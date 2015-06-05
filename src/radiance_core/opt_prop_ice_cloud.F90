@@ -303,6 +303,7 @@ SUBROUTINE opt_prop_ice_cloud(ierr                                      &
     DO i=n_cloud_top, n_layer
 !CDIR NODEP
       DO ll=1, n_cloud_profile(i)
+        l=i_cloud_profile(ll, i)
         x=MIN(ice_mass_frac(l, i)+1.0e-12_RealK, 1.0e-01_RealK)
         k_ext_tot_cloud(l, i)=ice_cloud_parameter(1)*x/(t(l, i)**4)
         x=MIN(ice_mass_frac(l, i)+1.0e-12_RealK,                        &
