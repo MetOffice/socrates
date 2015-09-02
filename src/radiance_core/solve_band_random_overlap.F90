@@ -282,7 +282,7 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !       Gas mass mixing ratios
     , doppler_correction(nd_species)
 !       Doppler broadening terms
-  REAL (RealK), INTENT(OUT) ::                                          &
+  REAL (RealK), INTENT(INOUT) ::                                        &
       gas_frac_rescaled(nd_profile, nd_layer, nd_species)
 !       Rescaled gas mass fractions
 

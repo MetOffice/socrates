@@ -69,8 +69,10 @@ SUBROUTINE inter_pt_lookup(nd_profile, nd_layer, nd_pre, nd_tmp         &
   REAL (RealK) ::                                                       &
        fp, ft, ftt, compfp                                              &
 !          Fraction factor for P & T interpolation
-     , p_layer, t_layer
+     , p_layer, t_layer                                                 &
 !          Inter-medium variable
+     , p_lookup_min, p_lookup_max
+!          Minimum and maximum values for look-up pressure
 
   INTEGER ::                                                            &
        i, l
@@ -84,6 +86,9 @@ SUBROUTINE inter_pt_lookup(nd_profile, nd_layer, nd_pre, nd_tmp         &
 
   IF (lhook) CALL dr_hook('INTER_PT',zhook_in,zhook_handle)
 
+  p_lookup_min = p_lookup(1)      + MAX(ABS(p_lookup(1)     )*eps, eps)
+  p_lookup_max = p_lookup(nd_pre) - MAX(ABS(p_lookup(nd_pre))*eps, eps)
+
   DO i=1, n_layer
     DO l=1, n_profile
 !     Find the reference pressure on the lower side of the layer
@@ -91,8 +96,7 @@ SUBROUTINE inter_pt_lookup(nd_profile, nd_layer, nd_pre, nd_tmp         &
 !     of the difference (in ln(pressure)) between JP and JP+1
 !     that the layer pressure lies for gas absorption
 !     coefficient interpolation.
-      p_layer=MIN( MAX( LOG(p(l,i)), p_lookup(1)*(1.0_RealK+eps) ), &
-                   p_lookup(nd_pre)*(1.0_RealK-eps) )
+      p_layer = MIN( MAX( LOG(p(l,i)), p_lookup_min ), p_lookup_max )
 
       jp(l,i) = MINLOC( p_layer - p_lookup, 1, &
                         p_layer - p_lookup >= 0.0_RealK)
@@ -114,6 +118,9 @@ SUBROUTINE inter_pt_lookup(nd_profile, nd_layer, nd_pre, nd_tmp         &
 
       ft = ( t_layer                     - t_lookup(jt(l,i),jp(l,i)) ) &
          / ( t_lookup(jt(l,i)+1,jp(l,i)) - t_lookup(jt(l,i),jp(l,i)) )
+
+      t_layer=MIN( MAX( t(l,i), t_lookup(1,jp(l,i)+1)*(1.0_RealK+eps) ), &
+                   t_lookup(nd_tmp,jp(l,i)+1)*(1.0_RealK-eps) )
 
       jtt(l,i) = MINLOC( t_layer - t_lookup(:,jp(l,i)+1), 1, &
                          t_layer - t_lookup(:,jp(l,i)+1) >= 0.0_RealK)
