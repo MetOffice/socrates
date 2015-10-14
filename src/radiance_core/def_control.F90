@@ -104,7 +104,8 @@ TYPE StrCtrl
 !   Flag for absorption by sodium
   LOGICAL :: l_k                                                  = .FALSE.
 !   Flag for absorption by potassium
-
+  LOGICAL :: l_co2                                                = .FALSE.
+!   Flag for absorption by carbon dioxide
 
 ! Properties of clouds:
   INTEGER :: i_cloud                                              = imdi
