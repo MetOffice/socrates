@@ -74,8 +74,10 @@ SUBROUTINE hemi_sph_integ(ls_trunc, ms, uplm_zero                       &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='HEMI_SPH_INTEG'
 
-  IF (lhook) CALL dr_hook('HEMI_SPH_INTEG',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! The outer loop is over l' where l'+m is odd. Indexing is done
 ! using the reduced indices l'+1-m and l+1-m.
@@ -89,6 +91,6 @@ SUBROUTINE hemi_sph_integ(ls_trunc, ms, uplm_zero                       &
   END DO
 
 
-  IF (lhook) CALL dr_hook('HEMI_SPH_INTEG',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE hemi_sph_integ

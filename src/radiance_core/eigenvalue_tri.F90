@@ -110,10 +110,10 @@ SUBROUTINE eigenvalue_tri(n_matrix, n_in, d, e                          &
   REAL(KIND=jprb)               :: zhook_handle
   INTEGER                       :: ierr
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'eigenvalue_tri'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'EIGENVALUE_TRI'
 
 
-  IF (lhook) CALL dr_hook('EIGENVALUE_TRI',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! The algorithm proceeds iteratively. The matrix supplied, A, is
 ! decomposed as A=QR where Q is orthogonal and R is upper
@@ -272,6 +272,6 @@ SUBROUTINE eigenvalue_tri(n_matrix, n_in, d, e                          &
   END IF
 
 
-  IF (lhook) CALL dr_hook('EIGENVALUE_TRI',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE eigenvalue_tri

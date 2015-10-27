@@ -396,8 +396,10 @@ SUBROUTINE grey_opt_prop(ierr                                           &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='GREY_OPT_PROP'
 
-  IF (lhook) CALL dr_hook('GREY_OPT_PROP',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! If using a separate solar phase function that must be initialized.
   IF (l_solar_phf) THEN
@@ -805,7 +807,7 @@ SUBROUTINE grey_opt_prop(ierr                                           &
 
     END IF
 
-    IF (lhook) CALL dr_hook('GREY_OPT_PROP',zhook_out,zhook_handle)
+    IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
     RETURN
 
   END IF
@@ -1337,6 +1339,6 @@ SUBROUTINE grey_opt_prop(ierr                                           &
   END IF
 
 
-  IF (lhook) CALL dr_hook('GREY_OPT_PROP',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE grey_opt_prop

@@ -174,8 +174,10 @@ SUBROUTINE set_level_weights(i                                          &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SET_LEVEL_WEIGHTS'
 
-  IF (lhook) CALL dr_hook('SET_LEVEL_WEIGHTS',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   DO WHILE (l_assign)
 
@@ -295,6 +297,6 @@ SUBROUTINE set_level_weights(i                                          &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SET_LEVEL_WEIGHTS',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE set_level_weights

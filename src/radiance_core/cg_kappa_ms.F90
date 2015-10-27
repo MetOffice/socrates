@@ -76,8 +76,10 @@ SUBROUTINE cg_kappa_ms(ms, ls_trunc, ls_brdf_trunc                      &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='CG_KAPPA_MS'
 
-  IF (lhook) CALL dr_hook('CG_KAPPA_MS',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Consider first the case where l+m is even. In this case the
 ! documented formula is applied directly, with the omission
@@ -111,6 +113,6 @@ SUBROUTINE cg_kappa_ms(ms, ls_trunc, ls_brdf_trunc                      &
   END DO
 
 
-  IF (lhook) CALL dr_hook('CG_KAPPA_MS',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE cg_kappa_ms

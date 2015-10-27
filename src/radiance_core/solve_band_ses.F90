@@ -537,8 +537,10 @@ SUBROUTINE solve_band_ses(ierr                                          &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SOLVE_BAND_SES'
 
-  IF (lhook) CALL dr_hook('SOLVE_BAND_SES',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the appropriate boundary terms for the total
 ! upward and downward fluxes.
@@ -817,6 +819,6 @@ SUBROUTINE solve_band_ses(ierr                                          &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SOLVE_BAND_SES',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE solve_band_ses

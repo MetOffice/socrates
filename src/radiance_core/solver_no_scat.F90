@@ -66,8 +66,10 @@ SUBROUTINE solver_no_scat(n_profile, n_layer                            &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SOLVER_NO_SCAT'
 
-  IF (lhook) CALL dr_hook('SOLVER_NO_SCAT',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Downward fluxes.
   DO l=1, n_profile
@@ -91,6 +93,6 @@ SUBROUTINE solver_no_scat(n_profile, n_layer                            &
     END DO
   END DO
 
-  IF (lhook) CALL dr_hook('SOLVER_NO_SCAT',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE solver_no_scat

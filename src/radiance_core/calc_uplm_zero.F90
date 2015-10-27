@@ -67,8 +67,10 @@ SUBROUTINE calc_uplm_zero(ms_min, ms_max, ia_sph_mm                     &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='CALC_UPLM_ZERO'
 
-  IF (lhook) CALL dr_hook('CALC_UPLM_ZERO',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   DO ms=ms_min, ms_max
 
@@ -108,6 +110,6 @@ SUBROUTINE calc_uplm_zero(ms_min, ms_max, ia_sph_mm                     &
   END DO
 
 
-  IF (lhook) CALL dr_hook('CALC_UPLM_ZERO',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE calc_uplm_zero

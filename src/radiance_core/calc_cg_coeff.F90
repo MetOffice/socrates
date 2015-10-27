@@ -67,8 +67,10 @@ SUBROUTINE calc_cg_coeff(ls_max_order                                   &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='CALC_CG_COEFF'
 
-  IF (lhook) CALL dr_hook('CALC_CG_COEFF',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   DO ls=0, ls_max_order
     inv=1.0e+00_RealK/REAL((2*ls+1)*(2*ls+3), RealK)
@@ -79,6 +81,6 @@ SUBROUTINE calc_cg_coeff(ls_max_order                                   &
   END DO
 
 
-  IF (lhook) CALL dr_hook('CALC_CG_COEFF',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE calc_cg_coeff

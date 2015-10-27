@@ -161,8 +161,10 @@ SUBROUTINE single_scat_sol(n_profile, n_layer                           &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SINGLE_SCAT_SOL'
 
-  IF (lhook) CALL dr_hook('SINGLE_SCAT_SOL',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the tolerances used in avoiding ill-conditioning, testing
 ! on any variable.
@@ -333,6 +335,6 @@ SUBROUTINE single_scat_sol(n_profile, n_layer                           &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SINGLE_SCAT_SOL',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE single_scat_sol

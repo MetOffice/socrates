@@ -111,8 +111,10 @@ SUBROUTINE rescale_phase_fnc(n_profile                                  &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='RESCALE_PHASE_FNC'
 
-  IF (lhook) CALL dr_hook('RESCALE_PHASE_FNC',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   DO k=1, n_order_phase
     DO i=i_layer_first, i_layer_last
@@ -165,6 +167,6 @@ SUBROUTINE rescale_phase_fnc(n_profile                                  &
   END IF
 
 
-  IF (lhook) CALL dr_hook('RESCALE_PHASE_FNC',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE rescale_phase_fnc

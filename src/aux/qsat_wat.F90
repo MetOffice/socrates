@@ -129,6 +129,8 @@
       INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
       REAL(KIND=jprb)               :: zhook_handle
 
+      CHARACTER(LEN=*), PARAMETER :: RoutineName='QSAT_WAT'
+
 
 !  External subroutine calls: ------------------------------------------
 !     EXTERNAL None
@@ -477,7 +479,7 @@
      &0.244611E+05,0.245712E+05,0.246814E+05,0.247923E+05,0.249034E+05, &
      &0.250152E+05,0.250152E+05/
 
-      IF (lhook) CALL dr_hook('QSAT_WAT',zhook_in,zhook_handle)
+      IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 !
 ! Npnts_do_1:
 
@@ -526,7 +528,7 @@
       END DO ! Npnts_do_1
 !$OMP END PARALLEL DO
 !
-      IF (lhook) CALL dr_hook('QSAT_WAT',zhook_out,zhook_handle)
+      IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
       RETURN
       END SUBROUTINE QSAT_WAT
 ! ======================================================================

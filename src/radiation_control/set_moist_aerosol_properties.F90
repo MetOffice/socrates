@@ -98,10 +98,10 @@ SUBROUTINE set_moist_aerosol_properties(ierr                            &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=256)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'set_moist_aerosol_properties'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'SET_MOIST_AEROSOL_PROPERTIES'
 
 
-  IF (lhook) CALL dr_hook('SET_MOIST_AEROSOL_PROPERTIES',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set up array of pointers to `include' the effects of humidity.
 ! Calculate the saturated mixing ratio.
@@ -170,6 +170,6 @@ SUBROUTINE set_moist_aerosol_properties(ierr                            &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SET_MOIST_AEROSOL_PROPERTIES',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE set_moist_aerosol_properties

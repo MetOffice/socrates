@@ -73,10 +73,10 @@ SUBROUTINE set_rad_layer(ierr                                           &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'set_rad_layer'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'SET_RAD_LAYER'
 
 
-  IF (lhook) CALL dr_hook('SET_RAD_LAYER',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the tolerance for detecting boundaries.
   tol_bdy=1.6e+01_RealK*EPSILON(tol_bdy)
@@ -112,6 +112,6 @@ SUBROUTINE set_rad_layer(ierr                                           &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SET_RAD_LAYER',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE set_rad_layer

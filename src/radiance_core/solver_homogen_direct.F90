@@ -95,8 +95,10 @@ SUBROUTINE solver_homogen_direct(n_profile, n_layer                     &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SOLVER_HOMOGEN_DIRECT'
 
-  IF (lhook) CALL dr_hook('SOLVER_HOMOGEN_DIRECT',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Initialization at the bottom for upward elimination:
   IF (isolir == ip_solar) THEN
@@ -148,6 +150,6 @@ SUBROUTINE solver_homogen_direct(n_profile, n_layer                     &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SOLVER_HOMOGEN_DIRECT',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE solver_homogen_direct

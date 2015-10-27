@@ -456,8 +456,10 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SOLVE_BAND_WITHOUT_GAS'
 
-  IF (lhook) CALL dr_hook('SOLVE_BAND_WITHOUT_GAS',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the appropriate total upward and downward fluxes
 ! at the boundaries.
@@ -625,6 +627,6 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
   l_initial=.FALSE.
 
 
-  IF (lhook) CALL dr_hook('SOLVE_BAND_WITHOUT_GAS',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE solve_band_without_gas

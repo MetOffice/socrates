@@ -258,10 +258,10 @@ SUBROUTINE opt_prop_aerosol(ierr                                        &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'opt_prop_aerosol'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'OPT_PROP_AEROSOL'
 
 
-  IF (lhook) CALL dr_hook('OPT_PROP_AEROSOL',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   DO j_mr=1, n_aerosol_mr
 
@@ -789,6 +789,6 @@ SUBROUTINE opt_prop_aerosol(ierr                                        &
   END DO
 
 
-  IF (lhook) CALL dr_hook('OPT_PROP_AEROSOL',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE opt_prop_aerosol

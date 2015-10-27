@@ -127,6 +127,8 @@ SUBROUTINE inter_pt(nd_profile, nd_layer                                &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='INTER_PT'
+
 ! ratio_air_h2o=0.01*28.964/18.015 e-2 for changing
 ! partial pressure to hPa
 
@@ -227,7 +229,7 @@ SUBROUTINE inter_pt(nd_profile, nd_layer                                &
   2.5827e+02, 2.7327e+02, 2.8827e+02, 3.0327e+02, 3.1827e+02,           &
   2.6400e+02, 2.7900e+02, 2.9400e+02, 3.0900e+02, 3.2400e+02/
 
-  IF (lhook) CALL dr_hook('INTER_PT',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   DO i=1, n_layer
     DO l=1, n_profile
@@ -307,5 +309,5 @@ SUBROUTINE inter_pt(nd_profile, nd_layer                                &
     END DO
   END DO
 
-  IF (lhook) CALL dr_hook('INTER_PT',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 END SUBROUTINE inter_pt

@@ -74,8 +74,10 @@ SUBROUTINE set_cloud_geometry(n_profile, n_layer                        &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SET_CLOUD_GEOMETRY'
 
-  IF (lhook) CALL dr_hook('SET_CLOUD_GEOMETRY',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   DO i=id_ct, n_layer
     n_cloud_profile(i)=0
@@ -98,6 +100,6 @@ SUBROUTINE set_cloud_geometry(n_profile, n_layer                        &
   END IF
 
 
-  IF (lhook) CALL dr_hook('SET_CLOUD_GEOMETRY',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE set_cloud_geometry

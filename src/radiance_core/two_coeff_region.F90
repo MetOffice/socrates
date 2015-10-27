@@ -176,8 +176,10 @@ SUBROUTINE two_coeff_region(ierr                                        &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='TWO_COEFF_REGION'
 
-  IF (lhook) CALL dr_hook('TWO_COEFF_REGION',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Determine the optical properties of the clear-sky regions of
 ! the layers.
@@ -385,6 +387,6 @@ SUBROUTINE two_coeff_region(ierr                                        &
   END DO
 
 
-  IF (lhook) CALL dr_hook('TWO_COEFF_REGION',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE two_coeff_region

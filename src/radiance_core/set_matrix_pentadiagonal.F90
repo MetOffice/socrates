@@ -81,8 +81,10 @@ SUBROUTINE set_matrix_pentadiagonal(n_profile, n_layer                  &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SET_MATRIX_PENTADIAGONAL'
 
-  IF (lhook) CALL dr_hook('SET_MATRIX_PENTADIAGONAL',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! The top boundary condition:
   DO l=1, n_profile
@@ -128,6 +130,6 @@ SUBROUTINE set_matrix_pentadiagonal(n_profile, n_layer                  &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SET_MATRIX_PENTADIAGONAL',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE set_matrix_pentadiagonal

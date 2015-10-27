@@ -179,8 +179,10 @@ SUBROUTINE increment_rad_cf(n_profile                                   &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='INCREMENT_RAD_CF'
 
-  IF (lhook) CALL dr_hook('INCREMENT_RAD_CF',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   IF (i_sph_algorithm == ip_sph_direct) THEN
 
@@ -306,6 +308,6 @@ SUBROUTINE increment_rad_cf(n_profile                                   &
   END IF
 
 
-  IF (lhook) CALL dr_hook('INCREMENT_RAD_CF',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE increment_rad_cf

@@ -45,8 +45,10 @@ INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
 INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
 REAL(KIND=jprb)               :: zhook_handle
 
+CHARACTER(LEN=*), PARAMETER :: RoutineName='MCICA_ORDER'
 
-IF (lhook) CALL dr_hook('MCICA_ORDER',zhook_in,zhook_handle)
+
+IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 subcol_band                           = 0
 first_subcol_band(control%first_band) = 1
@@ -67,6 +69,6 @@ DO i = control%first_band, control%last_band
   END DO
 END DO
 
-IF (lhook) CALL dr_hook('MCICA_ORDER',zhook_out,zhook_handle)
+IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE mcica_order

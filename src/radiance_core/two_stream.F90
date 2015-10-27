@@ -153,10 +153,10 @@ SUBROUTINE two_stream(ierr                                              &
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'two_stream'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'TWO_STREAM'
 
 
-  IF (lhook) CALL dr_hook('TWO_STREAM',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Calculate the two-stream coefficients.
   IF ( (i_scatter_method == ip_scatter_full) .OR.                       &
@@ -206,6 +206,6 @@ SUBROUTINE two_stream(ierr                                              &
     , nd_profile, nd_layer, nd_source_coeff)
 
 
-  IF (lhook) CALL dr_hook('TWO_STREAM',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE two_stream

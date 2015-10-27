@@ -129,6 +129,8 @@ MODULE mcica_mod
 !$OMP&               frac_cloudy, subcol_band,                          &
 !$OMP&               first_subcol_band, first_subcol_k,index_subcol)
 
+  CHARACTER(LEN=*), PARAMETER, PRIVATE :: ModuleName='MCICA_MOD'
+
   CONTAINS
 
   SUBROUTINE read_mcica_data(mcica_data)
@@ -148,7 +150,7 @@ MODULE mcica_mod
 
 ! Local variables
 
-    CHARACTER (LEN=15), PARAMETER :: RoutineName = 'read_mcica_data'
+    CHARACTER (LEN=*), PARAMETER :: RoutineName = 'READ_MCICA_DATA'
     INTEGER, PARAMETER :: iu_mcd = 80
     INTEGER            :: icode
     CHARACTER (LEN=80) :: cmessage
@@ -160,7 +162,7 @@ MODULE mcica_mod
     REAL(KIND=jprb)               :: zhook_handle
 
 
-    IF (lhook) CALL dr_hook('MCICA_MOD:READ_MCICA_DATA',zhook_in,zhook_handle)
+    IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
     OPEN(UNIT=iu_mcd, FILE=mcica_data, IOSTAT=icode, STATUS='OLD')
     IF (icode /= 0) THEN
@@ -275,7 +277,7 @@ MODULE mcica_mod
  9999 IF (icode /= 0) THEN
       CALL ereport(RoutineName, icode, cmessage)
     END IF
-    IF (lhook) CALL dr_hook('MCICA_MOD:READ_MCICA_DATA',zhook_out,zhook_handle)
+    IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
     RETURN
 
   END SUBROUTINE read_mcica_data

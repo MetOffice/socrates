@@ -239,8 +239,10 @@ SUBROUTINE calc_surf_rad(n_profile, n_layer, tau                        &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='CALC_SURF_RAD'
 
-  IF (lhook) CALL dr_hook('CALC_SURF_RAD',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! For each direction and observing level we calculate the
 ! contribution of the particular integral to the radiance
@@ -437,6 +439,6 @@ SUBROUTINE calc_surf_rad(n_profile, n_layer, tau                        &
   END DO
 
 
-  IF (lhook) CALL dr_hook('CALC_SURF_RAD',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE calc_surf_rad

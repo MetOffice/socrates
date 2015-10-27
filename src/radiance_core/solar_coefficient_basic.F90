@@ -107,10 +107,10 @@ SUBROUTINE solar_coefficient_basic(ierr                                 &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'solar_coefficient_basic'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'SOLAR_COEFFICIENT_BASIC'
 
 
-  IF (lhook) CALL dr_hook('SOLAR_COEFFICIENT_BASIC',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the tolerances used in avoiding ill-conditioning, testing
 ! on any variable.
@@ -171,6 +171,6 @@ SUBROUTINE solar_coefficient_basic(ierr                                 &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SOLAR_COEFFICIENT_BASIC',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE solar_coefficient_basic

@@ -76,8 +76,10 @@ SUBROUTINE calculate_density(n_profile, n_layer, l_continuum            &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='CALCULATE_DENSITY'
 
-  IF (lhook) CALL dr_hook('CALCULATE_DENSITY',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Find the air density first.
   DO i=i_top, n_layer
@@ -99,6 +101,6 @@ SUBROUTINE calculate_density(n_profile, n_layer, l_continuum            &
   END IF
 
 
-  IF (lhook) CALL dr_hook('CALCULATE_DENSITY',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE calculate_density

@@ -359,8 +359,10 @@ SUBROUTINE build_sph_matrix(i_sph_algorithm, euler_factor               &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='BUILD_SPH_MATRIX'
 
-  IF (lhook) CALL dr_hook('BUILD_SPH_MATRIX',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Initialize the matrix.
   DO ie=1, 2*n_layer*n_red_eigensystem
@@ -941,6 +943,6 @@ SUBROUTINE build_sph_matrix(i_sph_algorithm, euler_factor               &
   END IF
 
 
-  IF (lhook) CALL dr_hook('BUILD_SPH_MATRIX',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE build_sph_matrix

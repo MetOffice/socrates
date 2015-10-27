@@ -127,10 +127,10 @@ SUBROUTINE column_solver(ierr, control, bound                           &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'column_solver'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'COLUMN_SOLVER'
 
 
-  IF (lhook) CALL dr_hook('COLUMN_SOLVER',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! The source functions only need to be recalculated in the visible.
   IF (isolir == ip_solar) THEN
@@ -205,6 +205,6 @@ SUBROUTINE column_solver(ierr, control, bound                           &
   END IF
 
 
-  IF (lhook) CALL dr_hook('COLUMN_SOLVER',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE column_solver

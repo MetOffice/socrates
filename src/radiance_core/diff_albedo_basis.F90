@@ -87,8 +87,10 @@ SUBROUTINE diff_albedo_basis(n_brdf_basis_fnc                           &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='DIFF_ALBEDO_BASIS'
 
-  IF (lhook) CALL dr_hook('DIFF_ALBEDO_BASIS',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   DO j=1, n_brdf_basis_fnc
     diffuse_alb_basis(j)=0.0e+00_RealK
@@ -115,6 +117,6 @@ SUBROUTINE diff_albedo_basis(n_brdf_basis_fnc                           &
   END DO
 
 
-  IF (lhook) CALL dr_hook('DIFF_ALBEDO_BASIS',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE diff_albedo_basis

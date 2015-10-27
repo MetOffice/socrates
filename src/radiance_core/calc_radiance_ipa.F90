@@ -364,8 +364,10 @@ SUBROUTINE calc_radiance_ipa(ierr                                       &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='CALC_RADIANCE_IPA'
 
-  IF (lhook) CALL dr_hook('CALC_RADIANCE_IPA',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Zero the output arrays ready for incrementing.
   IF (i_sph_mode == ip_sph_mode_flux) THEN
@@ -723,6 +725,6 @@ SUBROUTINE calc_radiance_ipa(ierr                                       &
   END DO
 
 
-  IF (lhook) CALL dr_hook('CALC_RADIANCE_IPA',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE calc_radiance_ipa

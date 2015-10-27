@@ -128,8 +128,10 @@ SUBROUTINE two_coeff(ierr                                               &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='TWO_COEFF'
 
-  IF (lhook) CALL dr_hook('TWO_COEFF',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Calculate the basic two-stream coefficients. (The single
 ! scattering albedo has already been perturbed away from 1 in
@@ -181,6 +183,6 @@ SUBROUTINE two_coeff(ierr                                               &
     )
 
 
-  IF (lhook) CALL dr_hook('TWO_COEFF',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE two_coeff

@@ -82,8 +82,10 @@ SUBROUTINE ir_source(n_profile, i_layer_first, i_layer_last             &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='IR_SOURCE'
 
-  IF (lhook) CALL dr_hook('IR_SOURCE',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Multiply the source coefficients by the Planckian differences
 ! to the order required.
@@ -116,6 +118,6 @@ SUBROUTINE ir_source(n_profile, i_layer_first, i_layer_last             &
   END IF
 
 
-  IF (lhook) CALL dr_hook('IR_SOURCE',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE ir_source

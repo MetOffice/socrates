@@ -146,9 +146,10 @@ SUBROUTINE diff_planck_source_poly(n_profile, n_layer                   &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='DIFF_PLANCK_SOURCE_POLY'
 
-  IF (lhook) &
-    CALL dr_hook('DIFF_PLANCK_SOURCE_POLY',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   IF (i_angular_integration == ip_spherical_harmonic) THEN
 
@@ -286,7 +287,6 @@ SUBROUTINE diff_planck_source_poly(n_profile, n_layer                   &
   END IF
 
 
-  IF (lhook) &
-    CALL dr_hook('DIFF_PLANCK_SOURCE_POLY',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE diff_planck_source_poly

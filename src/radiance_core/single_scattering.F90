@@ -100,8 +100,10 @@ SUBROUTINE single_scattering(i_scatter_method_band                      &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SINGLE_SCATTERING'
 
-  IF (lhook) CALL dr_hook('SINGLE_SCATTERING',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the tolerances used in avoiding ill-conditioning, testing
 ! on any variable.
@@ -160,6 +162,6 @@ SUBROUTINE single_scattering(i_scatter_method_band                      &
   END IF
 
 
-  IF (lhook) CALL dr_hook('SINGLE_SCATTERING',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE single_scattering

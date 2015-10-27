@@ -52,8 +52,10 @@ FUNCTION l_cloud_density(n_condensed, i_phase_cmp, l_cloud_cmp          &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='L_CLOUD_DENSITY'
 
-  IF (lhook) CALL dr_hook('L_CLOUD_DENSITY',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   l_cloud_density=.FALSE.
 
@@ -71,6 +73,6 @@ FUNCTION l_cloud_density(n_condensed, i_phase_cmp, l_cloud_cmp          &
   END DO
 
 
-  IF (lhook) CALL dr_hook('L_CLOUD_DENSITY',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END FUNCTION l_cloud_density

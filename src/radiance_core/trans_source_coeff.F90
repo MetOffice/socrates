@@ -134,8 +134,10 @@ SUBROUTINE trans_source_coeff(n_profile                                 &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='TRANS_SOURCE_COEFF'
 
-  IF (lhook) CALL dr_hook('TRANS_SOURCE_COEFF',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the tolerances used in avoiding ill-conditioning, testing
 ! on any variable.
@@ -238,6 +240,6 @@ SUBROUTINE trans_source_coeff(n_profile                                 &
   END IF
 
 
-  IF (lhook) CALL dr_hook('TRANS_SOURCE_COEFF',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE trans_source_coeff

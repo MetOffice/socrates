@@ -168,8 +168,10 @@ SUBROUTINE inter_k(n_profile, n_layer, n_band_absorb                    &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='INTER_K'
 
-  IF (lhook) CALL dr_hook('INTER_K',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 
   IF (l_continuum .AND. ( n_continuum  /=  0 ) ) THEN
@@ -299,5 +301,5 @@ SUBROUTINE inter_k(n_profile, n_layer, n_band_absorb                    &
 
   END IF
 
-  IF (lhook) CALL dr_hook('INTER_K',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 END SUBROUTINE inter_k

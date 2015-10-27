@@ -105,8 +105,10 @@ SUBROUTINE gauss_angle(n_profile, n_layer                               &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='GAUSS_ANGLE'
 
-  IF (lhook) CALL dr_hook('GAUSS_ANGLE',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the source function.
   DO l=1, n_profile
@@ -161,6 +163,6 @@ SUBROUTINE gauss_angle(n_profile, n_layer                               &
   END DO
 
 
-  IF (lhook) CALL dr_hook('GAUSS_ANGLE',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE gauss_angle

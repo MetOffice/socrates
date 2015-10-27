@@ -68,8 +68,10 @@ SUBROUTINE sol_scat_cos(n_profile, n_direction                          &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SOL_SCAT_COS'
 
-  IF (lhook) CALL dr_hook('SOL_SCAT_COS',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   DO id=1, n_direction
     DO l=1, n_profile
@@ -81,6 +83,6 @@ SUBROUTINE sol_scat_cos(n_profile, n_direction                          &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SOL_SCAT_COS',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE sol_scat_cos

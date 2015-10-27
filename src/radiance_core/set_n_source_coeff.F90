@@ -40,8 +40,10 @@ FUNCTION set_n_source_coeff(isolir, l_ir_source_quad)
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SET_N_SOURCE_COEFF'
 
-  IF (lhook) CALL dr_hook('SET_N_SOURCE_COEFF',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   IF (isolir == ip_solar) THEN
     set_n_source_coeff=2
@@ -54,6 +56,6 @@ FUNCTION set_n_source_coeff(isolir, l_ir_source_quad)
   END IF
 
 
-  IF (lhook) CALL dr_hook('SET_N_SOURCE_COEFF',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END FUNCTION set_n_source_coeff

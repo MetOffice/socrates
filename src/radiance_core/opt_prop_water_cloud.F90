@@ -198,10 +198,10 @@ SUBROUTINE opt_prop_water_cloud(ierr                                    &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'opt_prop_water_cloud'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'OPT_PROP_WATER_CLOUD'
 
 
-  IF (lhook) CALL dr_hook('OPT_PROP_WATER_CLOUD',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   IF ( (n_order_phase == 1) .AND.                                       &
     (i_parametrization_drop == ip_drop_pade_2) .AND.                    &
@@ -743,6 +743,6 @@ SUBROUTINE opt_prop_water_cloud(ierr                                    &
   END IF
 
 
-  IF (lhook) CALL dr_hook('OPT_PROP_WATER_CLOUD',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE opt_prop_water_cloud

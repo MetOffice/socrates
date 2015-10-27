@@ -274,10 +274,10 @@ SUBROUTINE mix_column(ierr                                              &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'mix_column'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'MIX_COLUMN'
 
 
-  IF (lhook) CALL dr_hook('MIX_COLUMN',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the pointers to the various types of transition.
   i_ovp_dn_ff=3*k_clr-2
@@ -544,6 +544,6 @@ SUBROUTINE mix_column(ierr                                              &
   END IF
 
 
-  IF (lhook) CALL dr_hook('MIX_COLUMN',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE mix_column

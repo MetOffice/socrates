@@ -544,8 +544,10 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SOLVE_BAND_RANDOM_OVERLAP'
 
-  IF (lhook) CALL dr_hook('SOLVE_BAND_RANDOM_OVERLAP',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the number of active gases and initialize the pointers.
   DO k=1, n_gas
@@ -870,6 +872,6 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
   END IF
 
 
-  IF (lhook) CALL dr_hook('SOLVE_BAND_RANDOM_OVERLAP',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE solve_band_random_overlap

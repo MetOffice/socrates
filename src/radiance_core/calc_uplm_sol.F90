@@ -82,8 +82,10 @@ SUBROUTINE calc_uplm_sol(n_profile, ms_min, ms_max, ia_sph_mm           &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='CALC_UPLM_SOL'
 
-  IF (lhook) CALL dr_hook('CALC_UPLM_SOL',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Note here that ZEN_0 holds the cosine of the zenith angle, so
 ! the cosine of the solar direction is actually -ZEN_0.
@@ -139,6 +141,6 @@ SUBROUTINE calc_uplm_sol(n_profile, ms_min, ms_max, ia_sph_mm           &
   END DO
 
 
-  IF (lhook) CALL dr_hook('CALC_UPLM_SOL',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE calc_uplm_sol

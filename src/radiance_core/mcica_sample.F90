@@ -430,8 +430,10 @@ SUBROUTINE mcica_sample(ierr                                            &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='MCICA_SAMPLE'
 
-  IF (lhook) CALL dr_hook('MCICA_SAMPLE',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   DO m=cld%first_subcol_k(i_band,iex), cld%first_subcol_k(i_band,iex+1)-1
 
@@ -817,6 +819,6 @@ SUBROUTINE mcica_sample(ierr                                            &
     END DO
   END DO
 
-  IF (lhook) CALL dr_hook('MCICA_SAMPLE',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE mcica_sample

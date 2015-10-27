@@ -73,8 +73,10 @@ SUBROUTINE eval_uplm(ms, n_max_order, n_direction, x                    &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='EVAL_UPLM'
 
-  IF (lhook) CALL dr_hook('EVAL_UPLM',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Start the recurrence for Y_mm.
   product=1.0e+00_RealK
@@ -120,6 +122,6 @@ SUBROUTINE eval_uplm(ms, n_max_order, n_direction, x                    &
   END DO
 
 
-  IF (lhook) CALL dr_hook('EVAL_UPLM',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE eval_uplm

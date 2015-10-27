@@ -151,8 +151,10 @@ SUBROUTINE solver_mix_direct(n_profile, n_layer, n_cloud_top            &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SOLVER_MIX_DIRECT'
 
-  IF (lhook) CALL dr_hook('SOLVER_MIX_DIRECT',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Initialize at the bottom of the column for upward elimination.
   DO l=1, n_profile
@@ -335,6 +337,6 @@ SUBROUTINE solver_mix_direct(n_profile, n_layer, n_cloud_top            &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SOLVER_MIX_DIRECT',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE solver_mix_direct

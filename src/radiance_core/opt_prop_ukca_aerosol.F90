@@ -121,8 +121,10 @@ SUBROUTINE opt_prop_ukca_aerosol(ierr                                   &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='OPT_PROP_UKCA_AEROSOL'
 
-  IF (lhook) CALL dr_hook('OPT_PROP_UKCA_AEROSOL',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   DO j=1, n_ukca_mode
 
@@ -202,6 +204,6 @@ SUBROUTINE opt_prop_ukca_aerosol(ierr                                   &
   END DO ! j
 
 
-  IF (lhook) CALL dr_hook('OPT_PROP_UKCA_AEROSOL',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE opt_prop_ukca_aerosol

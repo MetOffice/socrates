@@ -524,8 +524,10 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SOLVE_BAND_ONE_GAS'
 
-  IF (lhook) CALL dr_hook('SOLVE_BAND_ONE_GAS',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! The ESFT terms for the first gas in the band alone are used.
   i_gas_pointer(1)=i_gas
@@ -732,6 +734,6 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SOLVE_BAND_ONE_GAS',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE solve_band_one_gas

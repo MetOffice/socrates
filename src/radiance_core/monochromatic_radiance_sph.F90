@@ -354,10 +354,10 @@ SUBROUTINE monochromatic_radiance_sph(ierr                              &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'monochromatic_radiance_sph'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'MONOCHROMATIC_RADIANCE_SPH'
 
 
-  IF (lhook) CALL dr_hook('MONOCHROMATIC_RADIANCE_SPH',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Split the method of solution according to the cloud scheme.
   IF (i_cloud == ip_cloud_clear) THEN
@@ -533,6 +533,6 @@ SUBROUTINE monochromatic_radiance_sph(ierr                              &
   END IF
 
 
-  IF (lhook) CALL dr_hook('MONOCHROMATIC_RADIANCE_SPH',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE monochromatic_radiance_sph

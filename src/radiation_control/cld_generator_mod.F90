@@ -21,6 +21,8 @@ MODULE cld_generator_mod
 
   IMPLICIT NONE
 
+  CHARACTER(LEN=*), PARAMETER, PRIVATE :: ModuleName='CLD_GENERATOR_MOD'
+
 CONTAINS
 
   SUBROUTINE cld_generator(lay, cloud_top, ilg, nsubcol,                &
@@ -148,7 +150,7 @@ CONTAINS
     l_top,     & ! Flag for cloud top
     l_bot        ! Flag for cloud bottom
 
-    CHARACTER(LEN=*), PARAMETER :: RoutineName = 'cld_generator'
+    CHARACTER(LEN=*), PARAMETER :: RoutineName = 'CLD_GENERATOR'
     CHARACTER(LEN=80)           :: cmessage
 
     INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
@@ -158,7 +160,7 @@ CONTAINS
     REAL(RealK) :: temp, rm
 
 
-    IF (lhook) CALL dr_hook('CLD_GENERATOR_MOD:CLD_GENERATOR',zhook_in,zhook_handle)
+    IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
 !   Set convective cloud FSD equal to large-scale value for now.
     sigma_ccw=sigma_qcw
@@ -184,7 +186,8 @@ CONTAINS
 
 !   If no cloudy layers in any GCM column then exit
     IF (k_top == 0) THEN
-      IF (lhook) CALL dr_hook('CLD_GENERATOR_MOD:CLD_GENERATOR',zhook_out,zhook_handle)
+      IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out, &
+                              zhook_handle)
       RETURN
     END IF
 
@@ -622,8 +625,7 @@ CONTAINS
     DO il = il1, il2
        ncldy(il) = i_loc(il)-1
     END DO ! IL
-    IF (lhook) CALL dr_hook('CLD_GENERATOR_MOD:CLD_GENERATOR',zhook_out, &
-                             zhook_handle)
+    IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
     RETURN
   END SUBROUTINE cld_generator
 END MODULE cld_generator_mod

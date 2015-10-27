@@ -41,8 +41,10 @@ FUNCTION set_n_cloud_parameter(i_scheme, i_component, n_phase_term)
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SET_N_CLOUD_PARAMETER'
 
-  IF (lhook) CALL dr_hook('SET_N_CLOUD_PARAMETER',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   IF ( (i_component == ip_clcmp_st_water).OR.                           &
        (i_component == ip_clcmp_cnv_water) ) THEN
@@ -93,5 +95,5 @@ FUNCTION set_n_cloud_parameter(i_scheme, i_component, n_phase_term)
   END IF
 
 
-  IF (lhook) CALL dr_hook('SET_N_CLOUD_PARAMETER',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 END FUNCTION set_n_cloud_parameter

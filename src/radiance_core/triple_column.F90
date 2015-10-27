@@ -239,10 +239,10 @@ SUBROUTINE triple_column(ierr                                           &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'triple_column'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'TRIPLE_COLUMN'
 
 
-  IF (lhook) CALL dr_hook('TRIPLE_COLUMN',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the number of source coefficients for the approximation
 ! DEPENDS ON: set_n_source_coeff
@@ -560,6 +560,6 @@ SUBROUTINE triple_column(ierr                                           &
   END IF
 
 
-  IF (lhook) CALL dr_hook('TRIPLE_COLUMN',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE triple_column

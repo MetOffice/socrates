@@ -105,8 +105,10 @@ SUBROUTINE sph_matrix_solver(n_matrix, n_step, n_block                  &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SPH_MATRIX_SOLVER'
 
-  IF (lhook) CALL dr_hook('SPH_MATRIX_SOLVER',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Eliminative phase:
   i_step=1
@@ -270,6 +272,6 @@ SUBROUTINE sph_matrix_solver(n_matrix, n_step, n_block                  &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SPH_MATRIX_SOLVER',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE sph_matrix_solver

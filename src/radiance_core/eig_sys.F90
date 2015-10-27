@@ -99,8 +99,10 @@ SUBROUTINE eig_sys(n_profile, ls_trunc, ms, n_red_eigensystem           &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='EIG_SYS'
 
-  IF (lhook) CALL dr_hook('EIG_SYS',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the tolerance for convergence of the algorithm from the
 ! precision of the machine.
@@ -221,6 +223,6 @@ SUBROUTINE eig_sys(n_profile, ls_trunc, ms, n_red_eigensystem           &
   END DO
 
 
-  IF (lhook) CALL dr_hook('EIG_SYS',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE eig_sys

@@ -91,8 +91,10 @@ SUBROUTINE solar_source(control, bound, n_profile, n_layer              &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SOLAR_SOURCE'
 
-  IF (lhook) CALL dr_hook('SOLAR_SOURCE',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   DO l=1, n_profile
     flux_direct(l, 0)=flux_inc_direct(l)
@@ -144,6 +146,6 @@ SUBROUTINE solar_source(control, bound, n_profile, n_layer              &
   END IF
 
 
-  IF (lhook) CALL dr_hook('SOLAR_SOURCE',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE solar_source

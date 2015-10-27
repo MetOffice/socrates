@@ -89,8 +89,10 @@ SUBROUTINE single_scattering_all(i_scatter_method_band                  &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SINGLE_SCATTERING_ALL'
 
-  IF (lhook) CALL dr_hook('SINGLE_SCATTERING_ALL',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Clear-sky properties:
 
@@ -130,6 +132,6 @@ SUBROUTINE single_scattering_all(i_scatter_method_band                  &
   END IF
 
 
-  IF (lhook) CALL dr_hook('SINGLE_SCATTERING_ALL',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE single_scattering_all

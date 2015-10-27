@@ -140,7 +140,9 @@ SUBROUTINE open_cloud_gen(                                              &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
-  IF (lhook) CALL dr_hook('OPEN_CLOUD_GEN',zhook_in,zhook_handle)
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='OPEN_CLOUD_GEN'
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   w_cloud=0.0_RealK
   c_cloud=0.0_RealK
@@ -333,6 +335,6 @@ SUBROUTINE open_cloud_gen(                                              &
     END DO
   END IF
 
-  IF (lhook) CALL dr_hook('OPEN_CLOUD_GEN',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE open_cloud_gen

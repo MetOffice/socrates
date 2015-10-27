@@ -73,10 +73,10 @@ SUBROUTINE set_cloud_pointer(ierr                                       &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'set_cloud_pointer'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'SET_CLOUD_POINTER'
 
 
-  IF (lhook) CALL dr_hook('SET_CLOUD_POINTER',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   DO k=1, n_condensed
 
@@ -157,6 +157,6 @@ SUBROUTINE set_cloud_pointer(ierr                                       &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SET_CLOUD_POINTER',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE set_cloud_pointer

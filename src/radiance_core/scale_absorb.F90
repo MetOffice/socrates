@@ -112,10 +112,10 @@ SUBROUTINE scale_absorb(ierr, n_profile, n_layer                        &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'scale_absorb'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'SCALE_ABSORB'
 
 
-  IF (lhook) CALL dr_hook('SCALE_ABSORB',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the offset to the pressure for the Doppler correction.
   IF (l_doppler) THEN
@@ -175,7 +175,7 @@ SUBROUTINE scale_absorb(ierr, n_profile, n_layer                        &
 
   ELSE IF (i_fnc == ip_scale_fnc_null) THEN
 
-    IF (lhook) CALL dr_hook('SCALE_ABSORB',zhook_out,zhook_handle)
+    IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
     RETURN
 
   ELSE IF (i_fnc == ip_scale_power_quad) THEN
@@ -303,6 +303,6 @@ SUBROUTINE scale_absorb(ierr, n_profile, n_layer                        &
     END DO
   END IF
 
-  IF (lhook) CALL dr_hook('SCALE_ABSORB',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE scale_absorb

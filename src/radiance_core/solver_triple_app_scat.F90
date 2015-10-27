@@ -166,8 +166,10 @@ SUBROUTINE solver_triple_app_scat(n_profile, n_layer, n_cloud_top       &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SOLVER_TRIPLE_APP_SCAT'
 
-  IF (lhook) CALL dr_hook('SOLVER_TRIPLE_APP_SCAT',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! The arrays flux_down and flux_up will eventually contain the total
 ! fluxes, but initially they are used for the clear fluxes.
@@ -317,6 +319,6 @@ SUBROUTINE solver_triple_app_scat(n_profile, n_layer, n_cloud_top       &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SOLVER_TRIPLE_APP_SCAT',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE solver_triple_app_scat

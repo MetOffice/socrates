@@ -192,8 +192,10 @@ SUBROUTINE solver_triple_hogan(n_profile, n_layer, n_cloud_top          &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SOLVER_TRIPLE_HOGAN'
 
-  IF (lhook) CALL dr_hook('SOLVER_TRIPLE_HOGAN',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! This routine is specific to cases of three regions and it is
 ! assumed that 1 represents clear skies, 2 represents startiform
@@ -407,6 +409,6 @@ SUBROUTINE solver_triple_hogan(n_profile, n_layer, n_cloud_top          &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SOLVER_TRIPLE_HOGAN',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE solver_triple_hogan

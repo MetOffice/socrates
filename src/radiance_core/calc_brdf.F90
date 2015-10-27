@@ -154,8 +154,10 @@ SUBROUTINE calc_brdf(isolir, ms_min, ms_max                             &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='CALC_BRDF'
 
-  IF (lhook) CALL dr_hook('CALC_BRDF',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   IF (isolir == ip_solar) THEN
 
@@ -285,6 +287,6 @@ SUBROUTINE calc_brdf(isolir, ms_min, ms_max                             &
   END IF
 
 
-  IF (lhook) CALL dr_hook('CALC_BRDF',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE calc_brdf

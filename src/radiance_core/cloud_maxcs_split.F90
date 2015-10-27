@@ -130,10 +130,10 @@ SUBROUTINE cloud_maxcs_split(ierr, n_profile, n_layer, n_cloud_top      &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'cloud_maxcs_split'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'CLOUD_MAXCS_SPLIT'
 
 
-  IF (lhook) CALL dr_hook('CLOUD_MAXCS_SPLIT',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the tolerance used for clouds.
   tol_cloud=1.0e+04_RealK*EPSILON(tol_cloud)
@@ -329,6 +329,6 @@ SUBROUTINE cloud_maxcs_split(ierr, n_profile, n_layer, n_cloud_top      &
     CALL ereport(RoutineName, ierr, cmessage)
   END IF
 
-  IF (lhook) CALL dr_hook('CLOUD_MAXCS_SPLIT',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE cloud_maxcs_split

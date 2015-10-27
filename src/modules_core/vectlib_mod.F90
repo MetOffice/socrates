@@ -15,6 +15,8 @@ USE realtype_rd, ONLY: RealK
 USE yomhook, ONLY: lhook, dr_hook
 USE parkind1, ONLY: jprb, jpim
 
+  CHARACTER(LEN=*), PARAMETER, PRIVATE :: ModuleName='VECTLIB_MOD'
+
 CONTAINS
 
 SUBROUTINE exp_v(n,x,y)
@@ -30,13 +32,15 @@ SUBROUTINE exp_v(n,x,y)
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:EXP_V',zhook_in,zhook_handle)
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='EXP_V'
+
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
   DO i=1, n
     y(i) = EXP(x(i))
   END DO
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:EXP_V',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
   RETURN
 END SUBROUTINE exp_v
 
@@ -55,7 +59,9 @@ SUBROUTINE powr_v(n, x, power, z)
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:POWR_V',zhook_in,zhook_handle)
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='POWR_V'
+
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
   DO i=1, n
     y(i)=power
@@ -65,7 +71,7 @@ SUBROUTINE powr_v(n, x, power, z)
     z(i) = x(i)**y(i)
   END DO
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:POWR_V',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
   RETURN
 END SUBROUTINE powr_v
 
@@ -84,13 +90,15 @@ SUBROUTINE rtor_v(n, x, y, z)
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:RTOR_V',zhook_in,zhook_handle)
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='RTOR_V'
+
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
   DO i=1, n
     z(i) = x(i)**y(i)
   END DO
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:RTOR_V',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
   RETURN
 END SUBROUTINE rtor_v
 
@@ -109,13 +117,15 @@ SUBROUTINE sqrt_v(n, x, y)
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:SQRT_V',zhook_in,zhook_handle)
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SQRT_V'
+
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
   DO i=1, n 
     y(i) = SQRT(x(i))
   END DO
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:SQRT_V',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
   RETURN
 END SUBROUTINE sqrt_v
 
@@ -134,13 +144,15 @@ SUBROUTINE oneover_v(n, x, y)
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:ONEOVER_V',zhook_in,zhook_handle)
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='ONEOVER_V'
+
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
   
   DO i=1, n
     y(i) = 1/x(i) 
   END DO
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:ONEOVER_V',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
   RETURN
 END SUBROUTINE oneover_v
 
@@ -159,13 +171,15 @@ SUBROUTINE log_v (n, x, y)
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:LOG_V',zhook_in,zhook_handle)
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='LOG_V'
+
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
   DO i=1, n 
     y(i) = LOG(x(i))
   END DO
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:LOG_V',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
   RETURN
 END SUBROUTINE log_v
 
@@ -184,13 +198,15 @@ SUBROUTINE sin_v(n,x,y)
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:SIN_V',zhook_in,zhook_handle)
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SIN_V'
+
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
   DO i=1, n
     y(i) = SIN(x(i)) 
   END DO
   
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:SIN_V',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
   RETURN
 END SUBROUTINE sin_v
 
@@ -209,13 +225,15 @@ SUBROUTINE cos_v(n,x,y)
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:COS_V',zhook_in,zhook_handle)
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='COS_V'
+
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
   DO i=1, n 
     y(i) = COS(x(i)) 
   END DO
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:COS_V',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
   RETURN
 END SUBROUTINE cos_v
 
@@ -234,13 +252,15 @@ SUBROUTINE asin_v(n,x,y)
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:ASIN_V',zhook_in,zhook_handle)
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='ASIN_V'
+
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
   DO i=1, n
     y(i) = ASIN(x(i)) 
   END DO
 
-  IF (lhook) CALL dr_hook('VECTLIB_MOD:ASIN_V',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
   RETURN
 END SUBROUTINE asin_v
 

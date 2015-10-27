@@ -95,8 +95,10 @@ SUBROUTINE copy_clr_sol(n_profile, n_layer, n_cloud_top                 &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='COPY_CLR_SOL'
 
-  IF (lhook) CALL dr_hook('COPY_CLR_SOL',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Above cloud top.
   DO i=1, n_cloud_top-1
@@ -127,6 +129,6 @@ SUBROUTINE copy_clr_sol(n_profile, n_layer, n_cloud_top                 &
   END DO
 
 
-  IF (lhook) CALL dr_hook('COPY_CLR_SOL',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE copy_clr_sol

@@ -64,8 +64,10 @@ SUBROUTINE rescale_tau_omega(n_profile                                  &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='RESCALE_TAU_OMEGA'
 
-  IF (lhook) CALL dr_hook('RESCALE_TAU_OMEGA',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   DO i=i_layer_first, i_layer_last
     DO l=1, n_profile
@@ -77,6 +79,6 @@ SUBROUTINE rescale_tau_omega(n_profile                                  &
   END DO
 
 
-  IF (lhook) CALL dr_hook('RESCALE_TAU_OMEGA',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE rescale_tau_omega

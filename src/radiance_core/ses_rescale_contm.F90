@@ -75,8 +75,10 @@ SUBROUTINE ses_rescale_contm(nd_profile, nd_layer                       &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SES_RESCALE_CONTM'
 
-  IF (lhook) CALL dr_hook('SES_RESCALE_CONTM',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   IF (i_continuum  ==  ip_cont_h2o ) THEN
     DO i=1, n_layer
@@ -107,5 +109,5 @@ SUBROUTINE ses_rescale_contm(nd_profile, nd_layer                       &
     END DO
   END IF
 
-  IF (lhook) CALL dr_hook('SES_RESCALE_CONTM',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 END SUBROUTINE ses_rescale_contm

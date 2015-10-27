@@ -285,8 +285,10 @@ SUBROUTINE sph_solver(ierr                                              &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SPH_SOLVER'
 
-  IF (lhook) CALL dr_hook('SPH_SOLVER',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Calculate the direct radiances which are independent of the
 ! azimuthal order.
@@ -524,6 +526,6 @@ SUBROUTINE sph_solver(ierr                                              &
   END IF
 
 
-  IF (lhook) CALL dr_hook('SPH_SOLVER',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE sph_solver

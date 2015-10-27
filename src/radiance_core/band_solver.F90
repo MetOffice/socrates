@@ -79,8 +79,10 @@ SUBROUTINE band_solver(n_matrix, n_equation                             &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='BAND_SOLVER'
 
-  IF (lhook) CALL dr_hook('BAND_SOLVER',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   iu1=iu+1
 ! Eliminative phase.
@@ -141,6 +143,6 @@ SUBROUTINE band_solver(n_matrix, n_equation                             &
   END IF
 
 
-  IF (lhook) CALL dr_hook('BAND_SOLVER',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE band_solver

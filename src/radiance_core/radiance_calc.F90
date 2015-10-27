@@ -370,10 +370,10 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
   INTEGER                       :: ierr = i_normal
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'radiance_calc'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'RADIANCE_CALC'
 
 
-  IF (lhook) CALL dr_hook('RADIANCE_CALC',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 
   CALL allocate_out(radout, control, dimen)
@@ -1998,6 +1998,6 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
     CALL ereport(RoutineName, ierr, cmessage)
   END IF
 
-  IF (lhook) CALL dr_hook('RADIANCE_CALC',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE radiance_calc

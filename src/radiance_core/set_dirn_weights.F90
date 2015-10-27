@@ -216,10 +216,10 @@ SUBROUTINE set_dirn_weights(n_profile                                   &
   REAL(KIND=jprb)               :: zhook_handle
   INTEGER                       :: ierr
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'set_dirn_weights'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'SET_DIRN_WEIGHTS'
 
 
-  IF (lhook) CALL dr_hook('SET_DIRN_WEIGHTS',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the tolerances used in avoiding ill-conditioning, testing
 ! on any variable.
@@ -625,6 +625,6 @@ SUBROUTINE set_dirn_weights(n_profile                                   &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SET_DIRN_WEIGHTS',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE set_dirn_weights

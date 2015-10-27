@@ -116,10 +116,10 @@ SUBROUTINE check_phf_term(ierr                                          &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'check_phf_term'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'CHECK_PHF_TERM'
 
 
-  IF (lhook) CALL dr_hook('CHECK_PHF_TERM',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Determine the order of terms for which information in the
 ! phase function will be required.
@@ -233,6 +233,6 @@ SUBROUTINE check_phf_term(ierr                                          &
     CALL ereport(RoutineName, ierr, cmessage)
   END IF
 
-  IF (lhook) CALL dr_hook('CHECK_PHF_TERM',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE check_phf_term

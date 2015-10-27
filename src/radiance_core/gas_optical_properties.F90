@@ -69,8 +69,10 @@ SUBROUTINE gas_optical_properties(n_profile, n_layer                    &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='GAS_OPTICAL_PROPERTIES'
 
-  IF (lhook) CALL dr_hook('GAS_OPTICAL_PROPERTIES',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Calculate the absorption for the first gas and add on the rest.
   i_gas=i_gas_pointer(1)
@@ -91,6 +93,6 @@ SUBROUTINE gas_optical_properties(n_profile, n_layer                    &
   END DO
 
 
-  IF (lhook) CALL dr_hook('GAS_OPTICAL_PROPERTIES',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE gas_optical_properties

@@ -258,8 +258,10 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='MONOCHROMATIC_RADIANCE_TSEQ'
 
-  IF (lhook) CALL dr_hook('MONOCHROMATIC_RADIANCE_TSEQ',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Choose an appropriate routine to calculate the fluxes as
 ! determined by the cloud scheme selected.
@@ -517,6 +519,6 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
   END IF
 
 
-  IF (lhook) CALL dr_hook('MONOCHROMATIC_RADIANCE_TSEQ',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE monochromatic_radiance_tseq

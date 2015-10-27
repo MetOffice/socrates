@@ -149,8 +149,10 @@ SUBROUTINE two_coeff_cloud(ierr                                         &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='TWO_COEFF_CLOUD'
 
-  IF (lhook) CALL dr_hook('TWO_COEFF_CLOUD',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Initialize the full arrays.
   DO i=i_layer_first, i_layer_last
@@ -259,6 +261,6 @@ SUBROUTINE two_coeff_cloud(ierr                                         &
   END DO
 
 
-  IF (lhook) CALL dr_hook('TWO_COEFF_CLOUD',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE two_coeff_cloud

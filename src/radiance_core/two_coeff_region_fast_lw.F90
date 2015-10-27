@@ -140,10 +140,10 @@ SUBROUTINE two_coeff_region_fast_lw(ierr                                &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'two_coeff_region_fast_lw'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'TWO_COEFF_REGION_FAST_LW'
 
 
-  IF (lhook) CALL dr_hook('TWO_COEFF_REGION_FAST_LW',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! This routine should not be used outside the IR.
   IF (isolir /= ip_infra_red) THEN
@@ -296,6 +296,6 @@ SUBROUTINE two_coeff_region_fast_lw(ierr                                &
   END DO
 
 
-  IF (lhook) CALL dr_hook('TWO_COEFF_REGION_FAST_LW',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE two_coeff_region_fast_lw

@@ -106,8 +106,10 @@ SUBROUTINE calc_top_rad(n_profile, tau                                  &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='CALC_TOP_RAD'
 
-  IF (lhook) CALL dr_hook('CALC_TOP_RAD',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Calculate the cumulative optical depth from the
 ! top of the atmosphere to each viewing level.
@@ -148,6 +150,6 @@ SUBROUTINE calc_top_rad(n_profile, tau                                  &
   END DO
 
 
-  IF (lhook) CALL dr_hook('CALC_TOP_RAD',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE calc_top_rad

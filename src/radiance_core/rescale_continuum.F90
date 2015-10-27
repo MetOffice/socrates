@@ -100,8 +100,10 @@ SUBROUTINE rescale_continuum(n_profile, n_layer, i_continuum            &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='RESCALE_CONTINUUM'
 
-  IF (lhook) CALL dr_hook('RESCALE_CONTINUUM',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   DO i=1, n_layer-i_top+1
     DO l=1, n_profile
@@ -172,6 +174,6 @@ SUBROUTINE rescale_continuum(n_profile, n_layer, i_continuum            &
   END IF
 
 
-  IF (lhook) CALL dr_hook('RESCALE_CONTINUUM',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE rescale_continuum

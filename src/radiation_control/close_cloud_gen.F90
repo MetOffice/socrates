@@ -27,7 +27,9 @@ SUBROUTINE close_cloud_gen
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
-  IF (lhook) CALL dr_hook('CLOSE_CLOUD_GEN',zhook_in,zhook_handle)
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='CLOSE_CLOUD_GEN'
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
   IF (ALLOCATED(ncldy)) DEALLOCATE(ncldy)
   IF (ALLOCATED(frac_cloudy_full)) DEALLOCATE(frac_cloudy_full)
   IF (ALLOCATED(cic_sub_full)) DEALLOCATE(cic_sub_full)
@@ -35,6 +37,6 @@ SUBROUTINE close_cloud_gen
   IF (ALLOCATED(lw_subcol_reorder)) DEALLOCATE(lw_subcol_reorder)
   IF (ALLOCATED(sw_subcol_reorder)) DEALLOCATE(sw_subcol_reorder)
 
-  IF (lhook) CALL dr_hook('CLOSE_CLOUD_GEN',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
   RETURN
 END SUBROUTINE close_cloud_gen

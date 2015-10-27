@@ -93,10 +93,10 @@ SUBROUTINE aggregate_cloud(ierr                                         &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'aggregate_cloud'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'AGGREGATE_CLOUD'
 
 
-  IF (lhook) CALL dr_hook('AGGREGATE_CLOUD',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   IF ( (i_cloud == ip_cloud_triple).OR.                                 &
        (i_cloud == ip_cloud_part_corr_cnv) ) THEN
@@ -155,6 +155,6 @@ SUBROUTINE aggregate_cloud(ierr                                         &
   END IF
 
 
-  IF (lhook) CALL dr_hook('AGGREGATE_CLOUD',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE aggregate_cloud

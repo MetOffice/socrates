@@ -84,7 +84,9 @@ SUBROUTINE inter_pt_lookup(nd_profile, nd_layer, nd_pre, nd_tmp         &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
-  IF (lhook) CALL dr_hook('INTER_PT',zhook_in,zhook_handle)
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='INTER_PT_LOOKUP'
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   p_lookup_min = p_lookup(1)      + MAX(ABS(p_lookup(1)     )*eps, eps)
   p_lookup_max = p_lookup(nd_pre) - MAX(ABS(p_lookup(nd_pre))*eps, eps)
@@ -138,5 +140,5 @@ SUBROUTINE inter_pt_lookup(nd_profile, nd_layer, nd_pre, nd_tmp         &
     END DO
   END DO
 
-  IF (lhook) CALL dr_hook('INTER_PT_LOOKUP',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 END SUBROUTINE inter_pt_lookup

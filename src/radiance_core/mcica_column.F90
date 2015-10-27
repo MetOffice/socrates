@@ -237,10 +237,10 @@ SUBROUTINE mcica_column(ierr                                            &
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'mcica_column'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'MCICA_COLUMN'
 
 
-  IF (lhook) CALL dr_hook('MCICA_COLUMN',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the number of source coefficients for the approximation
   n_source_coeff=set_n_source_coeff(isolir, l_ir_source_quad)
@@ -479,6 +479,6 @@ SUBROUTINE mcica_column(ierr                                            &
     , nd_profile, nd_layer, nd_source_coeff)
 
 
-  IF (lhook) CALL dr_hook('MCICA_COLUMN',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE mcica_column

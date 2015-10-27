@@ -108,8 +108,10 @@ SUBROUTINE monochromatic_gas_flux(n_profile, n_layer                    &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='MONOCHROMATIC_GAS_FLUX'
 
-  IF (lhook) CALL dr_hook('MONOCHROMATIC_GAS_FLUX',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the tolerances used in avoiding ill-conditioning, testing
 ! on any variable.
@@ -189,6 +191,6 @@ SUBROUTINE monochromatic_gas_flux(n_profile, n_layer                    &
   END DO
 
 
-  IF (lhook) CALL dr_hook('MONOCHROMATIC_GAS_FLUX',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE monochromatic_gas_flux

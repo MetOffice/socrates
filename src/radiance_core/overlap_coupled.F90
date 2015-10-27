@@ -139,8 +139,10 @@ SUBROUTINE overlap_coupled(n_profile, n_layer, n_cloud_top              &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='OVERLAP_COUPLED'
 
-  IF (lhook) CALL dr_hook('OVERLAP_COUPLED',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   tol_cloud=1.0e+02_RealK*EPSILON(tol_cloud)
 
@@ -442,6 +444,6 @@ SUBROUTINE overlap_coupled(n_profile, n_layer, n_cloud_top              &
   END DO
 
 
-  IF (lhook) CALL dr_hook('OVERLAP_COUPLED',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE overlap_coupled

@@ -141,8 +141,10 @@ SUBROUTINE mixed_solar_source(control, bound                            &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='MIXED_SOLAR_SOURCE'
 
-  IF (lhook) CALL dr_hook('MIXED_SOLAR_SOURCE',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! The clear and cloudy direct fluxes are calculated separately
 ! and added together to form the total direct flux.
@@ -290,6 +292,6 @@ SUBROUTINE mixed_solar_source(control, bound                            &
   END IF
 
 
-  IF (lhook) CALL dr_hook('MIXED_SOLAR_SOURCE',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE mixed_solar_source

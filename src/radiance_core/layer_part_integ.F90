@@ -162,8 +162,10 @@ SUBROUTINE layer_part_integ(                                            &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='LAYER_PART_INTEG'
 
-  IF (lhook) CALL dr_hook('LAYER_PART_INTEG',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   upm_c=0.0
 
@@ -391,6 +393,6 @@ SUBROUTINE layer_part_integ(                                            &
   END IF
 
 
-  IF (lhook) CALL dr_hook('LAYER_PART_INTEG',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE layer_part_integ

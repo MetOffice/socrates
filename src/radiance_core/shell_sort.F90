@@ -49,12 +49,14 @@ SUBROUTINE shell_sort(n, pointer, key)
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='SHELL_SORT'
 
-  IF (lhook) CALL dr_hook('SHELL_SORT',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   IF (n == 1) THEN
     pointer(1)=1
-    IF (lhook) CALL dr_hook('SHELL_SORT',zhook_out,zhook_handle)
+    IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
     RETURN
   END IF
 
@@ -73,6 +75,6 @@ SUBROUTINE shell_sort(n, pointer, key)
   END DO
 
 
-  IF (lhook) CALL dr_hook('SHELL_SORT',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE shell_sort

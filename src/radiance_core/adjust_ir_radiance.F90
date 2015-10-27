@@ -103,8 +103,10 @@ SUBROUTINE adjust_ir_radiance(n_profile, n_layer, n_viewing_level       &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='ADJUST_IR_RADIANCE'
 
-  IF (lhook) CALL dr_hook('ADJUST_IR_RADIANCE',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   IF ( (i_angular_integration == ip_two_stream).OR.                     &
        (i_angular_integration == ip_ir_gauss) ) THEN
@@ -150,6 +152,6 @@ SUBROUTINE adjust_ir_radiance(n_profile, n_layer, n_viewing_level       &
 
   END IF
 
-  IF (lhook) CALL dr_hook('ADJUST_IR_RADIANCE',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE adjust_ir_radiance

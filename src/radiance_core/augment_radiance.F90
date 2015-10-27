@@ -166,8 +166,10 @@ SUBROUTINE augment_radiance(n_profile, n_layer                          &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
 
+  CHARACTER(LEN=*), PARAMETER :: RoutineName='AUGMENT_RADIANCE'
 
-  IF (lhook) CALL dr_hook('AUGMENT_RADIANCE',zhook_in,zhook_handle)
+
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   IF (.NOT.l_initial) THEN
 
@@ -355,6 +357,6 @@ SUBROUTINE augment_radiance(n_profile, n_layer                          &
   END IF
 
 
-  IF (lhook) CALL dr_hook('AUGMENT_RADIANCE',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE augment_radiance

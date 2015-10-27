@@ -78,10 +78,10 @@ SUBROUTINE set_truncation(ierr                                          &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'set_truncation'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'SET_TRUNCATION'
 
 
-  IF (lhook) CALL dr_hook('SET_TRUNCATION',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Carry out a preliminary check that the truncation is appropriate.
   IF ( (i_truncation == ip_trunc_azim_sym).AND.                         &
@@ -188,6 +188,6 @@ SUBROUTINE set_truncation(ierr                                          &
   END DO
 
 
-  IF (lhook) CALL dr_hook('SET_TRUNCATION',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE set_truncation

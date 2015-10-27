@@ -87,10 +87,10 @@ SUBROUTINE two_coeff_basic(ierr                                         &
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
   CHARACTER (LEN=errormessagelength)           :: cmessage
-  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'two_coeff_basic'
+  CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'TWO_COEFF_BASIC'
 
 
-  IF (lhook) CALL dr_hook('TWO_COEFF_BASIC',zhook_in,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   IF (i_2stream == ip_eddington) THEN
     DO i=i_layer_first, i_layer_last
@@ -201,6 +201,6 @@ SUBROUTINE two_coeff_basic(ierr                                         &
   END IF
 
 
-  IF (lhook) CALL dr_hook('TWO_COEFF_BASIC',zhook_out,zhook_handle)
+  IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 
 END SUBROUTINE two_coeff_basic
