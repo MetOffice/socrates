@@ -64,6 +64,18 @@ TYPE StrOut
 !   Diagnostic total downward flux at the surface weighted by band
   REAL (RealK), ALLOCATABLE :: flux_down_clear_diag_surf(:)
 !   Diagnostic clear-sky downward flux at the surface weighted by band
+  REAL (RealK), ALLOCATABLE :: flux_direct_band(:, :, :)
+!   Direct flux per band
+  REAL (RealK), ALLOCATABLE :: flux_down_band(:, :, :)
+!   Total downward flux per band
+  REAL (RealK), ALLOCATABLE :: flux_up_band(:, :, :)
+!   Upward flux per band
+  REAL (RealK), ALLOCATABLE :: flux_direct_clear_band(:, :, :)
+!   Clear-sky direct flux per band
+  REAL (RealK), ALLOCATABLE :: flux_down_clear_band(:, :, :)
+!   Clear-sky downward flux per band
+  REAL (RealK), ALLOCATABLE :: flux_up_clear_band(:, :, :)
+!   Clear-sky upward flux per band
 
 ! Cloud diagnostics
   REAL (RealK), ALLOCATABLE :: tot_cloud_cover(:)
@@ -99,21 +111,31 @@ TYPE StrOut
   REAL (RealK), ALLOCATABLE :: cnv_cloud_weight_extinction(:, :)
 !   Weights to be applied to conv. cld. extinctions.
 
+! Aerosol diagnostics
+  REAL (RealK), ALLOCATABLE :: aerosol_absorption_band(:, :, :)
+!   Total aerosol absorption per band
+  REAL (RealK), ALLOCATABLE :: aerosol_scattering_band(:, :, :)
+!   Total aerosol scattering per band
+  REAL (RealK), ALLOCATABLE :: aerosol_asymmetry_band(:, :, :)
+!   Total aerosol asymmetry (weighted by scattering) per band
+
 END TYPE StrOut
 
 
 CONTAINS
 !------------------------------------------------------------------------------
-SUBROUTINE allocate_out(radout, control, dimen)
+SUBROUTINE allocate_out(radout, control, dimen, sp)
 
-USE def_control, ONLY: StrCtrl
-USE def_dimen,   ONLY: StrDim
+USE def_control,  ONLY: StrCtrl
+USE def_dimen,    ONLY: StrDim
+USE def_spectrum, ONLY: StrSpecData
 
 IMPLICIT NONE
 
-TYPE (StrOut),  INTENT(INOUT) :: radout
-TYPE (StrCtrl), INTENT(IN)    :: control
-TYPE (StrDim),  INTENT(IN)    :: dimen
+TYPE (StrOut),      INTENT(INOUT) :: radout
+TYPE (StrCtrl),     INTENT(IN)    :: control
+TYPE (StrDim),      INTENT(IN)    :: dimen
+TYPE (StrSpecData), INTENT(IN)    :: sp
 
 IF (.NOT. ALLOCATED(radout%flux_direct))                                       &
   ALLOCATE(radout%flux_direct                  ( dimen%nd_flux_profile,        &
@@ -210,6 +232,48 @@ IF (control%l_flux_down_clear_diag_surf) THEN
     ALLOCATE(radout%flux_down_clear_diag_surf  ( dimen%nd_flux_profile       ))
 END IF
 
+IF (control%l_flux_direct_band) THEN
+  IF (.NOT. ALLOCATED(radout%flux_direct_band))                                &
+    ALLOCATE(radout%flux_direct_band           ( dimen%nd_flux_profile,        &
+                                                 0: dimen%nd_layer,            &
+                                                 sp%dim%nd_band              ))
+END IF
+
+IF (control%l_flux_down_band) THEN
+  IF (.NOT. ALLOCATED(radout%flux_down_band))                                  &
+    ALLOCATE(radout%flux_down_band             ( dimen%nd_flux_profile,        &
+                                                 0: dimen%nd_layer,            &
+                                                 sp%dim%nd_band              ))
+END IF
+
+IF (control%l_flux_up_band) THEN
+  IF (.NOT. ALLOCATED(radout%flux_up_band))                                    &
+    ALLOCATE(radout%flux_up_band               ( dimen%nd_flux_profile,        &
+                                                 0: dimen%nd_layer,            &
+                                                 sp%dim%nd_band              ))
+END IF
+
+IF (control%l_flux_direct_clear_band) THEN
+  IF (.NOT. ALLOCATED(radout%flux_direct_clear_band))                          &
+    ALLOCATE(radout%flux_direct_clear_band     ( dimen%nd_2sg_profile,         &
+                                                 0: dimen%nd_layer,            &
+                                                 sp%dim%nd_band              ))
+END IF
+
+IF (control%l_flux_down_clear_band) THEN
+  IF (.NOT. ALLOCATED(radout%flux_down_clear_band))                            &
+    ALLOCATE(radout%flux_down_clear_band       ( dimen%nd_2sg_profile,         &
+                                                 0: dimen%nd_layer,            &
+                                                 sp%dim%nd_band              ))
+END IF
+
+IF (control%l_flux_up_clear_band) THEN
+  IF (.NOT. ALLOCATED(radout%flux_up_clear_band))                              &
+    ALLOCATE(radout%flux_up_clear_band         ( dimen%nd_2sg_profile,         &
+                                                 0: dimen%nd_layer,            &
+                                                 sp%dim%nd_band              ))
+END IF
+
 IF (.NOT. ALLOCATED(radout%tot_cloud_cover))                                   &
   ALLOCATE(radout%tot_cloud_cover              ( dimen%nd_profile            ))
 
@@ -267,6 +331,27 @@ IF (control%l_cnv_cloud_extinction) THEN
                                                  dimen%nd_layer              ))
 END IF
 
+IF (control%l_aerosol_absorption_band) THEN
+  IF (.NOT. ALLOCATED(radout%aerosol_absorption_band))                         &
+    ALLOCATE(radout%aerosol_absorption_band    ( dimen%nd_profile,             &
+                                                 dimen%nd_layer,               &
+                                                 sp%dim%nd_band              ))
+END IF
+
+IF (control%l_aerosol_scattering_band) THEN
+  IF (.NOT. ALLOCATED(radout%aerosol_scattering_band))                         &
+    ALLOCATE(radout%aerosol_scattering_band    ( dimen%nd_profile,             &
+                                                 dimen%nd_layer,               &
+                                                 sp%dim%nd_band              ))
+END IF
+
+IF (control%l_aerosol_asymmetry_band) THEN
+  IF (.NOT. ALLOCATED(radout%aerosol_asymmetry_band))                          &
+    ALLOCATE(radout%aerosol_asymmetry_band     ( dimen%nd_profile,             &
+                                                 dimen%nd_layer,               &
+                                                 sp%dim%nd_band              ))
+END IF
+
 END SUBROUTINE allocate_out
 !------------------------------------------------------------------------------
 SUBROUTINE deallocate_out(radout)
@@ -275,6 +360,12 @@ IMPLICIT NONE
 
 TYPE (StrOut), INTENT(INOUT) :: radout
 
+IF (ALLOCATED(radout%aerosol_asymmetry_band)) &
+    DEALLOCATE(radout%aerosol_asymmetry_band)
+IF (ALLOCATED(radout%aerosol_scattering_band)) &
+    DEALLOCATE(radout%aerosol_scattering_band)
+IF (ALLOCATED(radout%aerosol_absorption_band)) &
+    DEALLOCATE(radout%aerosol_absorption_band)
 IF (ALLOCATED(radout%cnv_cloud_weight_extinction)) &
     DEALLOCATE(radout%cnv_cloud_weight_extinction)
 IF (ALLOCATED(radout%cnv_cloud_extinction)) &
@@ -301,6 +392,18 @@ IF (ALLOCATED(radout%cloud_absorptivity)) &
     DEALLOCATE(radout%cloud_absorptivity)
 IF (ALLOCATED(radout%tot_cloud_cover)) &
     DEALLOCATE(radout%tot_cloud_cover)
+IF (ALLOCATED(radout%flux_up_clear_band)) &
+    DEALLOCATE(radout%flux_up_clear_band)
+IF (ALLOCATED(radout%flux_down_clear_band)) &
+    DEALLOCATE(radout%flux_down_clear_band)
+IF (ALLOCATED(radout%flux_direct_clear_band)) &
+    DEALLOCATE(radout%flux_direct_clear_band)
+IF (ALLOCATED(radout%flux_up_band)) &
+    DEALLOCATE(radout%flux_up_band)
+IF (ALLOCATED(radout%flux_down_band)) &
+    DEALLOCATE(radout%flux_down_band)
+IF (ALLOCATED(radout%flux_direct_band)) &
+    DEALLOCATE(radout%flux_direct_band)
 IF (ALLOCATED(radout%flux_down_clear_diag_surf)) &
     DEALLOCATE(radout%flux_down_clear_diag_surf)
 IF (ALLOCATED(radout%flux_down_diag_surf)) &

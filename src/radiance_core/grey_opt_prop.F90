@@ -19,8 +19,8 @@
 ! This file belongs in section: Radiance Core
 !
 !- ---------------------------------------------------------------------
-SUBROUTINE grey_opt_prop(ierr                                           &
-    , control, n_profile, n_layer, p, t, density                        &
+SUBROUTINE grey_opt_prop(ierr, control, radout, i_band                  &
+    , n_profile, n_layer, p, t, density                                 &
     , n_order_phase, l_solar_phf, n_direction, cos_sol_view             &
     , rayleigh_coeff                                                    &
     , l_continuum, n_continuum, i_continuum_pointer, k_continuum        &
@@ -64,6 +64,7 @@ SUBROUTINE grey_opt_prop(ierr                                           &
 
   USE realtype_rd, ONLY: RealK
   USE def_control, ONLY: StrCtrl
+  USE def_out,     ONLY: StrOut
   USE def_ss_prop
   USE rad_pcf
   USE yomhook, ONLY: lhook, dr_hook
@@ -74,6 +75,9 @@ SUBROUTINE grey_opt_prop(ierr                                           &
 
 ! Control options:
   TYPE(StrCtrl),      INTENT(IN)    :: control
+
+! Output fields:
+  TYPE(StrOut),       INTENT(INOUT) :: radout
 
 ! Sizes of dummy arrays
   INTEGER, INTENT(IN) ::                                                &
@@ -129,6 +133,9 @@ SUBROUTINE grey_opt_prop(ierr                                           &
       ierr
 !       Error flag
 
+  INTEGER, INTENT(IN) ::                                                &
+      i_band
+!       Spectral band
 
 ! Basic atmospheric properties:
   INTEGER, INTENT(IN) ::                                                &
@@ -671,6 +678,62 @@ SUBROUTINE grey_opt_prop(ierr                                           &
       , nd_profile, nd_layer, id_ct, nd_layer, nd_ukca_mode             &
       , nd_max_order                                                    &
       )
+  END IF
+
+! Output aerosol optical property diagnostics
+  IF (control%l_aerosol_absorption_band) THEN
+    DO i=1, n_cloud_top-1
+      DO l=1, n_profile
+!       At this point k_grey_tot includes the absorption only
+        radout%aerosol_absorption_band(l, i, i_band)                    &
+          = ss_prop%k_grey_tot_clr(l, i)
+      END DO
+    END DO
+    DO i=n_cloud_top, n_layer
+      DO l=1, n_profile
+        radout%aerosol_absorption_band(l, i, i_band)                    &
+          = ss_prop%k_grey_tot(l, i, 0)
+      END DO
+    END DO
+  END IF
+  IF (control%l_aerosol_scattering_band) THEN
+    DO i=1, n_cloud_top-1
+      DO l=1, n_profile
+        radout%aerosol_scattering_band(l, i, i_band)                    &
+          = ss_prop%k_ext_scat_clr(l, i)
+      END DO
+    END DO
+    DO i=n_cloud_top, n_layer
+      DO l=1, n_profile
+        radout%aerosol_scattering_band(l, i, i_band)                    &
+          = ss_prop%k_ext_scat(l, i, 0)
+      END DO
+    END DO
+    IF (control%l_rayleigh) THEN
+      DO i=1, n_layer
+        DO l=1, n_profile
+!         Remove the Rayleigh scattering contribution
+          radout%aerosol_scattering_band(l,i,i_band) =                  &
+            radout%aerosol_scattering_band(l,i,i_band) - rayleigh_coeff
+        END DO
+      END DO
+    END IF
+  END IF
+  IF (control%l_aerosol_asymmetry_band) THEN
+!   The first moment of the phase function is weighted by the scattering
+!   at this point: the diagnostic will be passed out as a weighted value
+    DO i=1, n_cloud_top-1
+      DO l=1, n_profile
+        radout%aerosol_asymmetry_band(l, i, i_band)                    &
+          = ss_prop%phase_fnc_clr(l, i, 1)
+      END DO
+    END DO
+    DO i=n_cloud_top, n_layer
+      DO l=1, n_profile
+        radout%aerosol_asymmetry_band(l, i, i_band)                    &
+          = ss_prop%phase_fnc(l, i, 1, 0)
+      END DO
+    END DO
   END IF
 
   IF (l_continuum) THEN

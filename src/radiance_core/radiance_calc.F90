@@ -309,9 +309,9 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !       Absorptivity of cloud in a particular band
     , cnv_cloud_extinction_band(dimen%nd_profile, dimen%nd_layer)              &
 !       Absorptivity of cloud in a particular band
-    , flux_direct_clear_band(dimen%nd_2sg_profile, 0: dimen%nd_layer)          &
+    , flux_direct_clear_prev(dimen%nd_2sg_profile, 0: dimen%nd_layer)          &
 !       Clear direct flux in a particular band
-    , flux_up_clear_band(dimen%nd_2sg_profile, 0: dimen%nd_layer)
+    , flux_up_clear_prev(dimen%nd_2sg_profile, 0: dimen%nd_layer)
 !       Clear upward flux in a particular band
 
   INTEGER ::                                                                   &
@@ -364,7 +364,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
   IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 
-  CALL allocate_out(radout, control, dimen)
+  CALL allocate_out(radout, control, dimen, spectrum)
 
 
 ! Initial determination of flags and switches:
@@ -684,24 +684,58 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       l_initial=(control%map_channel(i_band) > control%map_channel(i_band-1))
     END IF
 
-!   Initialise fluxes to calculate band increments for cloud diagnostics
-    IF (control%l_cloud_extinction    .OR.                                     &
-        control%l_ls_cloud_extinction .OR.                                     &
-        control%l_cnv_cloud_extinction) THEN
+!   Initialise fluxes to calculate band increments for diagnostics
+    IF (control%l_flux_direct_band) THEN
       IF (l_initial) THEN
-        flux_direct_clear_band = 0.0
+        radout%flux_direct_band(:,:,i_band) = 0.0
       ELSE
-        flux_direct_clear_band                                                 &
+        radout%flux_direct_band(:,:,i_band)                                    &
+          = radout%flux_direct(:,:,control%map_channel(i_band))
+      END IF
+    END IF
+    IF (control%l_flux_down_band) THEN
+      IF (l_initial) THEN
+        radout%flux_down_band(:,:,i_band) = 0.0
+      ELSE
+        radout%flux_down_band(:,:,i_band)                                      &
+          = radout%flux_down(:,:,control%map_channel(i_band))
+      END IF
+    END IF
+    IF (control%l_flux_up_band) THEN
+      IF (l_initial) THEN
+        radout%flux_up_band(:,:,i_band) = 0.0
+      ELSE
+        radout%flux_up_band(:,:,i_band)                                        &
+          = radout%flux_up(:,:,control%map_channel(i_band))
+      END IF
+    END IF
+    IF (control%l_cloud_extinction     .OR.                                    &
+        control%l_ls_cloud_extinction  .OR.                                    &
+        control%l_cnv_cloud_extinction .OR.                                    &
+        control%l_flux_direct_clear_band) THEN
+      IF (l_initial) THEN
+        flux_direct_clear_prev = 0.0
+      ELSE
+        flux_direct_clear_prev                                                 &
           = radout%flux_direct_clear(:,:,control%map_channel(i_band))
       END IF
     END IF
-    IF (control%l_cloud_absorptivity    .OR.                                   &
-        control%l_ls_cloud_absorptivity .OR.                                   &
-        control%l_cnv_cloud_absorptivity) THEN
+    IF (control%l_flux_down_clear_band) THEN
       IF (l_initial) THEN
-        flux_up_clear_band = 0.0
+        radout%flux_down_clear_band(:,:,i_band) = 0.0
       ELSE
-        flux_up_clear_band                                                     &
+        radout%flux_down_clear_band(:,:,i_band)                                &
+          = radout%flux_down_clear(:,:,control%map_channel(i_band))
+      END IF
+    END IF
+    IF (control%l_cloud_absorptivity     .OR.                                  &
+        control%l_ls_cloud_absorptivity  .OR.                                  &
+        control%l_cnv_cloud_absorptivity .OR.                                  &
+        control%l_flux_up_clear_band) THEN
+      IF (l_initial) THEN
+        flux_up_clear_prev = 0.0
+      ELSE
+        flux_up_clear_prev                                                     &
           = radout%flux_up_clear(:,:,control%map_channel(i_band))
       END IF
     END IF
@@ -910,8 +944,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !   Calculate the grey extinction within the band.
 
 ! DEPENDS ON: grey_opt_prop
-    CALL grey_opt_prop(ierr                                                    &
-      , control, atm%n_profile, atm%n_layer, atm%p, atm%t, atm%density         &
+    CALL grey_opt_prop(ierr, control, radout, i_band                           &
+      , atm%n_profile, atm%n_layer, atm%p, atm%t, atm%density                  &
       , n_order_phase, l_solar_phf, atm%n_direction, cos_sol_view              &
       , spectrum%rayleigh%rayleigh_coeff(i_band)                               &
       , l_grey_cont, n_continuum, i_continuum_pointer                          &
@@ -1830,11 +1864,11 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
            radout%cloud_weight_extinction(l, i)                                &
               =radout%cloud_weight_extinction(l, i) + cld%w_cloud(l, i)*       &
               (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))    &
-              -flux_direct_clear_band(l, i-1))
+              -flux_direct_clear_prev(l, i-1))
            radout%cloud_extinction(l, i)                                       &
               =radout%cloud_extinction(l, i) + cld%w_cloud(l, i)*              &
               (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))    &
-              -flux_direct_clear_band(l, i-1))                                 &
+              -flux_direct_clear_prev(l, i-1))                                 &
               *cloud_extinction_band(l, i)
         END DO
       END DO
@@ -1861,11 +1895,11 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
            radout%cloud_weight_absorptivity(l, i)                              &
               =radout%cloud_weight_absorptivity(l, i) + cld%w_cloud(l, i)*     &
               ABS(radout%flux_up_clear(l, i-1,control%map_channel(i_band))     &
-              -flux_up_clear_band(l, i-1))
+              -flux_up_clear_prev(l, i-1))
            radout%cloud_absorptivity(l, i)                                     &
               =radout%cloud_absorptivity(l, i) + cld%w_cloud(l, i)*            &
               ABS(radout%flux_up_clear(l, i-1,control%map_channel(i_band))     &
-              -flux_up_clear_band(l, i-1))                                     &
+              -flux_up_clear_prev(l, i-1))                                     &
               *cloud_absorptivity_band(l, i)
         END DO
       END DO
@@ -1890,12 +1924,12 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
               =radout%ls_cloud_weight_extinction(l, i)                         &
               +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2)) &
               *(radout%flux_direct_clear(l, i-1,control%map_channel(i_band))   &
-               -flux_direct_clear_band(l, i-1))
+               -flux_direct_clear_prev(l, i-1))
            radout%ls_cloud_extinction(l, i)                                    &
               =radout%ls_cloud_extinction(l, i)                                &
               +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2)) &
               *(radout%flux_direct_clear(l, i-1,control%map_channel(i_band))   &
-               -flux_direct_clear_band(l, i-1))                                &
+               -flux_direct_clear_prev(l, i-1))                                &
               *ls_cloud_extinction_band(l, i)
         END DO
       END DO
@@ -1923,12 +1957,12 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
               =radout%ls_cloud_weight_absorptivity(l, i)                       &
               +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2)) &
               *ABS(radout%flux_up_clear(l, i-1,control%map_channel(i_band))    &
-              -flux_up_clear_band(l, i-1))
+              -flux_up_clear_prev(l, i-1))
            radout%ls_cloud_absorptivity(l, i)                                  &
               =radout%ls_cloud_absorptivity(l, i)                              &
               +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2)) &
               *ABS(radout%flux_up_clear(l, i-1,control%map_channel(i_band))    &
-              -flux_up_clear_band(l, i-1))                                     &
+              -flux_up_clear_prev(l, i-1))                                     &
               *ls_cloud_absorptivity_band(l, i)
         END DO
       END DO
@@ -1953,12 +1987,12 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
               =radout%cnv_cloud_weight_extinction(l, i)                        &
               +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4)) &
               *(radout%flux_direct_clear(l, i-1,control%map_channel(i_band))   &
-               -flux_direct_clear_band(l, i-1))
+               -flux_direct_clear_prev(l, i-1))
            radout%cnv_cloud_extinction(l, i)                                   &
               =radout%cnv_cloud_extinction(l, i)                               &
               +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4)) &
               *(radout%flux_direct_clear(l, i-1,control%map_channel(i_band))   &
-               -flux_direct_clear_band(l, i-1))                                &
+               -flux_direct_clear_prev(l, i-1))                                &
               *cnv_cloud_extinction_band(l, i)
         END DO
       END DO
@@ -1986,12 +2020,12 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
               =radout%cnv_cloud_weight_absorptivity(l, i)                      &
               +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4)) &
               *ABS(radout%flux_up_clear(l, i-1,control%map_channel(i_band))    &
-              -flux_up_clear_band(l, i-1))
+              -flux_up_clear_prev(l, i-1))
            radout%cnv_cloud_absorptivity(l, i)                                 &
               =radout%cnv_cloud_absorptivity(l, i)                             &
               +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4)) &
               *ABS(radout%flux_up_clear(l, i-1,control%map_channel(i_band))    &
-              -flux_up_clear_band(l, i-1))                                     &
+              -flux_up_clear_prev(l, i-1))                                     &
               *cnv_cloud_absorptivity_band(l, i)
         END DO
       END DO
@@ -2052,6 +2086,37 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
         )
     END IF
 
+!   Set band-by-band flux diagnostics
+    IF (control%l_flux_direct_band) THEN
+      radout%flux_direct_band(:,:,i_band)                                      &
+        = radout%flux_direct(:,:,control%map_channel(i_band))                  &
+        - radout%flux_direct_band(:,:,i_band)
+    END IF
+    IF (control%l_flux_down_band) THEN
+      radout%flux_down_band(:,:,i_band)                                        &
+        = radout%flux_down(:,:,control%map_channel(i_band))                    &
+        - radout%flux_down_band(:,:,i_band)
+    END IF
+    IF (control%l_flux_up_band) THEN
+      radout%flux_up_band(:,:,i_band)                                          &
+        = radout%flux_up(:,:,control%map_channel(i_band))                      &
+        - radout%flux_up_band(:,:,i_band)
+    END IF
+    IF (control%l_flux_direct_clear_band) THEN
+      radout%flux_direct_clear_band(:,:,i_band)                                &
+        = radout%flux_direct_clear(:,:,control%map_channel(i_band))            &
+        - flux_direct_clear_prev(:,:)
+    END IF
+    IF (control%l_flux_down_clear_band) THEN
+      radout%flux_down_clear_band(:,:,i_band)                                  &
+        = radout%flux_down_clear(:,:,control%map_channel(i_band))              &
+        - radout%flux_down_clear_band(:,:,i_band)
+    END IF
+    IF (control%l_flux_up_clear_band) THEN
+      radout%flux_up_clear_band(:,:,i_band)                                    &
+        = radout%flux_up_clear(:,:,control%map_channel(i_band))                &
+        - flux_up_clear_prev(:,:)
+    END IF
 
   END DO ! i_band
 

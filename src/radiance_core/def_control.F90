@@ -289,6 +289,24 @@ TYPE StrCtrl
   LOGICAL :: l_flux_down_clear_diag_surf                          = .FALSE.
 !   Calculate diagnostic clear-sky downward flux at the surface
 !   weighted by band
+  LOGICAL :: l_flux_direct_band                                   = .FALSE.
+!   Calculate direct flux per band
+  LOGICAL :: l_flux_down_band                                     = .FALSE.
+!   Calculate total downward flux per band
+  LOGICAL :: l_flux_up_band                                       = .FALSE.
+!   Calculate upward flux per band
+  LOGICAL :: l_flux_direct_clear_band                             = .FALSE.
+!   Calculate clear-sky direct flux per band
+  LOGICAL :: l_flux_down_clear_band                               = .FALSE.
+!   Calculate clear-sky downward flux per band
+  LOGICAL :: l_flux_up_clear_band                                 = .FALSE.
+!   Calculate clear-sky upward flux per band
+  LOGICAL :: l_aerosol_absorption_band                            = .FALSE.
+!   Calculate total aerosol absorption per band
+  LOGICAL :: l_aerosol_scattering_band                            = .FALSE.
+!   Calculate total aerosol absorption per band
+  LOGICAL :: l_aerosol_asymmetry_band                             = .FALSE.
+!   Calculate total aerosol asymmetry (weighted by scattering) per band
 
 
 ! Satellite Data:
