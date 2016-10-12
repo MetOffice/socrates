@@ -13,7 +13,7 @@
 !   efficiency.
 !
 !- ---------------------------------------------------------------------
-SUBROUTINE quicksort(a_array, b_array)
+SUBROUTINE quicksort(n_elem, a_array, b_array)
 
   USE realtype_rd, ONLY: RealK
   USE rad_pcf, ONLY: i_normal, i_err_fatal
@@ -22,10 +22,13 @@ SUBROUTINE quicksort(a_array, b_array)
 
   IMPLICIT NONE
 
+  INTEGER,INTENT(IN) ::                                                        &
+      n_elem
+!     Number of elements in arrays
   REAL(RealK),INTENT(INOUT) ::                                                 &
-      a_array(:)                                                               &
+      a_array(n_elem)                                                          &
 !     Array to be sorted in increasing order
-    , b_array(:)
+    , b_array(n_elem)
 !     The rearrangement of b_array is also performed on this array
 
 ! Local variables
@@ -37,9 +40,7 @@ SUBROUTINE quicksort(a_array, b_array)
 
 ! Temporary variables
   INTEGER ::                                                                   &
-      n_elem                                                                   &
-!     Number of elements in arrays
-    , i, ir, j, k, l                                                           &
+      i, ir, j, k, l                                                           &
 !     Array and loop indices
     , j_stack, i_stack(n_elem_stack)
 !     Stack index and array
@@ -50,9 +51,6 @@ SUBROUTINE quicksort(a_array, b_array)
   INTEGER                            :: ierr = i_normal
   CHARACTER (LEN=errormessagelength) :: cmessage
   CHARACTER (LEN=*), PARAMETER       :: RoutineName = 'QUICKSORT'
-
-! Get length of arrays
-  n_elem = SIZE(a_array)
 
 ! Initialise indices
   j_stack = 0

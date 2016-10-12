@@ -92,6 +92,8 @@ SUBROUTINE opt_prop_inhom_corr_cairns(                                         &
     , asymmetry_process_corr
 !       Correction to asymmetry
 
+  REAL (RealK), PARAMETER :: tiny_k=TINY(k_ext_scat_cloud)
+
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
@@ -106,28 +108,31 @@ SUBROUTINE opt_prop_inhom_corr_cairns(                                         &
 !CDIR NODEP
     DO ll=1, n_cloud_profile(i)
       l=i_cloud_profile(ll, i)
-      
-      asymmetry_process=phase_fnc_cloud(l, i)/k_ext_scat_cloud(l, i)
-      omega_process=k_ext_scat_cloud(l, i)/k_ext_tot_cloud(l, i)
+
       k_ext_tot_corr=1.0_RealK/(1.0_RealK + rel_var_dens(l, i))
-      omega_process_corr=1.0_RealK/(1.0_RealK + rel_var_dens(l, i)             &
+      IF (k_ext_scat_cloud(l, i) > tiny_k) THEN
+        asymmetry_process=phase_fnc_cloud(l, i)/k_ext_scat_cloud(l, i)
+        omega_process=k_ext_scat_cloud(l, i)/k_ext_tot_cloud(l, i)
+
+        omega_process_corr=1.0_RealK/(1.0_RealK + rel_var_dens(l, i)           &
           *(1.0_RealK - omega_process))
-      asymmetry_process_corr                                                   &
+        asymmetry_process_corr                                                 &
           =(1.0_RealK + rel_var_dens(l, i)*(1.0_RealK - omega_process))        &
           /(1.0_RealK + rel_var_dens(l, i)                                     &
           *(1.0_RealK - omega_process*asymmetry_process))
-      
-      k_ext_tot_cloud(l, i)=k_ext_tot_cloud(l, i)*k_ext_tot_corr
-      k_ext_scat_cloud(l, i)=k_ext_scat_cloud(l, i)                            &
+
+        k_ext_scat_cloud(l, i)=k_ext_scat_cloud(l, i)                          &
           *k_ext_tot_corr*omega_process_corr
-      phase_fnc_cloud(l, i)=phase_fnc_cloud(l, i)                              &
+        phase_fnc_cloud(l, i)=phase_fnc_cloud(l, i)                            &
           *k_ext_tot_corr*omega_process_corr*asymmetry_process_corr
       
-      IF (l_rescale) THEN
-        forward_scatter_cloud(l, i)=forward_scatter_cloud(l, i)                &
+        IF (l_rescale) THEN
+          forward_scatter_cloud(l, i)=forward_scatter_cloud(l, i)              &
             *k_ext_tot_corr*omega_process_corr                                 &
             *asymmetry_process_corr**n_order_forward
+        END IF
       END IF
+      k_ext_tot_cloud(l, i)=k_ext_tot_cloud(l, i)*k_ext_tot_corr
     END DO
   END DO
 

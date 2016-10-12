@@ -44,6 +44,8 @@ $SPECTRUM
 $INPUT
 $WEIGHT
 EOF
+if [ $WEIGHT -ne $IP_WEIGHT_UNIFORM ]
+then
 if [ $WEIGHT -eq $IP_WEIGHT_SOLAR ]
 then cat >> /tmp/sa.$$ << EOF
 $SOLAR_FILE
@@ -52,6 +54,7 @@ elif [ $WEIGHT -eq $IP_WEIGHT_PLANCK ] || [ $WEIGHT -eq $IP_WEIGHT_DPLANCK ]
 then cat >> /tmp/sa.$$ << EOF
 $TEMPERATURE
 EOF
+fi
 fi
 if [ "$METHOD" ] 
    then echo $METHOD >> /tmp/sa.$$

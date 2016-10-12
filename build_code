@@ -4,6 +4,10 @@
 here=`pwd`
 host=`uname -n`
 
+if [ ${host:0:4} == "dali" ]; then
+  host="dali"
+fi
+
 SRC_LIST="general modules_gen aux scatter correlated_k um"
 SRC_LIST=${SRC_LIST}" modules_core radiance_core radiation_control"
 

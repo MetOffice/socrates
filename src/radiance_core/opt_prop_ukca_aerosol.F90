@@ -31,6 +31,7 @@ SUBROUTINE opt_prop_ukca_aerosol(ierr                                   &
     )
 
 
+  USE realtype_rd, ONLY: RealK
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
 
@@ -76,7 +77,7 @@ SUBROUTINE opt_prop_ukca_aerosol(ierr                                   &
       n_ukca_mode
 !       Number of UKCA aerosol modes
 
-  REAL, INTENT(IN) ::                                                   &
+  REAL(RealK), INTENT(IN) ::                                            &
       ukca_modal_mixr(nd_profile, nd_layer, nd_ukca_mode)               &
 !       Mass-mixing ratio of UKCA modes
     , ukca_absorption(nd_profile, nd_layer, nd_ukca_mode)               &
@@ -86,7 +87,7 @@ SUBROUTINE opt_prop_ukca_aerosol(ierr                                   &
     , ukca_asymmetry(nd_profile, nd_layer, nd_ukca_mode)
 !       UKCA aerosol asymmetry parameter in band
 
-  REAL, INTENT(INOUT) ::                                                &
+  REAL(RealK), INTENT(INOUT) ::                                         &
       k_ext_scat(nd_profile, id_lt: id_lb)                              &
 !       Scattering extinction
     , k_ext_tot(nd_profile, id_lt: id_lb)                               &
@@ -108,7 +109,7 @@ SUBROUTINE opt_prop_ukca_aerosol(ierr                                   &
     , ls
 !       Loop variable
 
-  REAL ::                                                               &
+  REAL(RealK) ::                                                        &
       k_scatter(nd_profile)                                             &
 !       Scattering of current extinction of the current aerosol
     , asymmetry(nd_profile)                                             &

@@ -586,19 +586,6 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                  &
   CHARACTER(LEN=*), PARAMETER :: RoutineName                            &
     = 'SOLVE_BAND_RANDOM_OVERLAP_RESORT_REBIN'
 
-! Subroutines called that need an explicit interface
-  INTERFACE
-
-! DEPENDS ON: quicksort
-    SUBROUTINE quicksort(a_array, b_array)
-      USE realtype_rd
-      REAL(RealK),INTENT(INOUT) ::                                      &
-          a_array(:)                                                    &
-        , b_array(:)
-    END SUBROUTINE quicksort
-    
-  END INTERFACE
-
 
   IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
   
@@ -753,8 +740,9 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                  &
         w_esft_mix(1:i_band_esft_mix) =                                 &
           w_esft_mix_unsort(1:i_band_esft_mix)
        
+! DEPENDS ON: quicksort
 !       Reorder ESFT terms and weights
-        CALL quicksort(                                                 &
+        CALL quicksort(i_band_esft_mix,                                 &
           k_esft_layer_mix(i_profile,i_layer,1:i_band_esft_mix),        &
           w_esft_mix(1:i_band_esft_mix))
          

@@ -1,0 +1,14 @@
+#
+# Pathnames for compilers and global options for naming files
+#
+FORTCOMP        = gfortran -O2 -c
+LINK            = gfortran -O2
+LIBLINK         = ar rvu
+INCCDF_PATH     = /home/damundse/Library/include
+LIBCDF_PATH     = /home/damundse/Library/lib
+LIBCDF_NAME     = netcdff -lnetcdf
+
+LIBSUFFIX       = a
+
+.SUFFIXES: $(SUFFIXES) .f90
+
