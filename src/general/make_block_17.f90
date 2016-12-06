@@ -18,6 +18,7 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
   USE def_solarspec, ONLY: StrSolarSpec
   USE def_refract, ONLY: StrRefract
   USE def_inst_flt, ONLY: StrFiltResp
+  USE missing_data_mod, ONLY: imdi
 
   IMPLICIT NONE
 
@@ -60,7 +61,7 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
   INTEGER :: ncid, varid, dimid_time, dimid_wlen, time_len, wlen_len
   INTEGER :: band, sub_band, number_term
   INTEGER :: sub_bands(Sp%Dim%nd_band)
-  INTEGER :: n_times, yearstart=0, monthstart, daystart
+  INTEGER :: n_times, yearstart=imdi, monthstart, daystart
   INTEGER, ALLOCATABLE :: calyear(:), calmonth(:), calday(:)
   LOGICAL :: l_monthly
   REAL (RealK), ALLOCATABLE :: tsi(:), ssi(:,:), wbinsize(:), wbinbnds(:,:)
@@ -401,15 +402,19 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
       ALLOCATE(ssi(1, wlen_len))
       CALL nf(nf90_inq_varid(ncid, 'ssi', varid))
 
-      DO jj = 1, time_len
-        IF (calyear(jj) >  yearstart) EXIT
-        IF (calyear(jj) == yearstart) THEN
-          IF (calmonth(jj) >  monthstart) EXIT
-          IF (calmonth(jj) == monthstart) THEN
-            IF (calday(jj) >= daystart) EXIT
+      IF (yearstart == imdi) THEN
+        jj = 1
+      ELSE
+        DO jj = 1, time_len
+          IF (calyear(jj) >  yearstart) EXIT
+          IF (calyear(jj) == yearstart) THEN
+            IF (calmonth(jj) >  monthstart) EXIT
+            IF (calmonth(jj) == monthstart) THEN
+              IF (calday(jj) >= daystart) EXIT
+            END IF
           END IF
-        END IF
-      END DO
+        END DO
+      END IF
       DO k = 1, n_times
          i = k + Sp%Var%n_times
          j = jj + k - 1
