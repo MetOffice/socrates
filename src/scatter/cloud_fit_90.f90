@@ -445,18 +445,19 @@ CONTAINS
           CASE (IP_Slingo_Schrecker)
 !  
 !           Scale the dimension:
-            scaling_d  = REAL(n_data, RealK) / SUM(d)
-            ds = scaling_d * d
+            scaling_d  = REAL(n_data, RealK) / SUM(d(1:n_data))
+            ds = scaling_d * d(1:n_data)
 !           Repeat for the optical propeties
             SELECT CASE(property(i))
               CASE("Extinction")
-                actual = (absorption_ave(i_b, :) + &
-                          scattering_ave(i_b, :) ) / &
-                         (vol_frac(:) * density_particle)
+                actual = (absorption_ave(i_b, 1:n_data) + &
+                          scattering_ave(i_b, 1:n_data) ) / &
+                         (vol_frac(1:n_data) * density_particle)
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
-                actual = absorption_ave(i_b, :) / &
-                  ( absorption_ave(i_b, :) + scattering_ave(i_b, :))
+                actual = absorption_ave(i_b, 1:n_data) / &
+                  ( absorption_ave(i_b, 1:n_data) + &
+                    scattering_ave(i_b, 1:n_data))
                 scaling = MAXVAL(actual)
                 IF (scaling > 0.0) THEN
                   scaling = 1.0 / scaling
@@ -464,7 +465,7 @@ CONTAINS
                   scaling = 1.0
                 ENDIF
               CASE("Asymmetry ")
-                actual = phf_fnc_ave(i_b, 1, :)
+                actual = phf_fnc_ave(i_b, 1, 1:n_data)
                 scaling = 1.0_RealK
             END SELECT
             actual = scaling * actual
@@ -472,18 +473,19 @@ CONTAINS
           CASE (IP_Ackerman_Stephens)
 !  
 !           Scale the dimension:
-            scaling_d  = REAL(n_data, RealK) / SUM(d)
-            ds = scaling_d * d
+            scaling_d  = REAL(n_data, RealK) / SUM(d(1:n_data))
+            ds = scaling_d * d(1:n_data)
 !           Repeat for the optical propeties
             SELECT CASE(property(i))
               CASE("Extinction")
-                actual = (absorption_ave(i_b, :) + &
-                          scattering_ave(i_b, :) ) / &
-                         (vol_frac(:) * density_particle)
+                actual = (absorption_ave(i_b, 1:n_data) + &
+                          scattering_ave(i_b, 1:n_data) ) / &
+                         (vol_frac(1:n_data) * density_particle)
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
                 actual = absorption_ave(i_b, :) / &
-                  ( absorption_ave(i_b, :) + scattering_ave(i_b, :))
+                  ( absorption_ave(i_b, 1:n_data) + &
+                    scattering_ave(i_b, 1:n_data))
                 scaling = MAXVAL(actual)
                 IF (scaling > 0.0) THEN
                   scaling = 1.0 / scaling
@@ -491,7 +493,7 @@ CONTAINS
                   scaling = 1.0
                 ENDIF
               CASE("Asymmetry ")
-                actual = phf_fnc_ave(i_b, 1, :)
+                actual = phf_fnc_ave(i_b, 1, 1:n_data)
                 scaling = 1.0_RealK
             END SELECT
             actual = scaling * actual
@@ -499,18 +501,19 @@ CONTAINS
           CASE (IP_Drop_Pade_2)
 !  
 !           Scale the dimension:
-            scaling_d  = REAL(n_data, RealK) / SUM(d)
-            ds = scaling_d * d
+            scaling_d  = REAL(n_data, RealK) / SUM(d(1:n_data))
+            ds = scaling_d * d(1:n_data)
 !           Repeat for the optical propeties
             SELECT CASE(property(i))
               CASE("Extinction")
-                actual = (absorption_ave(i_b, :) + &
-                          scattering_ave(i_b, :) ) / &
-                         (vol_frac(:) * density_particle)
+                actual = (absorption_ave(i_b, 1:n_data) + &
+                          scattering_ave(i_b, 1:n_data) ) / &
+                         (vol_frac(1:n_data) * density_particle)
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
-                actual = absorption_ave(i_b, :) / &
-                  ( absorption_ave(i_b, :) + scattering_ave(i_b, :))
+                actual = absorption_ave(i_b, 1:n_data) / &
+                  ( absorption_ave(i_b, 1:n_data) + &
+                    scattering_ave(i_b, 1:n_data))
                 scaling = MAXVAL(actual)
                 IF (scaling > 0.0) THEN
                   scaling = 1.0 / scaling
@@ -518,7 +521,7 @@ CONTAINS
                   scaling = 1.0
                 ENDIF
               CASE("Asymmetry ")
-                actual = phf_fnc_ave(i_b, 1, :)
+                actual = phf_fnc_ave(i_b, 1, 1:n_data)
                 scaling = 1.0_RealK
             END SELECT
             actual = scaling * actual
@@ -526,18 +529,19 @@ CONTAINS
           CASE (IP_Slingo_Schr_PHF)
 !  
 !           Scale the dimension:
-            scaling_d  = REAL(n_data, RealK) / SUM(d)
-            ds = scaling_d * d
+            scaling_d  = REAL(n_data, RealK) / SUM(d(1:n_data))
+            ds = scaling_d * d(1:n_data)
 !           Repeat for the optical propeties
             SELECT CASE(property(i))
               CASE("Extinction")
-                actual = (absorption_ave(i_b, :) + &
-                          scattering_ave(i_b, :) ) / &
-                         (vol_frac(:) * density_particle)
+                actual = (absorption_ave(i_b, 1:n_data) + &
+                          scattering_ave(i_b, 1:n_data) ) / &
+                         (vol_frac(1:n_data) * density_particle)
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
-                actual = absorption_ave(i_b, :) / &
-                  ( absorption_ave(i_b, :) + scattering_ave(i_b, :))
+                actual = absorption_ave(i_b, 1:n_data) / &
+                  ( absorption_ave(i_b, 1:n_data) + &
+                    scattering_ave(i_b, 1:n_data))
                 scaling = MAXVAL(actual)
                 IF (scaling > 0.0) THEN
                   scaling = 1.0 / scaling
@@ -545,7 +549,7 @@ CONTAINS
                   scaling = 1.0
                 ENDIF
               CASE("Moment   ")
-                actual = phf_fnc_ave(i_b, i_term, :)
+                actual = phf_fnc_ave(i_b, i_term, 1:n_data)
                 scaling = 1.0_RealK
             END SELECT
             actual = scaling * actual
@@ -553,18 +557,19 @@ CONTAINS
           CASE (IP_drop_Pade_2_PHF)
 !  
 !           Scale the dimension:
-            scaling_d  = REAL(n_data, RealK) / SUM(d)
-            ds = scaling_d * d
+            scaling_d  = REAL(n_data, RealK) / SUM(d(1:n_data))
+            ds = scaling_d * d(1:n_data)
 !           Repeat for the optical propeties
             SELECT CASE(property(i))
               CASE("Extinction")
-                actual = (absorption_ave(i_b, :) + &
-                          scattering_ave(i_b, :) ) / &
-                         (vol_frac(:) * density_particle)
+                actual = (absorption_ave(i_b, 1:n_data) + &
+                          scattering_ave(i_b, 1:n_data) ) / &
+                         (vol_frac(1:n_data) * density_particle)
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
-                actual = absorption_ave(i_b, :) / &
-                  ( absorption_ave(i_b, :) + scattering_ave(i_b, :))
+                actual = absorption_ave(i_b, 1:n_data) / &
+                  ( absorption_ave(i_b, 1:n_data) + &
+                    scattering_ave(i_b, 1:n_data))
                 scaling = MAXVAL(actual)
                 IF (scaling > 0.0) THEN
                   scaling = 1.0 / scaling
@@ -572,7 +577,7 @@ CONTAINS
                   scaling = 1.0
                 ENDIF
               CASE("Moment   ")
-                actual = phf_fnc_ave(i_b, i_term, :)
+                actual = phf_fnc_ave(i_b, i_term, 1:n_data)
                 scaling = 1.0_RealK
             END SELECT
             actual = scaling * actual
@@ -584,18 +589,19 @@ CONTAINS
           CASE (IP_Slingo_Schrecker_ice)
 !  
 !           Scale the dimension:
-            scaling_d  = REAL(n_data, RealK) / SUM(d)
-            ds = scaling_d * d
+            scaling_d  = REAL(n_data, RealK) / SUM(d(1:n_data))
+            ds = scaling_d * d(1:n_data)
 !           Repeat for the optical propeties
             SELECT CASE(property(i))
               CASE("Extinction")
-                actual = (absorption_ave(i_b, :) + &
-                          scattering_ave(i_b, :) ) / &
-                         (vol_frac(:) * density_particle)
+                actual = (absorption_ave(i_b, 1:n_data) + &
+                          scattering_ave(i_b, 1:n_data) ) / &
+                         (vol_frac(1:n_data) * density_particle)
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
-                actual = absorption_ave(i_b, :) / &
-                  ( absorption_ave(i_b, :) + scattering_ave(i_b, :))
+                actual = absorption_ave(i_b, 1:n_data) / &
+                  ( absorption_ave(i_b, 1:n_data) + &
+                    scattering_ave(i_b, 1:n_data))
                 scaling = MAXVAL(actual)
                 IF (scaling > 0.0) THEN
                   scaling = 1.0 / scaling
@@ -603,7 +609,7 @@ CONTAINS
                   scaling = 1.0
                 ENDIF
               CASE("Asymmetry ")
-                actual = phf_fnc_ave(i_b, 1, :)
+                actual = phf_fnc_ave(i_b, 1, 1:n_data)
                 scaling = 1.0_RealK
             END SELECT
             actual = scaling * actual
@@ -611,18 +617,19 @@ CONTAINS
           CASE (IP_ice_adt)
 !  
 !           Scale the dimension:
-            scaling_d = 1.0 / SQRT(MAXVAL(d) * MINVAL(d))
-            ds = LOG(d * scaling_d)
+            scaling_d = 1.0 / SQRT(MAXVAL(d(1:n_data)) * MINVAL(d(1:n_data)))
+            ds = LOG(d(1:n_data) * scaling_d)
 !           Repeat for the optical properties
             SELECT CASE(property(i))
               CASE("Extinction")
-                actual = (absorption_ave(i_b, :) + &
-                          scattering_ave(i_b, :) ) / &
-                         (vol_frac(:) * density_particle)
+                actual = (absorption_ave(i_b, 1:n_data) + &
+                          scattering_ave(i_b, 1:n_data) ) / &
+                         (vol_frac(1:n_data) * density_particle)
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
-                actual = absorption_ave(i_b, :) / &
-                  ( absorption_ave(i_b, :) + scattering_ave(i_b, :))
+                actual = absorption_ave(i_b, 1:n_data) / &
+                  ( absorption_ave(i_b, 1:n_data) + &
+                    scattering_ave(i_b, 1:n_data))
                 scaling = MAXVAL(actual) - MINVAL(actual)
                 IF (scaling > 0.0) THEN
                   scaling = 1.0 / scaling
@@ -630,7 +637,7 @@ CONTAINS
                   scaling = 1.0
                 ENDIF
               CASE("Asymmetry ")
-                actual = phf_fnc_ave(i_b, 1, :)
+                actual = phf_fnc_ave(i_b, 1, 1:n_data)
                 scaling = MAXVAL(actual) - MINVAL(actual)
                 IF (scaling > 0.0) THEN
                   scaling = 1.0 / scaling
@@ -643,18 +650,19 @@ CONTAINS
           CASE (IP_ice_adt_10)
 !  
 !           Scale the dimension:
-            scaling_d = 1.0 / MAXVAL(d)
-            ds = d * scaling_d
+            scaling_d = 1.0 / MAXVAL(d(1:n_data))
+            ds = d(1:n_data) * scaling_d
 !           Repeat for the optical properties
             SELECT CASE(property(i))
               CASE("Extinction")
-                actual = (absorption_ave(i_b, :) + &
-                          scattering_ave(i_b, :) ) / &
-                         (vol_frac(:) * density_particle)
+                actual = (absorption_ave(i_b, 1:n_data) + &
+                          scattering_ave(i_b, 1:n_data) ) / &
+                         (vol_frac(1:n_data) * density_particle)
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
-                actual = absorption_ave(i_b, :) / &
-                  ( absorption_ave(i_b, :) + scattering_ave(i_b, :))
+                actual = absorption_ave(i_b, 1:n_data) / &
+                  ( absorption_ave(i_b, 1:n_data) + &
+                    scattering_ave(i_b, 1:n_data))
                 scaling = MAXVAL(actual) - MINVAL(actual)
                 IF (scaling > 0.0) THEN
                   scaling = 1.0 / scaling
@@ -662,7 +670,7 @@ CONTAINS
                   scaling = 1.0
                 ENDIF
               CASE("Asymmetry ")
-                actual = phf_fnc_ave(i_b, 1, :)
+                actual = phf_fnc_ave(i_b, 1, 1:n_data)
                 scaling = MAXVAL(actual) - MINVAL(actual)
                 IF (scaling > 0.0) THEN
                   scaling = 1.0 / scaling
@@ -675,18 +683,19 @@ CONTAINS
           CASE (IP_ice_Fu_IR)
 !  
 !           Scale the dimension:
-            scaling_d = 1.0 / MAXVAL(d)
-            ds = d *scaling_d
+            scaling_d = 1.0 / MAXVAL(d(1:n_data))
+            ds = d(1:n_data) *scaling_d
 !           Repeat for the optical propeties
             SELECT CASE(property(i))
               CASE("Extinction")
-                actual = (absorption_ave(i_b, :) + &
-                          scattering_ave(i_b, :) ) / &
-                         (vol_frac(:) * density_particle)
+                actual = (absorption_ave(i_b, 1:n_data) + &
+                          scattering_ave(i_b, 1:n_data) ) / &
+                         (vol_frac(1:n_data) * density_particle)
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
-                actual = absorption_ave(i_b, :) / &
-                  ( absorption_ave(i_b, :) + scattering_ave(i_b, :))
+                actual = absorption_ave(i_b, 1:n_data) / &
+                  ( absorption_ave(i_b, 1:n_data) + &
+                    scattering_ave(i_b, 1:n_data))
                 scaling = MAXVAL(actual)
                 IF (scaling > 0.0) THEN
                   scaling = 1.0 / scaling
@@ -694,7 +703,7 @@ CONTAINS
                   scaling = 1.0
                 ENDIF
               CASE("Asymmetry ")
-                actual = phf_fnc_ave(i_b, 1, :)
+                actual = phf_fnc_ave(i_b, 1, 1:n_data)
                 scaling = MAXVAL(actual) - MINVAL(actual)
                 IF (scaling > 0.0) THEN
                   scaling = 1.0 / scaling
@@ -707,18 +716,19 @@ CONTAINS
           CASE (IP_Slingo_Schr_ice_PHF)
 !  
 !           Scale the dimension:
-            scaling_d = REAL(n_data, RealK)/ SUM(d)
-            ds = scaling_d * d
+            scaling_d = REAL(n_data, RealK)/ SUM(d(1:n_data))
+            ds = scaling_d * d(1:n_data)
 !           Repeat for the optical propeties
             SELECT CASE(property(i))
               CASE("Extinction")
-                actual = (absorption_ave(i_b, :) + &
-                          scattering_ave(i_b, :) ) / &
-                         (vol_frac(:) * density_particle)
+                actual = (absorption_ave(i_b, 1:n_data) + &
+                          scattering_ave(i_b, 1:n_data) ) / &
+                         (vol_frac(1:n_data) * density_particle)
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
-                actual = absorption_ave(i_b, :) / &
-                  ( absorption_ave(i_b, :) + scattering_ave(i_b, :))
+                actual = absorption_ave(i_b, 1:n_data) / &
+                  ( absorption_ave(i_b, 1:n_data) + &
+                    scattering_ave(i_b, 1:n_data))
                 scaling = MAXVAL(actual)
                 IF (scaling > 0.0) THEN
                   scaling = 1.0 / scaling
@@ -726,7 +736,7 @@ CONTAINS
                   scaling = 1.0
                 ENDIF
               CASE("Moment   ")
-                actual = phf_fnc_ave(i_b, i_term, :)
+                actual = phf_fnc_ave(i_b, i_term, 1:n_data)
                 scaling = 1.0_RealK
             END SELECT
             actual = scaling * actual
@@ -734,18 +744,19 @@ CONTAINS
           CASE (IP_ice_Fu_PHF)
 !  
 !           Scale the dimension:
-            scaling_d = 1.0 / MAXVAL(d)
-            ds = d *scaling_d
+            scaling_d = 1.0 / MAXVAL(d(1:n_data))
+            ds = d(1:n_data) *scaling_d
 !           Repeat for the optical propeties
             SELECT CASE(property(i))
               CASE("Extinction")
-                actual = (absorption_ave(i_b, :) + &
-                          scattering_ave(i_b, :) ) / &
-                         (vol_frac(:) * density_particle)
+                actual = (absorption_ave(i_b, 1:n_data) + &
+                          scattering_ave(i_b, 1:n_data) ) / &
+                         (vol_frac(1:n_data) * density_particle)
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
-                actual = absorption_ave(i_b, :) / &
-                  ( absorption_ave(i_b, :) + scattering_ave(i_b, :))
+                actual = absorption_ave(i_b, 1:n_data) / &
+                  ( absorption_ave(i_b, 1:n_data) + &
+                    scattering_ave(i_b, 1:n_data))
                 scaling = MAXVAL(actual)
                 IF (scaling > 0.0) THEN
                   scaling = 1.0 / scaling
@@ -753,7 +764,7 @@ CONTAINS
                   scaling = 1.0
                 ENDIF
               CASE("Moment   ")
-                actual = phf_fnc_ave(i_b, i_term, :)
+                actual = phf_fnc_ave(i_b, i_term, 1:n_data)
                 scaling = MAXVAL(actual) - MINVAL(actual)
                 IF (scaling > 0.0) THEN
                   scaling = 1.0 / scaling

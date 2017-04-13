@@ -35,11 +35,13 @@ diff -q $RAD_DATA/cloud/scatter_drop_lw_type5 scatter_drop_lw_type5
 diff -q $RAD_DATA/cloud/scatter_drop_sw_type5 scatter_drop_sw_type5
 
 ./scatter_average_ses
-(diff -q sp_lw_ses_ref     sp_lw_ses && echo 'Matched MetO LW output')    || \
-(diff -q sp_lw_ses_postzen sp_lw_ses && echo 'Matched postzen LW output') || \
+(diff -q sp_lw_ses_ref      sp_lw_ses && echo 'Matched MetO LW output')     || \
+(diff -q sp_lw_ses_postzen  sp_lw_ses && echo 'Matched postzen LW output')  || \
+(diff -q sp_lw_ses_gfortran sp_lw_ses && echo 'Matched gfortran LW output') || \
  ierr=1
-(diff -q sp_sw_ses_ref     sp_sw_ses && echo 'Matched MetO SW output')    || \
-(diff -q sp_sw_ses_postzen sp_sw_ses && echo 'Matched postzen SW output') || \
+(diff -q sp_sw_ses_ref      sp_sw_ses && echo 'Matched MetO SW output')     || \
+(diff -q sp_sw_ses_postzen  sp_sw_ses && echo 'Matched postzen SW output')  || \
+(diff -q sp_sw_ses_gfortran sp_sw_ses && echo 'Matched gfortran SW output') || \
  ierr=1
 
 if [ $ierr -gt 0 ] ; then
