@@ -17,7 +17,7 @@
 SUBROUTINE solve_band_one_gas(ierr                                      &
     , control, cld, bound                                               &
 !                 Atmospheric Column
-    , n_profile, n_layer, i_top, p, t, d_mass                           &
+    , n_profile, n_layer, d_mass                                        &
 !                 Angular Integration
     , i_angular_integration, i_2stream                                  &
     , n_order_phase, l_rescale, n_order_gauss                           &
@@ -31,12 +31,8 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 !                 Options for Solver
     , i_solver                                                          &
 !                 Gaseous Properties
-    , i_band, i_gas                                                     &
-    , i_band_esft, i_scale_esft, i_scale_fnc                            &
-    , k_esft, k_esft_layer, w_esft, scale_vector                        &
-    , p_reference, t_reference                                          &
-    , gas_mix_ratio, gas_frac_rescaled                                  &
-    , l_doppler, doppler_correction                                     &
+    , index_abs, n_abs_esft                                             &
+    , k_abs_layer, w_abs_esft                                           &
 !                 Spectral Region
     , isolir                                                            &
 !                 Solar Properties
@@ -87,8 +83,8 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 !                 Dimensions of Arrays
     , nd_profile, nd_layer, nd_layer_clr, id_ct, nd_column              &
     , nd_flux_profile, nd_radiance_profile, nd_j_profile                &
-    , nd_band, nd_species                                               &
-    , nd_esft_term, nd_scale_variable                                   &
+    , nd_abs                                                            &
+    , nd_esft_term                                                      &
     , nd_cloud_type, nd_region, nd_overlap_coeff                        &
     , nd_max_order, nd_sph_coeff                                        &
     , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level                &
@@ -136,14 +132,10 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 !       Size allocated for profiles in arrays of mean radiances
     , nd_column                                                         &
 !       Size allocated for sub-columns per point
-    , nd_band                                                           &
-!       Size allocated for bands
-    , nd_species                                                        &
-!       Size allocated for species
+    , nd_abs                                                            &
+!       Maximum number of absorbers including continua
     , nd_esft_term                                                      &
-!       Size allocated for ESFT variables
-    , nd_scale_variable                                                 &
-!       Size allocated for scaling variables
+!       Maximum number of ESFT terms
     , nd_cloud_type                                                     &
 !       Size allocated for cloud types
     , nd_region                                                         &
@@ -179,16 +171,10 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
   INTEGER, INTENT(IN) ::                                                &
       n_profile                                                         &
 !       Number of profiles
-    , n_layer                                                           &
+    , n_layer
 !       Number of layers
-    , i_top
-!       Top of vertical grid
   REAL (RealK), INTENT(IN) ::                                           &
-      p(nd_profile, nd_layer)                                           &
-!       Pressure
-    , t(nd_profile, nd_layer)                                           &
-!       Temperature
-    , d_mass(nd_profile, nd_layer)
+      d_mass(nd_profile, nd_layer)
 !       Mass thickness of each layer
 
 !                 Angular integration
@@ -249,40 +235,15 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 
 !                 Gaseous properties
   INTEGER, INTENT(IN) ::                                                &
-      i_band                                                            &
-!       Band being considered
-    , i_gas                                                             &
-!       Gas being considered
-    , i_band_esft(nd_band, nd_species)                                  &
+      index_abs(nd_abs)                                                 &
+!       Local indexing numbers for gases and continua
+    , n_abs_esft(nd_abs)
 !       Number of terms in band
-    , i_scale_esft(nd_band, nd_species)                                 &
-!       Type of ESFT scaling
-    , i_scale_fnc(nd_band, nd_species)
-!       Type of scaling function
-  LOGICAL, INTENT(IN) ::                                                &
-      l_doppler(nd_species)
-!       Doppler broadening included
   REAL (RealK), INTENT(IN) ::                                           &
-      k_esft(nd_esft_term, nd_band, nd_species)                         &
-!       Exponential ESFT terms
-    , k_esft_layer(nd_profile, nd_layer, nd_esft_term, nd_species)      &
+      k_abs_layer(nd_profile, nd_layer, nd_esft_term, nd_abs)           &
 !       Exponential ESFT terms at actual pressure layer
-    , w_esft(nd_esft_term, nd_band, nd_species)                         &
+    , w_abs_esft(nd_esft_term, nd_abs)
 !       Weights for ESFT
-    , scale_vector(nd_scale_variable, nd_esft_term, nd_band             &
-        , nd_species)                                                   &
-!       Absorber scaling parameters
-    , p_reference(nd_species, nd_band)                                  &
-!       Reference scaling pressure
-    , t_reference(nd_species, nd_band)                                  &
-!       Reference scaling temperature
-    , gas_mix_ratio(nd_profile, nd_layer, nd_species)                   &
-!       Gas mass mixing ratios
-    , doppler_correction(nd_species)
-!       Doppler broadening terms
-  REAL (RealK), INTENT(INOUT) ::                                        &
-      gas_frac_rescaled(nd_profile, nd_layer, nd_species)
-!       Rescaled gas mass fractions
 
 !                 Spectral region
   INTEGER, INTENT(IN) ::                                                &
@@ -477,13 +438,15 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
       l
 !       Loop variable
   INTEGER                                                               &
-      i_gas_pointer(nd_species)                                         &
+      i_abs                                                             &
+!       Local indexing number of gas considered (=1 here)
+    , i_abs_pointer(nd_abs)                                             &
 !       Pointer array for monochromatic ESFTs
     , iex
 !       Index of ESFT term
   REAL (RealK) ::                                                       &
-      k_esft_mono(nd_species)                                           &
-!       ESFT monochromatic exponents
+      k_esft(nd_profile, nd_layer, nd_abs)                              &
+!       Current ESFT exponents for each absorber
     , k_gas_abs(nd_profile, nd_layer)                                   &
 !       Gaseous absorptive extinction
     , d_planck_flux_surface(nd_profile)                                 &
@@ -530,27 +493,13 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
   IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! The ESFT terms for the first gas in the band alone are used.
-  i_gas_pointer(1)=i_gas
-  DO iex=1, i_band_esft(i_band, i_gas)
+  i_abs=index_abs(1)
+  i_abs_pointer(1)=i_abs
+  DO iex=1, n_abs_esft(i_abs)
 
-!   Rescale for each ESFT term if that is required.
-    IF (i_scale_esft(i_band, i_gas) == ip_scale_term) THEN
-! DEPENDS ON: scale_absorb
-      CALL scale_absorb(ierr, n_profile, n_layer                        &
-        , gas_mix_ratio(1, 1, i_gas), p, t                              &
-        , i_top                                                         &
-        , gas_frac_rescaled(1, 1, i_gas)                                &
-        , k_esft_layer(1, 1, iex, i_gas)                                &
-        , i_scale_fnc(i_band, i_gas)                                    &
-        , p_reference(i_gas, i_band)                                    &
-        , t_reference(i_gas, i_band)                                    &
-        , scale_vector(1, iex, i_band, i_gas)                           &
-        , iex, i_band                                                   &
-        , l_doppler(i_gas), doppler_correction(i_gas)                   &
-        , nd_profile, nd_layer                                          &
-        , nd_scale_variable                                             &
-        )
-    END IF
+!   Set the ESFT coefficient.
+    k_esft(1:n_profile, 1:n_layer, i_abs)=                              &
+      k_abs_layer(1:n_profile, 1:n_layer, iex, i_abs)
 
 !   Set the appropriate boundary terms for the total
 !   upward and downward fluxes.
@@ -593,20 +542,11 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 
     END IF
 
-!   Assign the monochromatic absorption coefficient.
-    IF (i_scale_fnc(i_band, i_gas) == ip_scale_lookup) THEN
-!     In this case gas_frac_rescaled has already been scaled by k
-      k_esft_mono(i_gas) = 1.0_RealK
-    ELSE
-      k_esft_mono(i_gas) = k_esft(iex, i_band, i_gas)
-    END IF
-
 ! DEPENDS ON: gas_optical_properties
     CALL gas_optical_properties(n_profile, n_layer                      &
-      , 1, i_gas_pointer, k_esft_mono                                   &
-      , gas_frac_rescaled                                               &
+      , 1, i_abs_pointer, k_esft                                        &
       , k_gas_abs                                                       &
-      , nd_profile, nd_layer, nd_species                                &
+      , nd_profile, nd_layer, nd_abs                                    &
       )
 
 
@@ -682,9 +622,9 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 !   its own weighting factor, hence for each increment the
 !   weighting is the product of these two factors: similarly
 !   for the blue flux.
-    weight_incr=weight_band*w_esft(iex, i_band,  i_gas)
+    weight_incr=weight_band*w_abs_esft(iex, i_abs)
     IF (l_blue_flux_surf)                                               &
-      weight_blue_incr=weight_blue*w_esft(iex, i_band,  i_gas)
+      weight_blue_incr=weight_blue*w_abs_esft(iex, i_abs)
 ! DEPENDS ON: augment_radiance
     CALL augment_radiance(n_profile, n_layer                            &
       , i_angular_integration, i_sph_mode                               &

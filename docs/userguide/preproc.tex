@@ -3,10 +3,11 @@ The following programs can be used to generate data for the spectral file. The n
 \begin{description}
 
 \item[{\tt corr\_k}]
-This program calculates correlated-k coefficients for prescribed
-spectral bands using data from HITRAN .par (line absorption) files
-or .xsc (cross-section) files. It will also calculate water vapour
-continuum absorption across the band.
+This program calculates correlated-$k$ coefficients for prescribed
+spectral bands using data from HITRAN .par (line absorption) files,
+.xsc (cross-section) files or .cia (collision-induced absorption)
+files. It will also calculate water vapour continuum absorption
+across the band.
 
 A man page for Ccorr\_k is provided.
 
@@ -56,10 +57,18 @@ Block 12: Ice crystal parameters in each band.
 
 Block 17: Spectral variability data in sub-bands.
 
-Blocks 5 \& 9 require output from the {\tt corr\_k} program.
+Block 19: Continuum k-terms and T scaling data.
+
+Blocks 5, 9 \& 19 require output from the {\tt corr\_k} program.
 Blocks 10, 11 \& 12 use output from {\tt scatter\_average}. Block 2 
 requires a solar spectrum (examples are in \$RAD\_DATA/solar/).
-Block 17 requires high-resolution solar spectral variability data files. Formats accepted are currently: CMIP5 (available from http://solarisheppa.geomar.de/cmip5).
+Block 17 requires high-resolution solar spectral variability data files.
+Formats accepted are currently:
+
+CMIP5 (available from http://solarisheppa.geomar.de/cmip5).
+
+CMIP6 (available from http://solarisheppa.geomar.de/cmip6)
+
 The other blocks are compiled within the prep\_spec routine.
 
 This routine is only available in interactive form. There are no command

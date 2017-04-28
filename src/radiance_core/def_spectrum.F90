@@ -21,10 +21,22 @@ USE realtype_rd
 IMPLICIT NONE
 
 
-INTEGER, PARAMETER :: n_dim = 22
+INTEGER, PARAMETER :: n_dim = 28
 !   Number of dimensions in StrSpecDim
+INTEGER, PARAMETER :: n_int = 15
+!   Number of (non-allocatable) integers
+INTEGER, PARAMETER :: n_real = 1
+!   Number of (non-allocatable) reals
+INTEGER, PARAMETER :: n_log = 1
+!   Number of (non-allocatable) logicals
 
 TYPE StrSpecDim
+  INTEGER :: nd_alloc_int
+!   Size allocated for all integers
+  INTEGER :: nd_alloc_real
+!   Size allocated for all reals
+  INTEGER :: nd_alloc_log
+!   Size allocated for all logicals
   INTEGER :: nd_type
 !   Size allocated for spectral blocks
   INTEGER :: nd_band
@@ -58,7 +70,7 @@ TYPE StrSpecDim
   INTEGER :: nd_phase_term
 !   Size allocated for terms in the phase function
   INTEGER :: nd_tmp
-!   Number of reference temperature for k-terms
+!   Number of reference temperatures for k-terms
   INTEGER :: nd_pre
 !   Number of reference pressures for k-terms
   INTEGER :: nd_mix
@@ -69,7 +81,13 @@ TYPE StrSpecDim
 !   Size allocated for spectral sub-bands (for spectral variability)
   INTEGER :: nd_times
 !   Size allocated for times (for spectral variability)
-END TYPE StrSPecDim
+  INTEGER :: nd_cont
+!   Size allocated for generalised continua
+  INTEGER :: nd_t_lookup_cont
+!   Number of temperatures in generalised continuum look-up tables
+  INTEGER :: nd_k_term_cont
+!   Size allocated for continuum k-terms
+END TYPE StrSpecDim
 
 
 TYPE StrSpecBasic
@@ -198,7 +216,7 @@ TYPE StrSpecCont
 !   Types of scaling functions for continua
 
   REAL (RealK), ALLOCATABLE :: k_cont(:, :)
-!   ABsorption coefficients for continuum absorption
+!   Absorption coefficients for continuum absorption
   REAL (RealK), ALLOCATABLE :: scale_cont(:, :, :)
 !   Reference temperature for the Plackian function
   REAL (RealK), ALLOCATABLE :: p_ref_cont(:, :)
@@ -209,6 +227,39 @@ TYPE StrSpecCont
   REAL (RealK), ALLOCATABLE :: k_h2oc(:, :, :, :)
 !   Absorption coefficient for water vapour continuum
 END TYPE StrSpecCont
+
+
+TYPE StrSpecContGen
+  INTEGER                   :: n_cont
+!   Number of continua
+  INTEGER, ALLOCATABLE      :: n_band_cont(:)
+!   Number of active continua in each band
+  INTEGER, ALLOCATABLE      :: index_cont(:, :)
+!   Indices of active continua in each band
+  INTEGER, ALLOCATABLE      :: index_cont_gas_1(:)
+!   Indices of first gas in continuum gas pair
+  INTEGER, ALLOCATABLE      :: index_cont_gas_2(:)
+!   Indices of second gas in continuum gas pair
+  INTEGER, ALLOCATABLE      :: i_band_k_cont(:, :)
+!   Number of continuum k-terms for each continuum
+  INTEGER, ALLOCATABLE      :: i_cont_overlap_band(:, :)
+!   Continuum overlap assumption for each continuum in each band
+  INTEGER, ALLOCATABLE      :: i_scat_cont(:, :, :)
+!   Method of scattering treatment for each continuum k-term
+  LOGICAL, ALLOCATABLE      :: l_cont_major(:)
+!   Flag for continuum being the major absorber in each band
+
+  REAL (RealK), ALLOCATABLE :: k_cont(:, :, :)
+!   Absorption coefficients of k-terms at tau = 1
+  REAL (RealK), ALLOCATABLE :: w_cont(:, :, :)
+!   Weights of continuum k-terms
+  INTEGER                   :: n_t_lookup_cont
+!   Number of temperatures in look-up table
+  REAL (RealK), ALLOCATABLE :: t_lookup_cont(:)
+!   Temperatures in continuum look-up table
+  REAL (RealK), ALLOCATABLE :: k_lookup_cont(:, :, :, :)
+!   Continuum k-coefficient look-up table
+END TYPE StrSpecContGen
 
 
 TYPE StrSpecDrop
@@ -320,6 +371,7 @@ TYPE StrSpecData
   TYPE (StrSpecGas)               :: Gas
   TYPE (StrSpecPlanck)            :: Planck
   TYPE (StrSpecCont)              :: Cont
+  TYPE (StrSpecContGen)           :: ContGen
   TYPE (StrSpecDrop)              :: Drop
   TYPE (StrSpecAerosol)           :: Aerosol
   TYPE (StrSpecIce)               :: Ice
@@ -337,284 +389,536 @@ IMPLICIT NONE
 
 TYPE (StrSpecData), INTENT(INOUT) :: Sp
 
+! Initialise count for integers, reals and logicals
+Sp%Dim%nd_alloc_int  = n_int
+Sp%Dim%nd_alloc_real = n_real
+Sp%Dim%nd_alloc_log  = n_log
+
 
 ! Basic
 IF (.NOT. ALLOCATED(Sp%Basic%l_present)) THEN
   ALLOCATE(Sp%Basic%l_present(0:Sp%Dim%nd_type))
   Sp%Basic%l_present = .FALSE.
 END IF
+Sp%Dim%nd_alloc_log = &
+Sp%Dim%nd_alloc_log + SIZE(Sp%Basic%l_present)
 
 IF (.NOT. ALLOCATED(Sp%Basic%wavelength_long)) &
   ALLOCATE(Sp%Basic%wavelength_long( Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Basic%wavelength_long)
 
 IF (.NOT. ALLOCATED(Sp%Basic%wavelength_short)) &
   ALLOCATE(Sp%Basic%wavelength_short( Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Basic%wavelength_short)
 
 IF (.NOT. ALLOCATED(Sp%Basic%n_band_exclude)) &
   ALLOCATE(Sp%Basic%n_band_exclude( Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Basic%n_band_exclude)
 
 IF (.NOT. ALLOCATED(Sp%Basic%index_exclude)) &
   ALLOCATE(Sp%Basic%index_exclude( Sp%Dim%nd_exclude, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Basic%index_exclude)
+
 
 ! Solar
 IF (.NOT. ALLOCATED(Sp%Solar%solar_flux_band)) &
   ALLOCATE(Sp%Solar%solar_flux_band( Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Solar%solar_flux_band)
 
 IF (.NOT. ALLOCATED(Sp%Solar%solar_flux_band_ses)) &
   ALLOCATE(Sp%Solar%solar_flux_band_ses( Sp%Dim%nd_k_term, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Solar%solar_flux_band_ses)
 
 IF (.NOT. ALLOCATED(Sp%Solar%weight_blue)) THEN
   ALLOCATE(Sp%Solar%weight_blue( Sp%Dim%nd_band ))
   Sp%Solar%weight_blue = rmdi
 END IF
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Solar%weight_blue)
+
 
 ! Rayleigh
 IF (.NOT. ALLOCATED(Sp%Rayleigh%rayleigh_coeff)) &
   ALLOCATE(Sp%Rayleigh%rayleigh_coeff( Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Rayleigh%rayleigh_coeff)
+
 IF (.NOT. ALLOCATED(Sp%Rayleigh%index_rayleigh)) &
   ALLOCATE(Sp%Rayleigh%index_rayleigh( Sp%Dim%nd_species ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Rayleigh%index_rayleigh)
+
 IF (.NOT. ALLOCATED(Sp%Rayleigh%rayleigh_coeff_gas)) &
   ALLOCATE(Sp%Rayleigh%rayleigh_coeff_gas( Sp%Dim%nd_species, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Rayleigh%rayleigh_coeff_gas)
+
 
 ! Gas
 IF (.NOT. ALLOCATED(Sp%Gas%n_band_absorb)) &
   ALLOCATE(Sp%Gas%n_band_absorb( Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%n_band_absorb)
 
 IF (.NOT. ALLOCATED(Sp%Gas%index_absorb)) &
   ALLOCATE(Sp%Gas%index_absorb( Sp%Dim%nd_species, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%index_absorb)
 
 IF (.NOT. ALLOCATED(Sp%Gas%type_absorb)) &
   ALLOCATE(Sp%Gas%type_absorb( Sp%Dim%nd_species ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%type_absorb)
 
 IF (.NOT. ALLOCATED(Sp%Gas%n_mix_gas)) &
   ALLOCATE(Sp%Gas%n_mix_gas( Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%n_mix_gas)
 
 IF (.NOT. ALLOCATED(Sp%Gas%index_mix_gas)) &
   ALLOCATE(Sp%Gas%index_mix_gas( 2, Sp%Dim%nd_band_mix_gas ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%index_mix_gas)
 
 IF (.NOT. ALLOCATED(Sp%Gas%num_mix)) &
   ALLOCATE(Sp%Gas%num_mix( Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%num_mix)
 
 IF (.NOT. ALLOCATED(Sp%Gas%mix_gas_band)) &
   ALLOCATE(Sp%Gas%mix_gas_band( Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%mix_gas_band)
 
 IF (.NOT. ALLOCATED(Sp%Gas%num_ref_p)) &
   ALLOCATE(Sp%Gas%num_ref_p( Sp%Dim%nd_species, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%num_ref_p)
 
 IF (.NOT. ALLOCATED(Sp%Gas%num_ref_t)) &
   ALLOCATE(Sp%Gas%num_ref_t( Sp%Dim%nd_species, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%num_ref_t)
 
 IF (.NOT. ALLOCATED(Sp%Gas%i_band_k)) THEN
   ALLOCATE(Sp%Gas%i_band_k( Sp%Dim%nd_band, Sp%Dim%nd_species ))
   Sp%Gas%i_band_k=0
 END IF
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%i_band_k)
 
 IF (.NOT. ALLOCATED(Sp%Gas%i_band_k_ses)) THEN
   ALLOCATE(Sp%Gas%i_band_k_ses( Sp%Dim%nd_band ))
   Sp%Gas%i_band_k_ses=0
 END IF
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%i_band_k_ses)
 
 IF (.NOT. ALLOCATED(Sp%Gas%i_scale_k)) &
   ALLOCATE(Sp%Gas%i_scale_k( Sp%Dim%nd_band, Sp%Dim%nd_species ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%i_scale_k)
 
 IF (.NOT. ALLOCATED(Sp%Gas%i_scale_fnc)) &
   ALLOCATE(Sp%Gas%i_scale_fnc( Sp%Dim%nd_band, Sp%Dim%nd_species ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%i_scale_fnc)
 
 IF (.NOT. ALLOCATED(Sp%Gas%i_scat)) &
   ALLOCATE(Sp%Gas%i_scat( Sp%Dim%nd_k_term, Sp%Dim%nd_band, Sp%Dim%nd_species ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%i_scat)
 
 IF (.NOT. ALLOCATED(Sp%Gas%k)) &
   ALLOCATE(Sp%Gas%k( Sp%Dim%nd_k_term, Sp%Dim%nd_band, Sp%Dim%nd_species ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%k)
 
 IF (.NOT. ALLOCATED(Sp%Gas%w)) &
   ALLOCATE(Sp%Gas%w( Sp%Dim%nd_k_term, Sp%Dim%nd_band, Sp%Dim%nd_species ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%w)
 
 IF (.NOT. ALLOCATED(Sp%Gas%scale)) &
   ALLOCATE(Sp%Gas%scale( Sp%Dim%nd_scale_variable, Sp%Dim%nd_k_term, &
                          Sp%Dim%nd_band, Sp%Dim%nd_species ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%scale)
 
 IF (.NOT. ALLOCATED(Sp%Gas%p_ref)) &
   ALLOCATE(Sp%Gas%p_ref( Sp%Dim%nd_species, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%p_ref)
 
 IF (.NOT. ALLOCATED(Sp%Gas%t_ref)) &
   ALLOCATE(Sp%Gas%t_ref( Sp%Dim%nd_species, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%t_ref)
 
 IF (.NOT. ALLOCATED(Sp%Gas%p_lookup)) &
   ALLOCATE(Sp%Gas%p_lookup( Sp%Dim%nd_pre ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%p_lookup)
 
 IF (.NOT. ALLOCATED(Sp%Gas%t_lookup)) &
   ALLOCATE(Sp%Gas%t_lookup( Sp%Dim%nd_tmp, Sp%Dim%nd_pre ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%t_lookup)
 
 IF (.NOT. ALLOCATED(Sp%Gas%k_lookup)) &
   ALLOCATE(Sp%Gas%k_lookup( Sp%Dim%nd_tmp, Sp%Dim%nd_pre, Sp%Dim%nd_k_term, &
                             Sp%Dim%nd_species, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%k_lookup)
 
 IF (.NOT. ALLOCATED(Sp%Gas%w_ses)) &
   ALLOCATE(Sp%Gas%w_ses( Sp%Dim%nd_k_term, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%w_ses)
 
 IF (.NOT. ALLOCATED(Sp%Gas%k_mix_gas)) &
   ALLOCATE(Sp%Gas%k_mix_gas( Sp%Dim%nd_pre, Sp%Dim%nd_tmp, Sp%Dim%nd_mix, &
                              Sp%Dim%nd_k_term, Sp%Dim%nd_band_mix_gas ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%k_mix_gas)
 
 IF (.NOT. ALLOCATED(Sp%Gas%f_mix)) &
   ALLOCATE(Sp%Gas%f_mix( Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%f_mix)
 
 IF (.NOT. ALLOCATED(Sp%Gas%l_doppler)) THEN
   ALLOCATE(Sp%Gas%l_doppler( Sp%Dim%nd_species ))
   Sp%Gas%l_doppler = .FALSE.
 END IF
+Sp%Dim%nd_alloc_log = &
+Sp%Dim%nd_alloc_log + SIZE(Sp%Gas%l_doppler)
 
 IF (.NOT. ALLOCATED(Sp%Gas%doppler_cor)) &
   ALLOCATE(Sp%Gas%doppler_cor( Sp%Dim%nd_species ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%doppler_cor)
+
 
 ! Planck
 IF (.NOT. ALLOCATED(Sp%Planck%thermal_coeff)) &
   ALLOCATE(Sp%Planck%thermal_coeff( 0:Sp%Dim%nd_thermal_coeff-1, &
                                     Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Planck%thermal_coeff)
+
 IF (.NOT. ALLOCATED(Sp%Planck%theta_planck_tbl)) &
   ALLOCATE(Sp%Planck%theta_planck_tbl( 0:Sp%Dim%nd_thermal_coeff-1 ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Planck%theta_planck_tbl)
+
 
 ! Cont
 IF (.NOT. ALLOCATED(Sp%Cont%n_band_continuum)) &
   ALLOCATE(Sp%Cont%n_band_continuum( Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Cont%n_band_continuum)
 
 IF (.NOT. ALLOCATED(Sp%Cont%index_continuum)) &
   ALLOCATE(Sp%Cont%index_continuum( Sp%Dim%nd_band, Sp%Dim%nd_continuum ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Cont%index_continuum)
 
 IF (.NOT. ALLOCATED(Sp%Cont%i_scale_fnc_cont)) &
   ALLOCATE(Sp%Cont%i_scale_fnc_cont( Sp%Dim%nd_band, Sp%Dim%nd_continuum ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Cont%i_scale_fnc_cont)
 
 IF (.NOT. ALLOCATED(Sp%Cont%k_cont)) &
   ALLOCATE(Sp%Cont%k_cont( Sp%Dim%nd_band, Sp%Dim%nd_continuum ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Cont%k_cont)
 
 IF (.NOT. ALLOCATED(Sp%Cont%scale_cont)) &
   ALLOCATE(Sp%Cont%scale_cont( Sp%Dim%nd_scale_variable, &
                                Sp%Dim%nd_band, Sp%Dim%nd_continuum ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Cont%scale_cont)
 
 IF (.NOT. ALLOCATED(Sp%Cont%p_ref_cont)) &
   ALLOCATE(Sp%Cont%p_ref_cont( Sp%Dim%nd_continuum, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Cont%p_ref_cont)
 
 IF (.NOT. ALLOCATED(Sp%Cont%t_ref_cont)) &
   ALLOCATE(Sp%Cont%t_ref_cont( Sp%Dim%nd_continuum, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Cont%t_ref_cont)
 
 IF (.NOT. ALLOCATED(Sp%Cont%k_cont_ses)) &
   ALLOCATE(Sp%Cont%k_cont_ses( Sp%Dim%nd_k_term, Sp%Dim%nd_tmp, &
                                Sp%Dim%nd_band, Sp%Dim%nd_continuum ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Cont%k_cont_ses)
 
 IF (.NOT. ALLOCATED(Sp%Cont%k_h2oc)) &
   ALLOCATE(Sp%Cont%k_h2oc( Sp%Dim%nd_pre, Sp%Dim%nd_tmp, &
                            Sp%Dim%nd_k_term, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Cont%k_h2oc)
+
+
+! Generalised continuum
+IF (.NOT. ALLOCATED(Sp%ContGen%n_band_cont)) THEN
+  ALLOCATE(Sp%ContGen%n_band_cont( Sp%Dim%nd_band ))
+  Sp%ContGen%n_band_cont=0
+END IF
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%ContGen%n_band_cont)
+
+IF (.NOT. ALLOCATED(Sp%ContGen%index_cont)) &
+  ALLOCATE(Sp%ContGen%index_cont( Sp%Dim%nd_cont, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%ContGen%index_cont)
+
+IF (.NOT. ALLOCATED(Sp%ContGen%index_cont_gas_1)) &
+  ALLOCATE(Sp%ContGen%index_cont_gas_1( Sp%Dim%nd_cont ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%ContGen%index_cont_gas_1)
+
+IF (.NOT. ALLOCATED(Sp%ContGen%index_cont_gas_2)) &
+  ALLOCATE(Sp%ContGen%index_cont_gas_2( Sp%Dim%nd_cont ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%ContGen%index_cont_gas_2)
+
+IF (.NOT. ALLOCATED(Sp%ContGen%i_band_k_cont)) THEN
+  ALLOCATE(Sp%ContGen%i_band_k_cont( Sp%Dim%nd_band, Sp%Dim%nd_cont ))
+  Sp%ContGen%i_band_k_cont=0
+END IF
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%ContGen%i_band_k_cont)
+
+IF (.NOT. ALLOCATED(Sp%ContGen%i_cont_overlap_band)) THEN
+  ALLOCATE(Sp%ContGen%i_cont_overlap_band( Sp%Dim%nd_band, Sp%Dim%nd_cont ))
+  Sp%ContGen%i_cont_overlap_band=0
+END IF
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%ContGen%i_cont_overlap_band)
+
+IF (.NOT. ALLOCATED(Sp%ContGen%i_scat_cont)) &
+  ALLOCATE(Sp%ContGen%i_scat_cont( Sp%Dim%nd_k_term_cont, Sp%Dim%nd_band, &
+                                   Sp%Dim%nd_cont ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%ContGen%i_scat_cont)
+
+IF (.NOT. ALLOCATED(Sp%ContGen%l_cont_major)) THEN
+  ALLOCATE(Sp%ContGen%l_cont_major( Sp%Dim%nd_band ))
+  Sp%ContGen%l_cont_major=.FALSE.
+END IF
+Sp%Dim%nd_alloc_log = &
+Sp%Dim%nd_alloc_log + SIZE(Sp%ContGen%l_cont_major)
+
+IF (.NOT. ALLOCATED(Sp%ContGen%k_cont)) &
+  ALLOCATE(Sp%ContGen%k_cont( Sp%Dim%nd_k_term_cont, Sp%Dim%nd_band, &
+                              Sp%Dim%nd_cont ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%ContGen%k_cont)
+
+IF (.NOT. ALLOCATED(Sp%ContGen%w_cont)) &
+  ALLOCATE(Sp%ContGen%w_cont( Sp%Dim%nd_k_term_cont, Sp%Dim%nd_band, &
+                              Sp%Dim%nd_cont ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%ContGen%w_cont)
+
+IF (.NOT. ALLOCATED(Sp%ContGen%t_lookup_cont)) &
+  ALLOCATE(Sp%ContGen%t_lookup_cont( Sp%Dim%nd_t_lookup_cont ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%ContGen%t_lookup_cont)
+
+IF (.NOT. ALLOCATED(Sp%ContGen%k_lookup_cont)) &
+  ALLOCATE(Sp%ContGen%k_lookup_cont( Sp%Dim%nd_t_lookup_cont, &
+                                     Sp%Dim%nd_k_term_cont, &
+                                     Sp%Dim%nd_cont, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%ContGen%k_lookup_cont)
+
 
 ! Drop
 IF (.NOT. ALLOCATED(Sp%Drop%l_drop_type)) THEN
   ALLOCATE(Sp%Drop%l_drop_type( Sp%Dim%nd_drop_type ))
   Sp%Drop%l_drop_type = .FALSE.
 END IF
+Sp%Dim%nd_alloc_log = &
+Sp%Dim%nd_alloc_log + SIZE(Sp%Drop%l_drop_type)
 
 IF (.NOT. ALLOCATED(Sp%Drop%i_drop_parm)) &
   ALLOCATE(Sp%Drop%i_drop_parm( Sp%Dim%nd_drop_type ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Drop%i_drop_parm)
 
 IF (.NOT. ALLOCATED(Sp%Drop%n_phf)) &
   ALLOCATE(Sp%Drop%n_phf( Sp%Dim%nd_drop_type ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Drop%n_phf)
 
 IF (.NOT. ALLOCATED(Sp%Drop%parm_list)) &
   ALLOCATE(Sp%Drop%parm_list( Sp%Dim%nd_cloud_parameter, Sp%Dim%nd_band, &
                               Sp%Dim%nd_drop_type ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Drop%parm_list)
 
 IF (.NOT. ALLOCATED(Sp%Drop%parm_min_dim)) &
   ALLOCATE(Sp%Drop%parm_min_dim( Sp%Dim%nd_drop_type ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Drop%parm_min_dim)
 
 IF (.NOT. ALLOCATED(Sp%Drop%parm_max_dim)) &
   ALLOCATE(Sp%Drop%parm_max_dim( Sp%Dim%nd_drop_type ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Drop%parm_max_dim)
+
 
 ! Aerosol
 IF (.NOT. ALLOCATED(Sp%Aerosol%l_aero_spec)) THEN
   ALLOCATE(Sp%Aerosol%l_aero_spec( Sp%Dim%nd_aerosol_species ))
   Sp%Aerosol%l_aero_spec = .FALSE.
 END IF
+Sp%Dim%nd_alloc_log = &
+Sp%Dim%nd_alloc_log + SIZE(Sp%Aerosol%l_aero_spec)
 
 IF (.NOT. ALLOCATED(Sp%Aerosol%type_aerosol)) &
   ALLOCATE(Sp%Aerosol%type_aerosol( Sp%Dim%nd_aerosol_species ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Aerosol%type_aerosol)
 
 IF (.NOT. ALLOCATED(Sp%Aerosol%i_aerosol_parm)) &
   ALLOCATE(Sp%Aerosol%i_aerosol_parm( Sp%Dim%nd_aerosol_species ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Aerosol%i_aerosol_parm)
 
 IF (.NOT. ALLOCATED(Sp%Aerosol%n_aerosol_phf_term)) &
   ALLOCATE(Sp%Aerosol%n_aerosol_phf_term( Sp%Dim%nd_aerosol_species ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Aerosol%n_aerosol_phf_term)
 
 IF (.NOT. ALLOCATED(Sp%Aerosol%nhumidity)) &
   ALLOCATE(Sp%Aerosol%nhumidity( Sp%Dim%nd_aerosol_species ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Aerosol%nhumidity)
 
 IF (.NOT. ALLOCATED(Sp%Aerosol%abs)) &
   ALLOCATE(Sp%Aerosol%abs( Sp%Dim%nd_humidity, Sp%Dim%nd_aerosol_species, &
                            Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Aerosol%abs)
 
 IF (.NOT. ALLOCATED(Sp%Aerosol%scat)) &
   ALLOCATE(Sp%Aerosol%scat( Sp%Dim%nd_humidity, Sp%Dim%nd_aerosol_species, &
                             Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Aerosol%scat)
 
 IF (.NOT. ALLOCATED(Sp%Aerosol%phf_fnc)) &
   ALLOCATE(Sp%Aerosol%phf_fnc( Sp%Dim%nd_humidity, Sp%Dim%nd_phase_term, &
                                Sp%Dim%nd_aerosol_species, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Aerosol%phf_fnc)
 
 IF (.NOT. ALLOCATED(Sp%Aerosol%humidities)) &
   ALLOCATE(Sp%Aerosol%humidities( Sp%Dim%nd_humidity, &
                                   Sp%Dim%nd_aerosol_species ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Aerosol%humidities)
 
 IF (.NOT. ALLOCATED(Sp%Aerosol%i_aod_type)) &
   ALLOCATE(Sp%Aerosol%i_aod_type( Sp%Dim%nd_aerosol_species ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Aerosol%i_aod_type)
 
 IF (.NOT. ALLOCATED(Sp%Aerosol%aod_wavel)) &
   ALLOCATE(Sp%Aerosol%aod_wavel( Sp%Dim%nd_aod_wavel ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Aerosol%aod_wavel)
 
 IF (.NOT. ALLOCATED(Sp%Aerosol%aod_abs)) &
   ALLOCATE(Sp%Aerosol%aod_abs( Sp%Dim%nd_humidity, Sp%Dim%nd_aerosol_species, &
                                Sp%Dim%nd_aod_wavel ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Aerosol%aod_abs)
 
 IF (.NOT. ALLOCATED(Sp%Aerosol%aod_scat)) &
   ALLOCATE(Sp%Aerosol%aod_scat( Sp%Dim%nd_humidity, Sp%Dim%nd_aerosol_species, &
                                 Sp%Dim%nd_aod_wavel ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Aerosol%aod_scat)
+
 
 ! Ice
 IF (.NOT. ALLOCATED(Sp%Ice%l_ice_type)) THEN
   ALLOCATE(Sp%Ice%l_ice_type( Sp%Dim%nd_ice_type ))
   Sp%Ice%l_ice_type = .FALSE.
 END IF
+Sp%Dim%nd_alloc_log = &
+Sp%Dim%nd_alloc_log + SIZE(Sp%Ice%l_ice_type)
 
 IF (.NOT. ALLOCATED(Sp%Ice%i_ice_parm)) &
   ALLOCATE(Sp%Ice%i_ice_parm( Sp%Dim%nd_ice_type ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Ice%i_ice_parm)
 
 IF (.NOT. ALLOCATED(Sp%Ice%n_phf)) &
   ALLOCATE(Sp%Ice%n_phf( Sp%Dim%nd_ice_type ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Ice%n_phf)
 
 IF (.NOT. ALLOCATED(Sp%Ice%parm_list)) &
   ALLOCATE(Sp%Ice%parm_list( Sp%Dim%nd_cloud_parameter, Sp%Dim%nd_band, &
                              Sp%Dim%nd_ice_type ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Ice%parm_list)
 
 IF (.NOT. ALLOCATED(Sp%Ice%parm_min_dim)) &
   ALLOCATE(Sp%Ice%parm_min_dim( Sp%Dim%nd_ice_type ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Ice%parm_min_dim)
 
 IF (.NOT. ALLOCATED(Sp%Ice%parm_max_dim)) &
   ALLOCATE(Sp%Ice%parm_max_dim( Sp%Dim%nd_ice_type ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Ice%parm_max_dim)
+
 
 ! Spectral variability
 IF (.NOT. ALLOCATED(Sp%Var%index_sub_band)) &
   ALLOCATE(Sp%Var%index_sub_band( 2, Sp%Dim%nd_sub_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Var%index_sub_band)
 
 IF (.NOT. ALLOCATED(Sp%Var%wavelength_sub_band)) &
   ALLOCATE(Sp%Var%wavelength_sub_band( 2, Sp%Dim%nd_sub_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Var%wavelength_sub_band)
 
 IF (.NOT. ALLOCATED(Sp%Var%time)) &
   ALLOCATE(Sp%Var%time( 4, Sp%Dim%nd_times ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Var%time)
 
 IF (.NOT. ALLOCATED(Sp%Var%total_solar_flux)) &
   ALLOCATE(Sp%Var%total_solar_flux( Sp%Dim%nd_times ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Var%total_solar_flux)
 
 IF (.NOT. ALLOCATED(Sp%Var%solar_flux_sub_band)) &
   ALLOCATE(Sp%Var%solar_flux_sub_band( Sp%Dim%nd_sub_band, Sp%Dim%nd_times ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Var%solar_flux_sub_band)
 
 IF (.NOT. ALLOCATED(Sp%Var%rayleigh_coeff)) &
   ALLOCATE(Sp%Var%rayleigh_coeff( Sp%Dim%nd_sub_band, 0:Sp%Dim%nd_times ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Var%rayleigh_coeff)
 
 END SUBROUTINE allocate_spectrum
 !------------------------------------------------------------------------------
@@ -713,6 +1017,32 @@ IF (ALLOCATED(Sp%Cont%index_continuum)) &
    DEALLOCATE(Sp%Cont%index_continuum)
 IF (ALLOCATED(Sp%Cont%n_band_continuum)) &
    DEALLOCATE(Sp%Cont%n_band_continuum)
+
+! Generalised continuum
+IF (ALLOCATED(Sp%ContGen%n_band_cont)) &
+  DEALLOCATE(Sp%ContGen%n_band_cont)
+IF (ALLOCATED(Sp%ContGen%index_cont)) &
+  DEALLOCATE(Sp%ContGen%index_cont)
+IF (ALLOCATED(Sp%ContGen%index_cont_gas_1)) &
+  DEALLOCATE(Sp%ContGen%index_cont_gas_1)
+IF (ALLOCATED(Sp%ContGen%index_cont_gas_2)) &
+  DEALLOCATE(Sp%ContGen%index_cont_gas_2)
+IF (ALLOCATED(Sp%ContGen%i_band_k_cont)) &
+  DEALLOCATE(Sp%ContGen%i_band_k_cont)
+IF (ALLOCATED(Sp%ContGen%i_cont_overlap_band)) &
+  DEALLOCATE(Sp%ContGen%i_cont_overlap_band)
+IF (ALLOCATED(Sp%ContGen%i_scat_cont)) &
+   DEALLOCATE(Sp%ContGen%i_scat_cont)
+IF (ALLOCATED(Sp%ContGen%l_cont_major)) &
+   DEALLOCATE(Sp%ContGen%l_cont_major)
+IF (ALLOCATED(Sp%ContGen%k_cont)) &
+  DEALLOCATE(Sp%ContGen%k_cont)
+IF (ALLOCATED(Sp%ContGen%w_cont)) &
+  DEALLOCATE(Sp%ContGen%w_cont)
+IF (ALLOCATED(Sp%ContGen%t_lookup_cont)) &
+  DEALLOCATE(Sp%ContGen%t_lookup_cont)
+IF (ALLOCATED(Sp%ContGen%k_lookup_cont)) &
+  DEALLOCATE(Sp%ContGen%k_lookup_cont)
 
 ! Planck
 IF (ALLOCATED(Sp%Planck%theta_planck_tbl)) &

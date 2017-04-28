@@ -17,7 +17,7 @@
 SUBROUTINE solve_band_random_overlap(ierr                               &
     , control, cld, bound                                               &
 !                 Atmospheric Column
-    , n_profile, n_layer, i_top, p, t, d_mass                           &
+    , n_profile, n_layer, d_mass                                        &
 !                 Angular Integration
     , i_angular_integration, i_2stream                                  &
     , n_order_phase, l_rescale, n_order_gauss                           &
@@ -31,12 +31,8 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !                 Options for solver
     , i_solver                                                          &
 !                 Gaseous Properties
-    , i_band, n_gas                                                     &
-    , index_absorb, i_band_esft, i_scale_esft, i_scale_fnc              &
-    , k_esft, k_esft_layer, w_esft, scale_vector                        &
-    , p_reference, t_reference                                          &
-    , gas_mix_ratio, gas_frac_rescaled                                  &
-    , l_doppler, doppler_correction                                     &
+    , n_abs, index_abs, n_abs_esft                                      &
+    , k_abs_layer, w_abs_esft                                           &
 !                 Spectral Region
     , isolir                                                            &
 !                 Solar Properties
@@ -87,8 +83,8 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !                 Dimensions
     , nd_profile, nd_layer, nd_layer_clr, id_ct, nd_column              &
     , nd_flux_profile, nd_radiance_profile, nd_j_profile                &
-    , nd_band, nd_species                                               &
-    , nd_esft_term, nd_scale_variable                                   &
+    , nd_abs                                                            &
+    , nd_esft_term                                                      &
     , nd_cloud_type, nd_region, nd_overlap_coeff                        &
     , nd_max_order, nd_sph_coeff                                        &
     , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level                &
@@ -134,14 +130,10 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !       Size allocated for profiles in arrays of radiances
     , nd_j_profile                                                      &
 !       Size allocated for profiles in arrays of mean radiances
-    , nd_band                                                           &
-!       Maximum number of spectral bands
-    , nd_species                                                        &
-!       Maximum number of species
+    , nd_abs                                                            &
+!       Maximum number of absorbers including continua
     , nd_esft_term                                                      &
 !       Maximum number of ESFT terms
-    , nd_scale_variable                                                 &
-!       Maximum number of scale variables
     , nd_column                                                         &
 !       Number of columns per point
     , nd_cloud_type                                                     &
@@ -179,17 +171,11 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
   INTEGER, INTENT(IN) ::                                                &
       n_profile                                                         &
 !       Number of profiles
-    , n_layer                                                           &
+    , n_layer
 !       Number of layers
-    , i_top
-!       Top of vertical grid
   REAL (RealK), INTENT(IN) ::                                           &
-      d_mass(nd_profile, nd_layer)                                      &
+      d_mass(nd_profile, nd_layer)
 !       Mass thickness of each layer
-    , p(nd_profile, nd_layer)                                           &
-!       Pressure
-    , t(nd_profile, nd_layer)
-!       Temperature
 
 !                 Angular integration
   INTEGER, INTENT(IN) ::                                                &
@@ -249,42 +235,17 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 
 !                 Gaseous properties
   INTEGER, INTENT(IN) ::                                                &
-      i_band                                                            &
-!       Band being considered
-    , n_gas                                                             &
+      n_abs                                                             &
 !       Number of gases in band
-    , index_absorb(nd_species, nd_band)                                 &
-!       List of absorbers in bands
-    , i_band_esft(nd_band, nd_species)                                  &
+    , index_abs(nd_abs)                                                 &
+!       Local indexing numbers for gases and continua
+    , n_abs_esft(nd_abs)
 !       Number of terms in band
-    , i_scale_esft(nd_band, nd_species)                                 &
-!       Type of ESFT scaling
-    , i_scale_fnc(nd_band, nd_species)
-!       Type of scaling function
-  LOGICAL, INTENT(IN) ::                                                &
-      l_doppler(nd_species)
-!       Doppler broadening included
   REAL (RealK), INTENT(IN) ::                                           &
-      k_esft(nd_esft_term, nd_band, nd_species)                         &
-!       Exponential ESFT terms
-    , k_esft_layer(nd_profile, nd_layer, nd_esft_term, nd_species)      &
+      k_abs_layer(nd_profile, nd_layer, nd_esft_term, nd_abs)               &
 !       Exponential ESFT terms at actual pressure layer
-    , w_esft(nd_esft_term, nd_band, nd_species)                         &
+    , w_abs_esft(nd_esft_term, nd_abs)
 !       Weights for ESFT
-    , scale_vector(nd_scale_variable, nd_esft_term, nd_band             &
-        , nd_species)                                                   &
-!       Absorber scaling parameters
-    , p_reference(nd_species, nd_band)                                  &
-!       Reference scaling pressure
-    , t_reference(nd_species, nd_band)                                  &
-!       Reference scaling temperature
-    , gas_mix_ratio(nd_profile, nd_layer, nd_species)                   &
-!       Gas mass mixing ratios
-    , doppler_correction(nd_species)
-!       Doppler broadening terms
-  REAL (RealK), INTENT(INOUT) ::                                        &
-      gas_frac_rescaled(nd_profile, nd_layer, nd_species)
-!       Rescaled gas mass fractions
 
 !                 Spectral region
   INTEGER, INTENT(IN) ::                                                &
@@ -476,19 +437,14 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 
 
 ! Local variables.
-  INTEGER                                                               &
-       j                                                                &
-!       Loop variable
-    , k                                                                 &
-!       Loop variable
-    , l
-!       Loop variable
-  INTEGER                                                               &
-      i_gas_band                                                        &
-!       Index of active gas
-    , i_gas_pointer(nd_species)                                         &
+  INTEGER ::                                                            &
+      j, k, l                                                           &
+!       Loop variables
+    , i_abs                                                             &
+!       Index of active absorber
+    , i_abs_pointer(nd_abs)                                             &
 !       Pointer array for monochromatic ESFTs
-    , i_esft_pointer(nd_species)                                        &
+    , i_esft_pointer(nd_abs)                                            &
 !       Pointer to ESFT for gas
     , i_change                                                          &
 !       Position of ESFT term to be altered
@@ -497,10 +453,9 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
     , index_last                                                        &
 !       Index of last gas in band
     , iex
-!       Index of ESFT term
   REAL (RealK) ::                                                       &
-      k_esft_mono(nd_species)                                           &
-!       ESFT monochromatic exponents
+      k_esft(nd_profile, nd_layer, nd_abs)                              &
+!       Current ESFT exponents for each absorber
     , k_gas_abs(nd_profile, nd_layer)                                   &
 !       Gaseous absorption
     , d_planck_flux_surface(nd_profile)                                 &
@@ -513,7 +468,6 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
     , product_weight                                                    &
 !       Product of ESFT weights
     , dummy_ke(nd_profile, nd_layer)
-!       Dummy array (not used)
 
 ! Monochromatic incrementing radiances:
   REAL (RealK) ::                                                       &
@@ -550,84 +504,36 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
   IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Set the number of active gases and initialize the pointers.
-  DO k=1, n_gas
-    i_gas_pointer(k)=index_absorb(k, i_band)
-    i_esft_pointer(index_absorb(k, i_band))=1
+  DO k=1, n_abs
+    i_abs_pointer(k)=index_abs(k)
+    i_esft_pointer(index_abs(k))=1
   END DO
-  index_last=index_absorb(n_gas, i_band)
+  index_last=index_abs(n_abs)
 
-! Perform the initial rescaling of the gases other than the last.
-! Note: we rescale amounts as required. It would be more
-! efficient to save the rescaled amounts, but the storage
-! needed would become excessive for a multicolumn code. In a
-! single code the overhead would be less significant.
-  DO k=1, n_gas-1
-    i_gas_band=i_gas_pointer(k)
-!   Initialize the monochromatic absorption coefficients.
-    IF (i_scale_fnc(i_band, i_gas_band) == ip_scale_lookup) THEN
-      k_esft_mono(i_gas_band) = 1.0_RealK
-    ELSE
-      k_esft_mono(i_gas_band) = k_esft(1, i_band, i_gas_band)
-    END IF
-
-    IF (i_scale_esft(i_band, i_gas_band) == ip_scale_term) THEN
-! DEPENDS ON: scale_absorb
-      CALL scale_absorb(ierr, n_profile, n_layer                        &
-        , gas_mix_ratio(1, 1, i_gas_band), p, t                         &
-        , i_top                                                         &
-        , gas_frac_rescaled(1, 1, i_gas_band)                           &
-        , k_esft_layer(1, 1, 1, i_gas_band)                             &
-        , i_scale_fnc(i_band, i_gas_band)                               &
-        , p_reference(i_gas_band, i_band)                               &
-        , t_reference(i_gas_band, i_band)                               &
-        , scale_vector(1, 1, i_band, i_gas_band)                        &
-        , 1, i_band                                                     &
-        , l_doppler(i_gas_band), doppler_correction(i_gas_band)         &
-        , nd_profile, nd_layer                                          &
-        , nd_scale_variable                                             &
-        )
-    END IF
+! Set the initial set of ESFT coefficients for all gases other than the last.
+  DO k=1, n_abs-1
+    i_abs=i_abs_pointer(k)
+    k_esft(1:n_profile, 1:n_layer, i_abs)=                              &
+      k_abs_layer(1:n_profile, 1:n_layer, 1, i_abs)
   END DO
 
-! Loop through the terms for the first absorber.
+! Loop through the terms for the last absorber.
 2000  i_esft_pointer(index_last)=0
-  DO k=1, i_band_esft(i_band, index_last)
+  DO k=1, n_abs_esft(index_last)
     i_esft_pointer(index_last)=i_esft_pointer(index_last)+1
 
-!   Set the ESFT coefficient and perform rescaling for the last gas.
+!   Set the ESFT coefficient of the last gas.
     iex=i_esft_pointer(index_last)
-    IF (i_scale_fnc(i_band, index_last) == ip_scale_lookup) THEN
-      k_esft_mono(index_last) = 1.0_RealK
-    ELSE
-      k_esft_mono(index_last) = k_esft(iex, i_band, index_last)
-    END IF
-
-    IF (i_scale_esft(i_band, index_last) == ip_scale_term) THEN
-! DEPENDS ON: scale_absorb
-      CALL scale_absorb(ierr, n_profile, n_layer                        &
-        , gas_mix_ratio(1, 1, index_last), p, t                         &
-        , i_top                                                         &
-        , gas_frac_rescaled(1, 1, index_last)                           &
-        , k_esft_layer(1, 1, iex, index_last)                           &
-        , i_scale_fnc(i_band, index_last)                               &
-        , p_reference(index_last, i_band)                               &
-        , t_reference(index_last, i_band)                               &
-        , scale_vector(1, iex, i_band, index_last)                      &
-        , iex, i_band                                                   &
-        , l_doppler(index_last)                                         &
-        , doppler_correction(index_last)                                &
-        , nd_profile, nd_layer                                          &
-        , nd_scale_variable                                             &
-        )
-    END IF
+    k_esft(1:n_profile, 1:n_layer, index_last)=                         &
+      k_abs_layer(1:n_profile, 1:n_layer, iex, index_last)
 
 !   Set the appropriate source terms for the two-stream equations.
 !   The product of the ESFT weights can be precalculated for speed.
     product_weight=1.0e+00_RealK
-    DO j=1, n_gas
-      i_gas_band=i_gas_pointer(j)
-      iex=i_esft_pointer(i_gas_band)
-      product_weight=product_weight*w_esft(iex, i_band, i_gas_band)
+    DO j=1, n_abs
+      i_abs=i_abs_pointer(j)
+      iex=i_esft_pointer(i_abs)
+      product_weight=product_weight*w_abs_esft(iex, i_abs)
     END DO
 
     IF ( (i_angular_integration == ip_two_stream).OR.                   &
@@ -679,10 +585,9 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 
 ! DEPENDS ON: gas_optical_properties
     CALL gas_optical_properties(n_profile, n_layer                      &
-      , n_gas, i_gas_pointer, k_esft_mono                               &
-      , gas_frac_rescaled                                               &
+      , n_abs, i_abs_pointer, k_esft                                    &
       , k_gas_abs                                                       &
-      , nd_profile, nd_layer, nd_species                                &
+      , nd_profile, nd_layer, nd_abs                                    &
       )
 
 
@@ -804,73 +709,29 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 
   END DO
 
-  IF (n_gas >  1) THEN
+  IF (n_abs > 1) THEN
 !   Increment the ESFT pointers for the next pass through
 !   the loop above. I_CHANGE is the ordinal of the gas,
 !   the pointer of which is to be changed.
-    i_change=n_gas-1
-2001  index_change=index_absorb(i_change, i_band)
-    IF (i_band_esft(i_band, index_change)                               &
-       >  i_esft_pointer(index_change)) THEN
+  i_change=n_abs-1
+2001  index_change=index_abs(i_change)
+   IF (n_abs_esft(index_change) > i_esft_pointer(index_change)) THEN
       i_esft_pointer(index_change)=i_esft_pointer(index_change)+1
-!     Rescale the amount of this gas and advance the ESFT term.
       iex=i_esft_pointer(index_change)
-      IF (i_scale_fnc(i_band, index_change) == ip_scale_lookup) THEN
-        k_esft_mono(index_change) = 1.0_RealK
-      ELSE
-        k_esft_mono(index_change) = k_esft(iex, i_band, index_change)
-      END IF
-      IF (i_scale_esft(i_band, index_change) == ip_scale_term) THEN
-! DEPENDS ON: scale_absorb
-        CALL scale_absorb(ierr, n_profile, n_layer                      &
-          , gas_mix_ratio(1, 1, index_change), p, t                     &
-          , i_top                                                       &
-          , gas_frac_rescaled(1, 1, index_change)                       &
-          , k_esft_layer(1, 1, iex, index_change)                       &
-          , i_scale_fnc(i_band, index_change)                           &
-          , p_reference(index_change, i_band)                           &
-          , t_reference(index_change, i_band)                           &
-          , scale_vector(1, iex, i_band, index_change)                  &
-          , iex, i_band                                                 &
-          , l_doppler(index_change)                                     &
-          , doppler_correction(index_change)                            &
-          , nd_profile, nd_layer                                        &
-          , nd_scale_variable                                           &
-          )
-      END IF
+      k_esft(1:n_profile, 1:n_layer, index_change)=                       &
+        k_abs_layer(1:n_profile, 1:n_layer, iex, index_change)
       GO TO 2000
     ELSE IF (i_change >  1) THEN
 !     All terms for this absorber have been done:
 !     reset its pointer to 1 and move to the next absorber.
       i_esft_pointer(index_change)=1
       iex=i_esft_pointer(index_change)
-      IF (i_scale_fnc(i_band, index_change) == ip_scale_lookup) THEN
-        k_esft_mono(index_change) = 1.0_RealK
-      ELSE
-        k_esft_mono(index_change) = k_esft(1, i_band, index_change)
-      END IF
-      IF (i_scale_esft(i_band, index_change) == ip_scale_term) THEN
-        CALL scale_absorb(ierr, n_profile, n_layer                      &
-          , gas_mix_ratio(1, 1, index_change), p, t                     &
-          , i_top                                                       &
-          , gas_frac_rescaled(1, 1, index_change)                       &
-          , k_esft_layer(1, 1, iex, index_change)                       &
-          , i_scale_fnc(i_band, index_change)                           &
-          , p_reference(index_change, i_band)                           &
-          , t_reference(index_change, i_band)                           &
-          , scale_vector(1, iex, i_band, index_change)                  &
-          , iex, i_band                                                 &
-          , l_doppler(index_change)                                     &
-          , doppler_correction(index_change)                            &
-          , nd_profile, nd_layer                                        &
-          , nd_scale_variable                                           &
-          )
-      END IF
+      k_esft(1:n_profile, 1:n_layer, index_change)=                       &
+        k_abs_layer(1:n_profile, 1:n_layer, iex, index_change)
       i_change=i_change-1
       GO TO 2001
     END IF
   END IF
-
 
   IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 

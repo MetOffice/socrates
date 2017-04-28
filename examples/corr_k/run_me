@@ -2,7 +2,7 @@
 
 # Initialise error status (to test for output differences)
 ierr=0
-rm -f h2o_* cfc113_* sp_lw_300_skel sp_lw_300_dev* 2>/dev/null
+rm -f h2o* cfc113_* sp_lw_300_skel sp_lw_300_dev* 2>/dev/null
 
 ./prep_spec_300 >/dev/null
 
@@ -19,7 +19,7 @@ rm -f h2o_* cfc113_* sp_lw_300_skel sp_lw_300_dev* 2>/dev/null
 if [ $ierr -gt 0 ] ; then
   exit 1
 else
-  rm -f h2o_* cfc113_* sp_lw_300_skel sp_lw_300_dev* 2>/dev/null
+  rm -f h2o* cfc113_* sp_lw_300_skel sp_lw_300_dev* 2>/dev/null
   echo OK
   exit 0
 fi

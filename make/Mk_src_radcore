@@ -36,6 +36,7 @@ SOURCE_RADCORE=	adjust_ir_radiance.f90 \
 		inter_k.f90 \
 		inter_pt.f90 \
 		inter_pt_lookup.f90 \
+		inter_t_lookup.f90 \
 		ir_source.f90 \
 		l_cloud_density.f90 \
 		layer_part_integ.f90 \
@@ -83,6 +84,7 @@ SOURCE_RADCORE=	adjust_ir_radiance.f90 \
 		solar_coefficient_basic.f90 \
 		solar_source.f90 \
 		solve_band_k_eqv.f90 \
+		solve_band_k_eqv_scl.f90 \
 		solve_band_one_gas.f90 \
 		solve_band_random_overlap.f90 \
 		solve_band_random_overlap_resort_rebin.f90 \
@@ -97,6 +99,7 @@ SOURCE_RADCORE=	adjust_ir_radiance.f90 \
 		solver_triple_app_scat.f90 \
 		sph_matrix_solver.f90 \
 		sph_solver.f90 \
+		sum_k.f90 \
 		trans_source_coeff.f90 \
 		triple_column.f90 \
 		triple_solar_source.f90 \

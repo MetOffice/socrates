@@ -507,6 +507,16 @@ PROGRAM l_run_cdf
         STOP
       ENDIF
 
+    ELSE IF (process_flag(j: j) == 'u') THEN
+      control%l_cont_gen=.TRUE.
+
+      IF (.NOT.Spectrum%Basic%l_present(19)) THEN
+        write (iu_err, '(/a)')                                          &
+          '*** Error: The spectral file contains ' //                   &
+          'no generalised continuum absorption data.'
+        STOP
+      ENDIF
+
     ELSE IF (process_flag(j: j) == 'd') THEN
       control%l_drop=.TRUE.
 

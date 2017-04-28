@@ -8,7 +8,8 @@
 !
 SUBROUTINE optimal_k &
 !
-(n_nu, nu_inc, k, wgt, integ_wgt, k_mean, tol, k_opt, error, ierr)
+(n_nu, nu_inc, k, wgt, integ_wgt, k_mean, tol, &
+ l_k_wgt, k_wgt, l_wgt_scale_sqrt, u_wgt_scale, k_opt, error, ierr)
 !
 ! Description:
 !
@@ -46,10 +47,19 @@ SUBROUTINE optimal_k &
 !   Simple mean absorption coefficient for the band
   REAL  (RealK), Intent(IN) :: tol
 !   Tolerance required of the fit
+  REAL  (RealK), Intent(IN) :: k_wgt(:)
+!   Monochromatic absorption coefficients to use in weighting
+  REAL  (RealK), Intent(IN) :: u_wgt_scale
+!   Factor to scale continuum column mass to gas column mass
   REAL  (RealK), Intent(OUT) :: k_opt
 !   Optimal absorption coefficient
   REAL  (RealK), Intent(OUT) :: error
 !   Root mean square error in the fitted transmission
+  LOGICAL, Intent(IN) :: l_k_wgt
+!   Use k_wgt as additional weights in transmissions
+  LOGICAL, Intent(IN) :: l_wgt_scale_sqrt
+!   If true gas column mass is scaled using the square root of the continuum
+!   column mass. Otherwise a linear scaling is used. 
 !
 !
 ! Local variables
@@ -65,6 +75,8 @@ SUBROUTINE optimal_k &
 !   Maximum pathlength for the absorber
   REAL  (RealK) :: u(n_path_kopt_default)
 !   Path lengths of absorber
+  REAL  (RealK) :: u_wgt
+!   Path length of gas used as weight in continuum transmissions
   REAL  (RealK), Allocatable :: wgt_trans(:)
 !   Product of weightings and transmissions along defined paths
   REAL  (RealK) :: trans_exact(n_path_kopt_default)
@@ -116,12 +128,27 @@ SUBROUTINE optimal_k &
 !
 ! Calculate the exact transmission over these paths.
   ALLOCATE(wgt_trans(n_nu))
-  DO i = 1, n_path_kopt_default
-    DO j=1, n_nu
-      wgt_trans(j)=wgt(j)*EXP(-k(j)*u(i))
+  IF (l_k_wgt) THEN
+    DO i = 1, n_path_kopt_default
+      IF (l_wgt_scale_sqrt) THEN
+        u_wgt=u_wgt_scale*SQRT(u(i))
+      ELSE
+        u_wgt=u_wgt_scale*u(i)
+      END IF
+      DO j=1, n_nu
+        wgt_trans(j)=wgt(j)*EXP(-k(j)*u(i)-k_wgt(j)*u_wgt)
+      ENDDO
+      trans_exact(i)=SUM(wgt_trans(1:n_nu)) &
+        / (SUM(wgt(1:n_nu)*EXP(-k_wgt(1:n_nu)*u_wgt)))
     ENDDO
-    trans_exact(i)=nu_inc * SUM(wgt_trans(1:n_nu)) / integ_wgt
-  ENDDO
+  ELSE
+    DO i = 1, n_path_kopt_default
+      DO j=1, n_nu
+        wgt_trans(j)=wgt(j)*EXP(-k(j)*u(i))
+      ENDDO
+      trans_exact(i)=nu_inc * SUM(wgt_trans(1:n_nu)) / integ_wgt
+    ENDDO
+  END IF
   DEALLOCATE(wgt_trans)
 !
 ! Carry out Newton-Raphson iteration to mimimize the squared

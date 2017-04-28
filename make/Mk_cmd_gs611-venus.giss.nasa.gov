@@ -4,8 +4,8 @@
 FORTCOMP        = gfortran -O2 -c
 LINK            = gfortran -O2
 LIBLINK         = ar rvu
-INCCDF_PATH     = /home/damundse/Library/include
-LIBCDF_PATH     = /home/damundse/Library/lib
+INCCDF_PATH     = /opt/netcdf/gcc-4.9.2/usr/lib64/gfortran/modules
+LIBCDF_PATH     = /opt/netcdf/gcc-4.9.2/usr/lib64
 LIBCDF_NAME     = netcdff -lnetcdf
 OMPARG          = -fopenmp
 

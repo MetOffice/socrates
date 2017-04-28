@@ -8,28 +8,32 @@
 !
 SUBROUTINE corr_k_single &
 !
-(i_gas, i_index, n_band, n_selected_band, list_band, &
+(i_gas, i_index, i_gas_1, i_index_1, i_gas_2, i_index_2, &
+ n_band, n_selected_band, list_band, &
  n_pt_pair, n_p, p_calc, t_calc, p_ref, t_ref, l_scale_pt, &
- iu_lbl, nu_inc_0, line_cutoff, l_ckd_cutoff, &
+ iu_lbl, iu_cia, nu_inc_0, line_cutoff, l_ckd_cutoff, &
  wavelength_long, wavelength_short, &
  n_band_exclude, index_exclude, &
  i_weight, solarspec, &
  include_h2o_foreign_continuum, &
- l_access_HITRAN, l_access_xsc, l_lbl_exist, &
+ l_use_h2o_frn_param, l_use_h2o_self_param, l_cont_line_abs_weight, &
+ l_access_HITRAN, l_access_xsc, l_access_cia, l_lbl_exist, &
  l_fit_line_data, l_fit_self_continuum, l_fit_frn_continuum, &
- n_path_c, umin_c, umax_c, n_pp, &
+ l_fit_cont_data, n_path_c, umin_c, umax_c, n_pp, &
  include_instrument_response, filter, &
- i_ck_fit, tol, max_path, &
+ i_ck_fit, tol, max_path, max_path_wgt, &
  nd_k_term, n_k, w_k, k_ave, k_opt, &
  k_opt_self, k_opt_frn, &
  i_type_residual, i_scale_function, scale_vector, scale_cont, &
  iu_k_out, file_k, iu_monitor, file_monitor, file_lbl, &
+ l_load_map, l_load_wgt, l_save_map, file_map, &
  n_omp_threads, ierr &
 )
 
 ! Modules used:
   USE realtype_rd
   USE rad_pcf
+  USE rad_ccf
   USE def_solarspec
   USE def_std_io_icf
   USE def_inst_flt
@@ -76,11 +80,21 @@ SUBROUTINE corr_k_single &
 !
   INTEGER, Intent(IN) :: i_gas
 !   Identifier for gas
-  INTEGER :: i_index
+  INTEGER, Intent(IN) :: i_index
 !   Index of the gas in the spectral file
+  INTEGER, Intent(IN) :: i_gas_1
+!   Identifier for first continuum gas
+  INTEGER , Intent(IN) :: i_index_1
+!   Index of first continuum gas in the spectral file
+  INTEGER, Intent(IN) :: i_gas_2
+!   Identifier for second continuum gas
+  INTEGER , Intent(IN) :: i_index_2
+!   Index of second continuum gas in the spectral file
 !
   INTEGER, Intent(IN) :: iu_lbl
 !   Unit number for input from the database
+  INTEGER, Intent(IN) :: iu_cia
+!   Unit number for input from the HITRAN CIA database
 !
 ! Options for generating data
   LOGICAL, Intent(IN) :: l_fit_line_data
@@ -89,10 +103,14 @@ SUBROUTINE corr_k_single &
 !   Controlling flag to fit self-broadened data
   LOGICAL, Intent(IN) :: l_fit_frn_continuum
 !   Controlling flag to fit foreign-broadened continuum data
+  LOGICAL, Intent(IN) :: l_fit_cont_data
+!   Controlling flag to fit generalised continuum data
   LOGICAL, Intent(IN) :: l_access_HITRAN
 !   Logical set to true if program has access to HITRAN LbL database
   LOGICAL, Intent(IN) :: l_access_xsc
 !   Logical set to true if program has access to HITRAN XSC database
+  LOGICAL, Intent(IN) :: l_access_cia
+!   Logical set to true if program has access to HITRAN CIA database
   LOGICAL, Intent(IN) :: l_lbl_exist
 !   Flag for lbl absorption coefficient file
 !
@@ -108,6 +126,9 @@ SUBROUTINE corr_k_single &
 !   Tolerance for fitting k-terms
   REAL  (RealK), Intent(IN) :: max_path
 !   Maximum pathlength to be considered for the absorber
+  REAL  (RealK), Intent(IN) :: max_path_wgt
+!   Maximum pathlength to be considered for the absorber used for weighting
+!   in continuum transmissions
   REAL  (RealK), Intent(IN) :: line_cutoff
 !   Cutoff for choosing lines
   LOGICAL, Intent(IN) :: l_ckd_cutoff
@@ -144,6 +165,12 @@ SUBROUTINE corr_k_single &
   LOGICAL, Intent(IN) :: include_h2o_foreign_continuum
 !   Flag to include the foreign-broadened H2O continuum (with a 
 !   partial pressure of 0) with the line data
+  LOGICAL, Intent(IN) :: l_use_h2o_frn_param
+!   Flag to use foreign broadened H2O continuum parametrisation
+  LOGICAL, Intent(IN) :: l_use_h2o_self_param
+!   Flag to use self broadened H2O continuum parametrisation
+  LOGICAL, Intent(IN) :: l_cont_line_abs_weight
+!   Flag to use line absorption data for weighting in continuum transmissions
 !
   LOGICAL, Intent(IN) :: include_instrument_response
 !   Flag to include the instrumental response function
@@ -193,6 +220,15 @@ SUBROUTINE corr_k_single &
   CHARACTER  (LEN=*), Intent(IN) :: file_lbl
 !   File for output of the lbl absorption coefficients
 !
+  LOGICAL, Intent(IN) :: l_load_map
+!   Use pre-defined mapping of wavenumbers to g-space
+  LOGICAL, Intent(IN) :: l_load_wgt
+!   Use pre-defined k-term weights
+  LOGICAL, Intent(IN) :: l_save_map
+!   Save mapping of wavenumbers to g-space
+  CHARACTER(LEN=*), Intent(IN) :: file_map
+!   Name of file with mapping
+!
 !
 ! Local variables
   INTEGER :: alloc_status
@@ -219,6 +255,8 @@ SUBROUTINE corr_k_single &
 !   List of required isotopes
   INTEGER :: num_lines_in_band
 !   Number of lines extracted from the database for the gas
+  INTEGER :: num_cia_lines_in_band
+!   Number of lines extracted from the CIA database for the gas
   REAL  (RealK), Allocatable, Dimension(:) :: k_cutoff
 !   Absorption by each line at its cutoff
 !
@@ -226,7 +264,7 @@ SUBROUTINE corr_k_single &
 !   Pointer to position in weighting array
   INTEGER :: i1
 !   Pointer to position in weighting array
-  INTEGER :: n_nu_k, n_nu_tmp
+  INTEGER :: n_nu_k
 !   Number of frequency points in the k-interval
   INTEGER :: n_path
 !   Number of absorber paths
@@ -235,12 +273,14 @@ SUBROUTINE corr_k_single &
 !   Pointers to g-quadrature points
   INTEGER :: n_k_last, n_pre
   INTEGER :: pstart(n_pt_pair), pend(n_pt_pair), pcount(n_pt_pair)
-  REAL (RealK) :: pmax, pmin, pstep, pref(n_pt_pair)
+  REAL (RealK) :: pmax, pmin, pstep
 !
   TYPE(StrHitranRec), DIMENSION(:), ALLOCATABLE :: hitran_data
 !   Information on lines read from the Hitran line database
   TYPE(StrXscRec), DIMENSION(:), ALLOCATABLE :: xsc
 !   Information on cross-sections read from the Hitran database
+  TYPE(StrCIARec), DIMENSION(:), ALLOCATABLE :: cia
+!   Information on CIA read from the Hitran database
 !
 ! Weighting:
   INTEGER :: n_nu, n_nu_written, hitran_lines(n_selected_band)
@@ -249,6 +289,8 @@ SUBROUTINE corr_k_single &
 !   Frequencies of weighting points
   REAL  (RealK), Allocatable :: kabs(:), kabs_all(:,:)
 !   Absorption coefficients at weighting frequencies
+  REAL  (RealK), Allocatable :: kabs_lines(:), kabs_all_lines(:,:)
+!   Line absorption coefficients at weighting frequencies
   REAL  (RealK), Allocatable :: kabs_rank1(:), kabs_rank2(:)
 !   Rankings for absorption coeffs at weighting freqs
   REAL  (RealK) :: rank_work
@@ -268,8 +310,6 @@ SUBROUTINE corr_k_single &
   REAL  (RealK) :: integ_k
 !   Integral of the weighting function across the part of the band
 !   represented by the k-term
-  REAL  (RealK) :: nu_max
-!   Frequency where the filter function peaks
   REAL  (RealK) :: response_0
 !   Value of the response function at the point of evaluation
 !
@@ -329,7 +369,16 @@ SUBROUTINE corr_k_single &
   REAL  (RealK), Dimension(:, :), Allocatable :: u_l
   REAL  (RealK), Dimension(:), Allocatable :: u_l_ref
 !   Pathlengths of absorber
-!
+  LOGICAL :: l_wgt_scale_sqrt
+  REAL  (RealK) :: u_wgt_scale
+!   In order to apply a line transmission weighting to continuum absorption
+!   transmissions the column mass of the weighting gas is needed. This is
+!   calculated as u_gas = max_path_wgt*sqrt(u_cont/max_path) for  self-
+!   broadened continua (l_wgt_scale_sqrt == .TRUE.) and 
+!   as u_gas = max_path_wgt*u_cont/max_path if a foreign-broadened continuum
+!   (l_wgt_scale_sqrt == .FALSE.). u_wgt_scale is used to store the quantity
+!   max_path_wgt/sqrt(max_path) or max_path_wgt/max_path.
+
   INTEGER :: i_index_c
 !   Variable indicating the type of the continuum
   REAL  (RealK) :: k_ave_tmp(nd_k_term)
@@ -339,7 +388,7 @@ SUBROUTINE corr_k_single &
 !   Optimal k-value across the band: temporary value at conditions
 !   other than the reference
   REAL  (RealK) :: kopt_all(nd_k_term, n_pt_pair, n_selected_band)
-  REAL  (RealK), ALLOCATABLE :: k_lookup(:,:,:), k_lookup2(:,:,:)
+  REAL  (RealK), ALLOCATABLE :: k_lookup(:,:,:)
   REAL  (RealK), ALLOCATABLE :: p_lookup(:), t_lookup(:,:)
   REAL  (RealK) :: ln_p_calc(n_pt_pair), max_p_calc
   REAL  (RealK), Pointer :: k_cont
@@ -348,8 +397,14 @@ SUBROUTINE corr_k_single &
   LOGICAL :: l_transparent_fit
 !   Logical is true if a transparent fit should be applied
 
+  LOGICAL :: l_calc_cont
+!   Logical is true if calculating continuum data is required
+
   INTEGER :: ncidin_lbl,ncidout_lbl
 !   NetCDF file identifiers for input and output lbl files
+
+  INTEGER :: ncidin_map,ncidout_map
+!   NetCDF file identifiers for input and output mapping files
 
   REAL  (RealK) :: err_norm
 !   Error norm for fitting
@@ -411,7 +466,8 @@ SUBROUTINE corr_k_single &
 !
 !
     SUBROUTINE set_g_point_90(n_nu, nu_inc, kabs, wgt, integ_wgt, &
-      i_ck_fit, tol, max_path, nd_k_term, iu_monitor, &
+      i_ck_fit, tol, max_path, l_kabs_wgt, kabs_wgt, &
+      l_wgt_scale_sqrt, u_wgt_scale, nd_k_term, iu_monitor, &
       n_k, w_k, k_opt, k_ave, ig, ierr)
 !
       USE realtype_rd
@@ -429,14 +485,20 @@ SUBROUTINE corr_k_single &
       REAL  (RealK), Intent(IN) :: integ_wgt
       REAL  (RealK), Intent(IN) :: tol
       REAL  (RealK), Intent(IN) :: max_path
+      REAL  (RealK), Intent(IN) :: kabs_wgt(:)
+      REAL  (RealK), Intent(IN) :: u_wgt_scale
       REAL  (RealK), Intent(OUT) :: w_k(:)
       REAL  (RealK), Intent(OUT) :: k_opt(:)
       REAL  (RealK), Intent(OUT) :: k_ave(:)
+      LOGICAL, Intent(IN) :: l_kabs_wgt
+      LOGICAL, Intent(IN) :: l_wgt_scale_sqrt
 !
     END SUBROUTINE set_g_point_90
 !
     SUBROUTINE optimal_k &
-      (n_nu, nu_inc, k, wgt, integ_k, k_mean, tol, k_opt, error, ierr)
+      (n_nu, nu_inc, k, wgt, integ_k, k_mean, tol, &
+       l_k_wgt, k_wgt, l_wgt_scale_sqrt, u_wgt_scale, &
+       k_opt, error, ierr)
 !
       USE realtype_rd
 !
@@ -448,8 +510,12 @@ SUBROUTINE corr_k_single &
       REAL  (RealK), Intent(IN) :: integ_k
       REAL  (RealK), Intent(IN) :: k_mean
       REAL  (RealK), Intent(IN) :: tol
+      REAL  (RealK), Intent(IN) :: k_wgt(:)
+      REAL  (RealK), Intent(IN) :: u_wgt_scale
       REAL  (RealK), Intent(OUT) :: k_opt
       REAL  (RealK), Intent(OUT) :: error
+      LOGICAL, Intent(IN) :: l_k_wgt
+      LOGICAL, Intent(IN) :: l_wgt_scale_sqrt
 !
     END SUBROUTINE optimal_k
 !
@@ -487,7 +553,8 @@ SUBROUTINE corr_k_single &
 !
 !
     SUBROUTINE write_fit_90 &
-      (iu_k_out, l_continuum, i_band, i_index, &
+      (iu_k_out, l_continuum, l_cont_gen, i_band, &
+       i_index, i_index_1, i_index_2, &
        p, t, n_points, amount, transmittance, trans_calc, &
        n_k, k, w_k, i_scale, i_scale_function, scale_vector)
 !
@@ -497,11 +564,14 @@ SUBROUTINE corr_k_single &
 !
       INTEGER, Intent(IN) :: i_band
       INTEGER, Intent(IN) :: i_index
+      INTEGER, Intent(IN) :: i_index_1
+      INTEGER, Intent(IN) :: i_index_2
       INTEGER, Intent(IN) :: n_points
       INTEGER, Intent(IN) :: n_k
       INTEGER, Intent(IN) :: i_scale
       INTEGER, Intent(IN) :: i_scale_function
       LOGICAL, Intent(IN) :: l_continuum
+      LOGICAL, Intent(IN) :: l_cont_gen
       REAL  (RealK), Intent(IN) :: p
       REAL  (RealK), Intent(IN) :: t
       REAL  (RealK), Intent(IN), Dimension(:) :: amount
@@ -521,19 +591,61 @@ SUBROUTINE corr_k_single &
 !
 ! Check that either a lbl file has been provided or the code has access to
 ! HITRAN
-  IF (l_fit_line_data.OR.l_fit_frn_continuum.OR.l_fit_self_continuum) THEN
+  IF (l_fit_line_data.OR.l_fit_frn_continuum.OR.l_fit_self_continuum.OR. &
+      (l_fit_cont_data.AND.l_cont_line_abs_weight)) THEN
     IF (.NOT.l_lbl_exist.AND..NOT.l_access_hitran.AND..NOT.l_access_xsc) THEN
-      write(*,'(a)') 'Please provide either a HITRAN or line-by-line file.'
+      WRITE(*,'(a)') 'Please provide either a HITRAN or line-by-line file.'
       ierr = i_err_fatal
       RETURN
     ELSE IF (l_lbl_exist.AND.(l_access_hitran.OR.l_access_xsc)) THEN
-      write(*,'(a)') 'Line-by-line file exists and HITRAN file provided. ' // &
-          'Using line-by-line file.'
+      WRITE(*,'(a)') 'Line-by-line file exists and HITRAN file ' // &
+          'provided. Using line-by-line file.'
     ENDIF
   ENDIF
+  IF (l_fit_cont_data) THEN
+    IF (l_cont_line_abs_weight) THEN
+      IF (.NOT.l_lbl_exist.AND..NOT.l_access_hitran) THEN
+        WRITE(*,'(a)') 'Please provide either a HITRAN line database , ' // &
+            'or line-by-line file.'
+        ierr = i_err_fatal
+        RETURN
+      ELSE IF (.NOT.l_access_cia.AND. &
+               .NOT.l_use_h2o_frn_param.AND..NOT.l_use_h2o_self_param) THEN
+        WRITE(*,'(a)') 'Please provide a HITRAN CIA file or use ' // &
+            'built-in water vapour continuum.'
+        ierr = i_err_fatal
+        RETURN
+      END IF
+    ELSE IF (.NOT.l_lbl_exist.AND..NOT.l_access_cia.AND. &
+             .NOT.l_use_h2o_frn_param.AND..NOT.l_use_h2o_self_param) THEN
+      WRITE(*,'(a)') 'Please provide a HITRAN CIA file use ' // &
+          'built-in water continuum.'
+      ierr = i_err_fatal
+      RETURN
+    ELSE IF (l_lbl_exist.AND.l_access_cia) THEN
+      WRITE(*,'(a)') 'Line-by-line file exists and HITRAN file ' // &
+          'provided. Using line-by-line file.'
+    END IF
+  END IF
+
+! Check that scaling is look-up table if using generalised continuum formulation
+  IF (l_fit_cont_data .AND. i_scale_function /= ip_scale_t_lookup) THEN
+    WRITE(iu_err,'(a)') 'A look-up table must be used with the ' // &
+        'generalised continuum formulation.'
+    ierr = i_err_fatal
+    RETURN
+  END IF
+
+! Check that only a single set of temperatures has been provided
+  IF (l_fit_cont_data .AND. n_p > 1) THEN
+    WRITE(iu_err,'(a)') 'Only a single pressure should be specified ' // &
+        'with the generalised continuum formulation.'
+    ierr = i_err_fatal
+    RETURN
+  END IF
 
 ! Perform preliminary allocation of arrays.
-  IF (l_fit_line_data) THEN
+  IF (l_fit_line_data .OR. l_fit_cont_data) THEN
     ALLOCATE(u_l(2*nd_k_term+1, n_pt_pair))
     ALLOCATE(u_l_ref(2*nd_k_term+1))
     ln_p_calc=LOG(p_calc(1:n_pt_pair))
@@ -603,9 +715,9 @@ SUBROUTINE corr_k_single &
 ! in the spectral file
   DO ib=1,n_band
     IF (abs(band_min(ib)-(nint((band_min(ib)-nu_band_adjust)/nu_inc)*nu_inc + &
-      nu_band_adjust)) >= 1e-9*band_min(ib) .OR. &
+      nu_band_adjust)) >= 1.0E-09_RealK*band_min(ib) .OR. &
       abs(band_max(ib)-(nint((band_max(ib)-nu_band_adjust)/nu_inc)*nu_inc + &
-      nu_band_adjust)) >= 1e-9*band_max(ib)) THEN
+      nu_band_adjust)) >= 1.0E-09_RealK*band_max(ib)) THEN
 
 !     If necessary adjust the band limits to enclose an integer number
 !     of increments
@@ -617,8 +729,29 @@ SUBROUTINE corr_k_single &
     END IF
   END DO
 
+! Calculate scaling of continuum column mass to gas column mass
+  IF (l_fit_cont_data .AND. l_cont_line_abs_weight) THEN
+    l_wgt_scale_sqrt = i_gas_1 == i_gas_2
+    IF (l_wgt_scale_sqrt) THEN
+      u_wgt_scale = max_path_wgt/sqrt(max_path)
+    ELSE
+      u_wgt_scale = max_path_wgt/max_path
+    END IF
+  END IF
+
+! Check if calculating continuum data is required (if provided access)
+  l_calc_cont = .NOT. l_lbl_exist .OR. &
+    (l_fit_cont_data .AND. l_cont_line_abs_weight)
+
 ! Initialise lbl output file
   IF (.NOT.l_lbl_exist) CALL output_lbl_band_cdf_init
+
+! Initialise map file
+  IF (l_load_map .OR. l_load_wgt) THEN
+    CALL input_map_band_cdf_init
+  ELSE IF (l_save_map) THEN
+    CALL output_map_band_cdf_init
+  END IF
 
   Bands: DO ibb=1, n_selected_band
 
@@ -657,8 +790,10 @@ SUBROUTINE corr_k_single &
     END IF
 
 !   Processing depends on the purpose of the call.
-    IF (l_fit_line_data.OR.l_fit_frn_continuum.OR.l_fit_self_continuum) THEN
+    IF (l_fit_line_data .OR. l_fit_frn_continuum .OR. &
+        l_fit_self_continuum .OR. l_fit_cont_data) THEN
 !
+      l_transparent_fit=.FALSE.
       IF (l_lbl_exist) THEN
         CALL input_lbl_band_cdf ! Read lbl file for current band
         l_transparent_fit=sum(kabs_all) < EPSILON(kabs_all)
@@ -671,13 +806,18 @@ SUBROUTINE corr_k_single &
         CALL access_xsc_int
         IF (ierr /= i_normal) RETURN
         hitran_lines(ibb)=num_lines_in_band
-        l_transparent_fit=num_lines_in_band.EQ.0        
+        l_transparent_fit=num_lines_in_band.EQ.0
+      END IF
+      IF (l_calc_cont .AND. l_access_cia) THEN
+        CALL access_cia_int
+        IF (ierr /= i_normal) RETURN
+        l_transparent_fit=num_cia_lines_in_band.EQ.0
       ENDIF
 
       IF (l_transparent_fit) THEN
 !
 !       A null transparent fit can be used.
-        IF (l_fit_line_data) CALL fit_transparent_int
+        IF (l_fit_line_data .OR. l_fit_cont_data) CALL fit_transparent_int
         IF (.NOT.l_lbl_exist) kabs_all=0.0
         IF (ierr /= i_normal) RETURN
 !
@@ -778,10 +918,48 @@ SUBROUTINE corr_k_single &
             DEALLOCATE(xsc(i)%data)
           END DO
           DEALLOCATE(xsc)
+        
+        END IF
+
+        IF (l_fit_cont_data .AND. l_cont_line_abs_weight) THEN
+!         Save line absorption for use in weighting
+          kabs_all_lines = kabs_all
+        END IF
+
+        IF (l_calc_cont .AND. l_access_cia) THEN
+!         Loop over temperatures
+          DO ipt=1, n_pt_pair
+            CALL calc_cia_abs_int
+            kabs_all(:,ipt)=kabs
+          END DO
+!         Deallocate structure holding raw cross-section data
+          DO i = 1, num_cia_lines_in_band
+            DEALLOCATE(cia(i)%wavenumber)
+            DEALLOCATE(cia(i)%data)
+          END DO
+          DEALLOCATE(cia)
+
+        ELSE IF (l_calc_cont .AND. l_use_h2o_frn_param) THEN
+
+!         Loop over temperatures
+          DO ipt=1, n_pt_pair
+            CALL foreign_continuum(t_calc(ipt), 0.0_RealK, 0.0_RealK, &
+              n_nu, nu_wgt, .TRUE., kabs)
+            kabs_all(:,ipt)=kabs
+          END DO
+
+        ELSE IF (l_calc_cont .AND. l_use_h2o_self_param) THEN
+
+!         Loop over temperatures
+          DO ipt=1, n_pt_pair
+            CALL self_continuum(t_calc(ipt), 0.0_RealK, 0.0_RealK, &
+              n_nu, nu_wgt, .TRUE., kabs)
+            kabs_all(:,ipt)=kabs
+          END DO
 
         END IF
 
-        IF (l_fit_line_data) THEN
+        IF (l_fit_line_data .OR. l_fit_cont_data) THEN
 !         Define the mapping for correlated-k.
 
           ALLOCATE(kabs_rank1(n_nu))
@@ -797,93 +975,135 @@ SUBROUTINE corr_k_single &
             kabs_rank1(i)=ln_p_calc(MAXLOC(kabs_all(i,:),1,mask_pt_ref))
 
 !           Rank by the pressure where optical depth = 1.
+
             ipt=index_pt_ref(1)
-            kabs_rank2(i)=kabs_all(i,ipt)*p_calc(ipt)
-            IF (kabs_rank2(i) > max_p_calc/max_path .OR. &
-                n_p == 1) THEN
-              kabs_rank2(i) = &
-                max_p_calc / (max_path*kabs_all(i,ipt))
+            IF (l_fit_cont_data) THEN
+!             The continuum absorption coefficient is pressure independent,
+!             i.e. we can calculate the pressure at which the optical depth = 1
+!             directly
+              kabs_rank2(i) = max_p_calc/SQRT(max_path*kabs_all(i,ipt))
+
             ELSE
-              DO ip=2,n_p
-                ipt=index_pt_ref(ip)
-                rank_work = kabs_rank2(i) + kabs_all(i,ipt) &
-                  *(p_calc(ipt)-p_calc(index_pt_ref(ip-1)))
-                IF (rank_work > max_p_calc/max_path .OR. &
-                    ip == n_p) THEN
-                  kabs_rank2(i) = (max_p_calc/max_path &
-                    - kabs_rank2(i)) / kabs_all(i,ipt) &
-                    + p_calc(index_pt_ref(ip-1))
-                  EXIT
-                ELSE
-                  kabs_rank2(i) = rank_work
-                END IF
-              END DO
+!             Calculate pressure at which the optical depth = 1
+              kabs_rank2(i)=kabs_all(i,ipt)*p_calc(ipt)
+              IF (kabs_rank2(i) > max_p_calc/max_path .OR. &
+                  n_p == 1) THEN
+                kabs_rank2(i) = &
+                  max_p_calc / (max_path*kabs_all(i,ipt))
+              ELSE
+                DO ip=2,n_p
+                  ipt=index_pt_ref(ip)
+                  rank_work = kabs_rank2(i) + kabs_all(i,ipt) &
+                    *(p_calc(ipt)-p_calc(index_pt_ref(ip-1)))
+                  IF (rank_work > max_p_calc/max_path .OR. &
+                      ip == n_p) THEN
+                    kabs_rank2(i) = (max_p_calc/max_path &
+                      - kabs_rank2(i)) / kabs_all(i,ipt) &
+                      + p_calc(index_pt_ref(ip-1))
+                    EXIT
+                  ELSE
+                    kabs_rank2(i) = rank_work
+                  END IF
+                END DO
+              END IF
             END IF
           END DO
 
-!         Max/min in the pressure ranking
-          pmax=MAXVAL(kabs_rank1)
-          pmin=MINVAL(kabs_rank1)
-          pstart(1)=1
-
-          ALLOCATE(kabs_mask(n_nu))
-          kabs_mask=0
-
-          IF (i_ck_fit == ip_ck_bin) THEN
-!           Split mapping into a number of bins in the pressure ranking
-            n_pre=MAX(INT(pmax-pmin)/3,1)
-          ELSE
-            n_pre=1
-          END IF
-          DO
-            pstep=(pmax-pmin)/REAL(n_pre, RealK)
-            DO ipb=1,n_pre
-              WHERE (kabs_rank1 >= pmin+pstep*REAL(ipb-1, RealK))
-                kabs_mask=ipb
-              END WHERE
-            END DO
-!           If absorption coefficients are optically thin place in last bin
-            WHERE (kabs_rank2 >= max_p_calc)
-              kabs_mask=n_pre
-            END WHERE
-            DO ipb=1,n_pre
-              pcount(ipb)=COUNT(kabs_mask==ipb)
-            END DO
-            IF (MINVAL(pcount(1:n_pre)) > 0) EXIT
-            IF (n_pre == 1) EXIT
-            n_pre=n_pre-1
-          END DO
-
-          DO ipb=1,n_pre
-!           Find start and end points of current pressure bin
-            pcount(ipb)=COUNT(kabs_mask==ipb)
-            pend(ipb)=pstart(ipb)+pcount(ipb)-1
-            IF (ipb < n_pre) pstart(ipb+1)=pend(ipb)+1
-          END DO
-
-          CALL map_heap_func(REAL(kabs_mask, RealK), pmap)
-
-          DO ipb=1,n_pre
-            WRITE(iu_monitor,*) 'pstart, pend: ', pstart(ipb),pend(ipb)
+          IF (l_load_map) THEN
+!           Use pre-defined mapping
 
 !           Set absorption coefficients for this bin using an
 !           effective value for optical depth = 1
-            WHERE (kabs_mask==ipb)
+            IF (l_fit_cont_data) THEN
+              kabs = max_p_calc**2/(max_path*kabs_rank2**2)
+            ELSE
               kabs = max_p_calc/(max_path*kabs_rank2)
-            END WHERE
+            END IF
+          
+!           Read mapping, g-points and reference k-term weights
+            CALL input_map_band_cdf
 
-!           Reorder absorption coefficients for this bin
-            CALL map_heap_func( kabs(pmap(pstart(ipb):pend(ipb))), &
-              gmap(pstart(ipb):pend(ipb)) )
-            gmap(pstart(ipb):pend(ipb)) = pstart(ipb)-1 + &
-              gmap(pstart(ipb):pend(ipb))
-          END DO
-          DEALLOCATE(kabs_mask)
+          ELSE
+!           Derive new mapping
+
+            IF (l_load_wgt) THEN
+!             Use pre-defined pressure mapping and reference k-term weights
+              CALL input_wgt_band_cdf
+
+            ELSE
+!             Derive new pressure mapping
+
+!             Max/min in the pressure ranking
+              pmax=MAXVAL(kabs_rank1)
+              pmin=MINVAL(kabs_rank1)
+
+              ALLOCATE(kabs_mask(n_nu))
+              kabs_mask=0
+
+              IF (i_ck_fit == ip_ck_bin) THEN
+!               Split mapping into a number of bins in the pressure ranking
+                n_pre=MAX(INT(pmax-pmin)/3,1)
+              ELSE
+                n_pre=1
+              END IF
+              DO
+                pstep=(pmax-pmin)/REAL(n_pre, RealK)
+                DO ipb=1,n_pre
+                  WHERE (kabs_rank1 >= pmin+pstep*REAL(ipb-1, RealK))
+                    kabs_mask=ipb
+                  END WHERE
+                END DO
+!               If absorption coefficients are optically thin place in last bin
+                WHERE (kabs_rank2 >= max_p_calc)
+                  kabs_mask=n_pre
+                END WHERE
+                DO ipb=1,n_pre
+                  pcount(ipb)=COUNT(kabs_mask==ipb)
+                END DO
+                IF (MINVAL(pcount(1:n_pre)) > 0) EXIT
+                IF (n_pre == 1) EXIT
+                n_pre=n_pre-1
+              END DO
+
+              pstart(1)=1
+              DO ipb=1,n_pre
+!               Find start and end points of current pressure bin
+                pcount(ipb)=COUNT(kabs_mask==ipb)
+                pend(ipb)=pstart(ipb)+pcount(ipb)-1
+                IF (ipb < n_pre) pstart(ipb+1)=pend(ipb)+1
+              END DO
+
+              CALL map_heap_func(REAL(kabs_mask, RealK), pmap)
+
+              DEALLOCATE(kabs_mask)
+
+            END IF
+
+!           Set absorption coefficients for this bin using an
+!           effective value for optical depth = 1
+            IF (l_fit_cont_data) THEN
+              kabs = max_p_calc**2/(max_path*kabs_rank2**2)
+            ELSE
+              kabs = max_p_calc/(max_path*kabs_rank2)
+            END IF
+
+            DO ipb=1,n_pre
+              WRITE(iu_monitor,*) 'pstart, pend: ', pstart(ipb),pend(ipb)
+
+!             Reorder absorption coefficients for this bin
+              CALL map_heap_func( kabs(pmap(pstart(ipb):pend(ipb))), &
+                gmap(pstart(ipb):pend(ipb)) )
+              gmap(pstart(ipb):pend(ipb)) = pstart(ipb)-1 + &
+                gmap(pstart(ipb):pend(ipb))
+            END DO
+
+!           Define the global mapping from the original wavenumber
+!           spectrum to the binned and reordered g-space.
+            map = pmap(gmap)
+
+          END IF
+
           DEALLOCATE(kabs_rank1)
-
-!         Define the global mapping from the original wavenumber
-!         spectrum to the binned and reordered g-space.
-          map = pmap(gmap)
 
 !         Set the weights to use the fraction of the Plankian at the
 !         reference temperature where optical depth = 1
@@ -910,40 +1130,55 @@ SUBROUTINE corr_k_single &
 !         Sort the weighting function.
           kabs=kabs(map)
           wgt=wgt(map)
+          IF (l_fit_cont_data .AND. l_cont_line_abs_weight) &
+            kabs_lines=kabs_all_lines(map,index_pt_ref(1))
 
 !         Don't consider path lengths greater than max_path*10
 !         for calculating the error on the k-term fit:
           umax_kopt=max_path*10.0_RealK
           umin_kopt=umin_kopt_default
-  
-!         Set the g-points within each pressure bin
-          n_k_last=0
-          ig(0)=0
-          integ_wgt=nu_inc * SUM(wgt(1:n_nu))
-          DO ipb=1,n_pre
-!           Integrate the sorted weightings across the band.
-            integ_wgt_tmp=nu_inc * SUM(wgt(pstart(ipb):pend(ipb)))
 
-!           Set the number of g-points based on the error in the
-!           transmission.
-            CALL set_g_point_90(pcount(ipb), nu_inc, &
-              kabs(pstart(ipb):pend(ipb)), &
-              wgt(pstart(ipb):pend(ipb)), integ_wgt, &
-              i_ck_fit, tol*REAL(ipb,RealK), &
-              max_path, nd_k_term, iu_monitor, &
-              n_k(ib), w_k(n_k_last+1:nd_k_term,ib), &
-              k_opt(n_k_last+1:nd_k_term,ib), &
-              k_ave(n_k_last+1:nd_k_term,ib), &
-              ig_tmp(0:nd_k_term), ierr)
+          IF (l_load_map .OR. l_load_wgt) THEN
+!           The g-points are given in the mapping file, use them to calculate
+!           k_opt
+            CALL calc_k_opt_ref
 
-              ig(n_k_last+1:n_k_last+n_k(ib))= &
-                ig_tmp(1:n_k(ib))+ig(n_k_last)
-              n_k_last=n_k_last+n_k(ib)
-          END DO
-          n_k(ib)=n_k_last
+          ELSE
+!           Set the g-points within each pressure bin
+            n_k_last=0
+            ig(0)=0
+            integ_wgt=nu_inc * SUM(wgt(1:n_nu))
+            DO ipb=1,n_pre
+!             Integrate the sorted weightings across the band.
+              integ_wgt_tmp=nu_inc * SUM(wgt(pstart(ipb):pend(ipb)))
+
+!             Set the number of g-points based on the error in the
+!             transmission.
+              CALL set_g_point_90(pcount(ipb), nu_inc, &
+                kabs(pstart(ipb):pend(ipb)), &
+                wgt(pstart(ipb):pend(ipb)), integ_wgt, &
+                i_ck_fit, tol*REAL(ipb,RealK), max_path, &
+                l_fit_cont_data .AND. l_cont_line_abs_weight, &
+                kabs_lines(pstart(ipb):pend(ipb)), &
+                l_wgt_scale_sqrt, u_wgt_scale, &
+                nd_k_term, iu_monitor, &
+                n_k(ib), w_k(n_k_last+1:nd_k_term,ib), &
+                k_opt(n_k_last+1:nd_k_term,ib), &
+                k_ave(n_k_last+1:nd_k_term,ib), &
+                ig_tmp(0:nd_k_term), ierr)
+
+                ig(n_k_last+1:n_k_last+n_k(ib))= &
+                  ig_tmp(1:n_k(ib))+ig(n_k_last)
+                n_k_last=n_k_last+n_k(ib)
+            END DO
+            n_k(ib)=n_k_last
+          END IF
           WRITE(*,*) 'Number of k-terms in band: ',n_k(ib)
           WRITE(iu_monitor,*) 'Number of k-terms in band: ',n_k(ib)
           CALL ck_trans_fit
+
+!         Save mapping if requested
+          IF (l_save_map) CALL output_map_band_cdf
 
         END IF
 
@@ -954,6 +1189,9 @@ SUBROUTINE corr_k_single &
           CALL apply_response_int
 
           kabs=kabs_all(1:n_nu,ipt)
+          IF (l_fit_cont_data .AND. l_cont_line_abs_weight) &
+            kabs_lines=kabs_all_lines(1:n_nu,ipt)
+
           IF (ipt == ipt_ref) THEN
             wgt_ref(1:n_nu) = nu_inc * wgt(1:n_nu)
           END IF
@@ -969,7 +1207,7 @@ SUBROUTINE corr_k_single &
              CALL calc_frn_trans_int
              IF (ierr /= i_normal) RETURN
           ENDIF
-          IF (l_fit_line_data) CALL ck_fit_k
+          IF (l_fit_line_data .OR. l_fit_cont_data) CALL ck_fit_k
         ENDDO
 
         IF (l_fit_frn_continuum) k_cont => k_opt_frn(ib)
@@ -1005,11 +1243,12 @@ SUBROUTINE corr_k_single &
     DEALLOCATE(map)
     DEALLOCATE(gmap)
     DEALLOCATE(pmap)
+    DEALLOCATE(kabs_lines)
 !
 !   Write out the calculated fit.
-    IF (l_fit_line_data) THEN
-      CALL write_fit_90(iu_k_out, .FALSE., ib, i_index, &
-        p_calc(ipt_ref), t_calc(ipt_ref), &
+    IF (l_fit_line_data .OR. l_fit_cont_data) THEN
+      CALL write_fit_90(iu_k_out, .FALSE., l_fit_cont_data, ib, &
+        i_index, i_index_1, i_index_2, p_calc(ipt_ref), t_calc(ipt_ref), &
         n_path, u_l_ref, trans_ref, trans_calc, &
         n_k(ib), k_opt(:, ib), w_k(:, ib), IP_scale_term, &
         i_scale_function, scale_vector(:, :, ib))
@@ -1045,6 +1284,17 @@ SUBROUTINE corr_k_single &
         DEALLOCATE(k_lookup)
         DEALLOCATE(t_lookup)
         DEALLOCATE(p_lookup)
+      ELSE IF (i_scale_function == IP_scale_t_lookup) THEN
+!       Write temperature look-up table to file (n_p = 1):
+        WRITE(iu_k_out,'(a,i4,a)') 'Lookup table: ', &
+          n_t(1), ' temperatures.'
+        WRITE(iu_k_out,'(6(1PE13.6))') t_calc(1:n_t(1))
+        WRITE(iu_k_out,'(/,4(a,i4))') 'Band: ', ib, &
+          ', gases: ', i_gas_1, ' and ', i_gas_2, &
+          ', k-terms: ', n_k(ib)
+        DO ik=1, n_k(ib)
+          WRITE(iu_k_out,'(6(1PE13.6))') kopt_all(ik,1:n_t(1),ibb)
+        END DO
       END IF
     ENDIF
     IF (l_fit_frn_continuum) i_index_c = IP_frn_continuum
@@ -1052,7 +1302,7 @@ SUBROUTINE corr_k_single &
     IF (l_fit_frn_continuum .OR. l_fit_self_continuum) THEN
       ALLOCATE(trans_app_c(n_path_c*n_pp))
       trans_app_c(:) = EXP( -k_cont * u_fit_c(:, ipt_ref) )
-      CALL write_fit_90(iu_k_out, .TRUE., ib, i_index_c, &
+      CALL write_fit_90(iu_k_out, .TRUE., .FALSE., ib, i_index_c, 0, 0, &
         p_calc(ipt_ref), t_calc(ipt_ref), &
         n_path_c*n_pp, u_fit_c(:, ipt_ref), &
         trans_fit_c(:, ipt_ref), trans_app_c(:), &
@@ -1061,10 +1311,13 @@ SUBROUTINE corr_k_single &
       DEALLOCATE(trans_app_c)
     ENDIF
     
+    IF (l_fit_cont_data .AND. l_cont_line_abs_weight) &
+      kabs_all=kabs_all_lines
     IF (.NOT.l_lbl_exist) CALL output_lbl_band_cdf
     DEALLOCATE(wgt_ref)
     DEALLOCATE(nu_wgt)
     DEALLOCATE(kabs_all)
+    IF (l_fit_cont_data .AND. l_cont_line_abs_weight) DEALLOCATE(kabs_all_lines)
 !
     CLOSE(iu_k_out)
     CLOSE(iu_monitor)
@@ -1082,18 +1335,19 @@ SUBROUTINE corr_k_single &
       ENDIF
     ENDIF
 
-    IF (l_fit_line_data) DEALLOCATE(trans_ref)
-    IF (l_fit_line_data) DEALLOCATE(trans_calc)
+    IF (l_fit_line_data .OR. l_fit_cont_data) DEALLOCATE(trans_ref)
+    IF (l_fit_line_data .OR. l_fit_cont_data) DEALLOCATE(trans_calc)
 !
   ENDDO Bands
 !
-  IF (l_fit_line_data) CALL output_ck_cdf
+  IF (l_fit_line_data .OR. l_fit_cont_data) CALL output_ck_cdf
   IF (ierr /= i_normal) RETURN
   IF (l_lbl_exist) DEALLOCATE(nu_wgt_all)
   DEALLOCATE(band_min)
   DEALLOCATE(band_max)
   
   CALL close_lbl_files
+  CALL close_map_files
 !
 !
   RETURN
@@ -1233,6 +1487,68 @@ CONTAINS
 
 
 
+  SUBROUTINE access_cia_int
+
+    TYPE(StrCIAHead) :: single_header
+    REAL (RealK), ALLOCATABLE :: cia_wavenumber(:)
+    REAL (RealK), ALLOCATABLE :: cia_data(:)
+    INTEGER :: io_status    ! Error code for file I/O
+
+    lower_band_limit = band_min(ib) * 0.01_RealK
+    upper_band_limit = band_max(ib) * 0.01_RealK
+
+!   To cover the whole range, the database must be rewound for bands
+!   after the first.
+    IF (ibb > 1) REWIND(iu_cia)
+
+!   First find the number of records that contain cross-sections for
+!   this band
+    num_cia_lines_in_band = 0
+    DO
+      READ(iu_cia, cia_header_frmt, IOSTAT = io_status) single_header
+      IF (io_status < 0) EXIT ! EOF
+      IF (single_header%wavenumber_min <= upper_band_limit .AND. &
+          single_header%wavenumber_max >= lower_band_limit) THEN
+        num_cia_lines_in_band = num_cia_lines_in_band + 1
+      END IF
+      ALLOCATE(cia_wavenumber(single_header%no_pts))
+      ALLOCATE(cia_data(single_header%no_pts))
+      READ(iu_cia, cia_data_frmt, IOSTAT = io_status) &
+        (cia_wavenumber(i), cia_data(i), i = 1, single_header%no_pts)
+      DEALLOCATE(cia_wavenumber)
+      DEALLOCATE(cia_data)
+    END DO
+
+!   Now allocate structure and read in required data
+    IF (num_cia_lines_in_band > 0) THEN
+      ALLOCATE(cia(num_cia_lines_in_band))
+      REWIND(iu_cia)
+      num_cia_lines_in_band = 0
+      DO
+        READ(iu_cia, cia_header_frmt, IOSTAT = io_status) single_header
+        IF (io_status < 0) EXIT ! EOF
+        ALLOCATE(cia_wavenumber(single_header%no_pts))
+        ALLOCATE(cia_data(single_header%no_pts))
+        READ(iu_cia, cia_data_frmt, IOSTAT = io_status)  &
+          (cia_wavenumber(i), cia_data(i), i = 1, single_header%no_pts)
+        IF (single_header%wavenumber_min <= upper_band_limit .AND. &
+            single_header%wavenumber_max >= lower_band_limit) THEN
+          num_cia_lines_in_band = num_cia_lines_in_band + 1
+          cia(num_cia_lines_in_band)%head = single_header
+          ALLOCATE(cia(num_cia_lines_in_band)%wavenumber(single_header%no_pts))
+          ALLOCATE(cia(num_cia_lines_in_band)%data(single_header%no_pts))
+          cia(num_cia_lines_in_band)%wavenumber = cia_wavenumber
+          cia(num_cia_lines_in_band)%data = cia_data
+        END IF
+        DEALLOCATE(cia_wavenumber)
+        DEALLOCATE(cia_data)
+      END DO
+    END IF
+
+  END SUBROUTINE access_cia_int
+
+
+
   SUBROUTINE fit_transparent_int
 !
 !
@@ -1341,6 +1657,9 @@ CONTAINS
     ALLOCATE(map(n_nu))
     ALLOCATE(gmap(n_nu))
     ALLOCATE(pmap(n_nu))
+    ALLOCATE(kabs_lines(n_nu))
+    IF (l_fit_cont_data .AND. l_cont_line_abs_weight) &
+      ALLOCATE(kabs_all_lines(n_nu,n_pt_pair))
 
   END SUBROUTINE set_wgt_int
 !
@@ -1467,6 +1786,7 @@ CONTAINS
         t_calc(ipt), p_calc(ipt), &
         0.0_RealK, &
         n_nu, nu_wgt, &
+        .FALSE., &
         k_for)
       kabs = kabs + k_for
       DEALLOCATE(k_for)
@@ -1485,7 +1805,7 @@ CONTAINS
     INTEGER :: l, ll
     LOGICAL :: p_test, p_test2, t_test, t_test2
     REAL (RealK) :: p_lk(4), t_lk(4), ptorr, waveno
-    REAL (RealK) :: p_int(4), t_int(4), k_int(4), fp, ft, ftt
+    REAL (RealK) :: p_int(4), t_int(4), k_int(4)
     REAL (RealK), PARAMETER :: rmdi = -1.0_RealK
 
 !   Calculate the monochromatic absorption coefficients at each
@@ -1570,6 +1890,109 @@ CONTAINS
   END SUBROUTINE calc_xsc_abs_int
 
 
+
+  SUBROUTINE calc_cia_abs_int
+
+    REAL(RealK) :: waveno
+!     Wavenumber in cm-1
+    REAL(RealK) :: t_cia(num_cia_lines_in_band)
+!     CIA temperatures with data at current wavenumber
+    INTEGER :: n_t_cia
+!     Number of CIA temperatures with data at current wavenumber
+    REAL(RealK) :: kabs_t1, kabs_t2
+!     Temporary storage for interpolation of absorption coefficient
+    REAL(RealK) :: wgt_t1, wgt_t2
+!     Temperature interpolation weights
+
+    REAL(RealK), EXTERNAL :: interp1d
+
+!   Calculate the monochromatic absorption coefficients at each
+!   wavenumber.
+    WRITE(*, '(A, 1PE10.3, A2)') &
+      'Calculation of CIA at ', t_calc(ipt), ' K.'
+    WRITE(iu_monitor, '(A, 1PE10.3, A2)') &
+      'Calculation of CIA at ', t_calc(ipt), ' K.'
+    kabs(1:n_nu)=0.0_RealK
+
+!   Look-up absorption cross-section for P/T/wavenumber
+    DO j = 1, n_nu
+!     Lookup wavenumer in cm-1
+      waveno = nu_wgt(j) * 0.01_RealK
+      
+!     Reset interpolation quantities
+      t_cia = 0.0_RealK
+      n_t_cia = 0
+
+      DO i = 1, num_cia_lines_in_band
+        IF ( cia(i)%head%wavenumber_min <= waveno .AND. &
+             cia(i)%head%wavenumber_max >= waveno ) THEN
+!         Data for this wavenumber exists in this entry
+          t_cia(i) = cia(i)%head%temperature
+          n_t_cia = n_t_cia + 1
+        END IF
+      END DO
+
+      IF (n_t_cia > 0) THEN
+
+!       Perform interpolation in wavenumber and temperature
+        IF (t_calc(ipt) <= t_cia(1)) THEN
+          kabs(j) = interp1d(cia(1)%wavenumber, &
+            cia(1)%data, waveno, cia(1)%head%no_pts)
+        ELSE IF (t_calc(ipt) >= t_cia(n_t_cia)) THEN
+          kabs(j) = interp1d(cia(n_t_cia)%wavenumber, &
+            cia(n_t_cia)%data, waveno, cia(n_t_cia)%head%no_pts)
+        ELSE
+          DO i = 1, n_t_cia - 1
+            IF (t_calc(ipt) >= t_cia(i) .AND. t_calc(ipt) <= t_cia(i+1)) THEN
+              kabs_t1 = interp1d(cia(i)%wavenumber, &
+                cia(i)%data, waveno, cia(i)%head%no_pts)
+              kabs_t2 = interp1d(cia(i+1)%wavenumber, &
+                cia(i+1)%data, waveno, cia(i+1)%head%no_pts)
+              wgt_t1 = (t_cia(i+1) - t_calc(ipt))/(t_cia(i+1) - t_cia(i))
+              wgt_t2 = 1.0_RealK - wgt_t1
+              kabs(j) = wgt_t1*kabs_t1 + wgt_t2*kabs_t2
+            END IF
+          END DO
+        END IF
+
+!       Convert from  cm5 molecule-2  to  m5 kg-2
+        kabs(j) = 1.0E-10_RealK*kabs(j)/ &
+          (molar_weight(i_gas_1)*molar_weight(i_gas_2)*atomic_mass_unit**2)
+
+      END IF
+
+    END DO
+
+  END SUBROUTINE calc_cia_abs_int
+
+
+
+  SUBROUTINE calc_k_opt_ref
+
+!   Calculate for a fixed set of quadrature points.
+    DO ik=1, n_k(ib)
+      i0 = ig(ik-1)+1
+      i1 = ig(ik)
+      n_nu_k=i1-i0+1
+!     Calculate the simple mean k-value across this interval.
+      integ_k =  nu_inc * SUM(wgt(i0:i1))
+      ALLOCATE(wgt_k(i0:i1))
+      wgt_k(i0:i1)=kabs(i0:i1)*wgt(i0:i1)
+      k_ave(ik,ib) = nu_inc * SUM(wgt_k(i0:i1))/integ_k
+      DEALLOCATE(wgt_k)
+      CALL optimal_k(n_nu_k, &
+        nu_inc, kabs(i0:i1), wgt(i0:i1), &
+        integ_k, k_ave(ik,ib), tol, &
+        l_fit_cont_data .AND. l_cont_line_abs_weight, kabs_lines(i0:i1), &
+        l_wgt_scale_sqrt, u_wgt_scale, k_opt(ik,ib), err_norm, ierr)
+      IF (ierr /= i_normal) RETURN
+
+    ENDDO
+
+  END SUBROUTINE calc_k_opt_ref
+
+
+
   SUBROUTINE ck_trans_fit
 
     IMPLICIT NONE 
@@ -1615,18 +2038,22 @@ CONTAINS
 
     IMPLICIT NONE
 
-!   Sort the absorption and weighting functions
-!   with reordering at each pressure level
-    DO ipb=1,n_pre
-      CALL map_heap_func( kabs(pmap(pstart(ipb):pend(ipb))), &
-        gmap(pstart(ipb):pend(ipb)))
-      gmap(pstart(ipb):pend(ipb)) = pstart(ipb)-1 + &
-        gmap(pstart(ipb):pend(ipb))
-    END DO
-    map = pmap(gmap)
+    IF (.NOT.l_load_map) THEN
+!     Sort the absorption and weighting functions
+!     with reordering at each pressure level
+      DO ipb=1,n_pre
+        CALL map_heap_func( kabs(pmap(pstart(ipb):pend(ipb))), &
+          gmap(pstart(ipb):pend(ipb)))
+        gmap(pstart(ipb):pend(ipb)) = pstart(ipb)-1 + &
+          gmap(pstart(ipb):pend(ipb))
+      END DO
+      map = pmap(gmap)
+    END IF
 
     kabs=kabs(map)
     wgt=wgt(map)
+    IF (l_fit_cont_data .AND. l_cont_line_abs_weight) &
+      kabs_lines=kabs_lines(map)
 
 !   Integrate the sorted weightings across the band.
     integ_wgt=nu_inc * SUM(wgt(1:n_nu))
@@ -1647,7 +2074,9 @@ CONTAINS
       DEALLOCATE(wgt_k)
       CALL optimal_k(n_nu_k, &
         nu_inc, kabs(i0:i1), wgt(i0:i1), &
-        integ_k, k_ave_tmp(ik), tol, k_opt_tmp(ik), err_norm, ierr)
+        integ_k, k_ave_tmp(ik), tol, &
+        l_fit_cont_data .AND. l_cont_line_abs_weight, kabs_lines(i0:i1), &
+        l_wgt_scale_sqrt, u_wgt_scale, k_opt_tmp(ik), err_norm, ierr)
       IF (ierr /= i_normal) RETURN
 
       IF (l_scale_pT) THEN
@@ -1752,6 +2181,7 @@ CONTAINS
         t_calc(ipt), p_calc(ipt), &
         pp, &
         n_nu, nu_wgt, &
+        .FALSE., &
         k_self)
 !
 !     Now calculate the total transmission
@@ -1885,6 +2315,7 @@ CONTAINS
         t_calc(ipt), p_calc(ipt), &
         pp, &
         n_nu, nu_wgt, &
+        .FALSE., &
         k_frn)
 !
 !     Now calculate the total transmission
@@ -1998,7 +2429,7 @@ CONTAINS
     IMPLICIT NONE
 
     INTEGER :: index_k_ref, i_scale_function2
-    REAL :: err_norm_old
+    REAL  (RealK) :: err_norm_old
 
     IF (i_scale_function == ip_scale_dbl_pow_law)  &
         i_scale_function2 = ip_scale_power_law
@@ -2166,7 +2597,7 @@ CONTAINS
 
     USE netcdf
     IMPLICIT NONE
-    INTEGER :: dimid1, dimid2          ! dimension ID
+    INTEGER :: dimid1                  ! dimension ID
     INTEGER :: varid                   ! variable ID
     CHARACTER(LEN=2) :: dim_name='nu'  ! Name of wavenumber dimension
     INTEGER :: dim_len                 ! Length of wavenumber dimension
@@ -2212,7 +2643,6 @@ CONTAINS
 !   Read pressures and temperatures
     CALL nf(nf90_inq_varid(ncidin_lbl,'p_calc',varid)) 
     CALL nf(nf90_get_var(ncidin_lbl,varid,p_calc_in))
-
     CALL nf(nf90_inq_varid(ncidin_lbl,'t_calc',varid))
     CALL nf(nf90_get_var(ncidin_lbl,varid,t_calc_in))
 
@@ -2222,7 +2652,7 @@ CONTAINS
       IF (abs(p_calc_in(ipt)-p_calc(ipt)) >= &
         p_calc(ipt)*EPSILON(REAL(1e+0)) .OR. &
         abs(t_calc_in(ipt)-t_calc(ipt)) >= t_calc(ipt)*EPSILON(REAL(1e+0))) THEN
-        write(*,'(a)') 'P,T points in lbl file do not match input values.'
+        WRITE(*,'(a)') 'P,T points in lbl file do not match input values.'
         ierr = i_err_fatal
         RETURN
       ENDIF
@@ -2236,7 +2666,6 @@ CONTAINS
     USE netcdf
     IMPLICIT NONE
     INTEGER :: varid                   ! variable ID
-    REAL (RealK) :: p_calc_in(n_pt_pair), t_calc_in(n_pt_pair)
     INTEGER :: i_nu, nu_index, nu_count
     INTEGER :: nu_wgt_map(n_nu), nu_wgt_all_map(SIZE(nu_wgt_all))
 
@@ -2281,6 +2710,88 @@ CONTAINS
     END DO
 
   END SUBROUTINE input_lbl_band_cdf
+
+
+  SUBROUTINE input_map_band_cdf_init
+
+    USE netcdf
+    IMPLICIT NONE
+    INTEGER :: varid
+
+!   Open the file for reading
+    CALL nf(nf90_open(TRIM(file_map),NF90_NOWRITE,ncidin_map))
+
+!   Read number of k-terms
+    CALL nf(nf90_inq_varid(ncidin_map,'n_k',varid))
+    CALL nf(nf90_get_var(ncidin_map,varid,n_k,start=(/1/),count=(/n_band/)))
+
+  END SUBROUTINE input_map_band_cdf_init
+
+
+  SUBROUTINE input_map_band_cdf
+
+    USE netcdf
+    IMPLICIT NONE
+    INTEGER :: varid                   ! variable ID
+
+!   Read g-points
+    CALL nf(nf90_inq_varid(ncidin_map,'ig',varid))
+    CALL nf(nf90_get_var(ncidin_map,varid,ig, &
+      start=(/1,ib/),count=(/n_k(ib)+1,1/)))
+
+!   Read mapping of frequencies
+    CALL nf(nf90_inq_varid(ncidin_map,'map',varid))
+    CALL nf(nf90_get_var(ncidin_map,varid,map, &
+      start=(/1,ib/),count=(/n_nu,1/)))
+
+!   Read reference k-term weights
+    CALL nf(nf90_inq_varid(ncidin_map,'w_k',varid))
+    CALL nf(nf90_get_var(ncidin_map,varid,w_k(1:n_k(ib),ib), &
+      start=(/1,ib/),count=(/n_k(ib),1/)))
+
+  END SUBROUTINE input_map_band_cdf
+
+
+  SUBROUTINE input_wgt_band_cdf
+
+    USE netcdf
+    IMPLICIT NONE
+    INTEGER :: varid
+    INTEGER :: n_pre_arr(1)
+
+!   Read number of pressure bins
+    CALL nf(nf90_inq_varid(ncidin_map,'n_pre',varid))
+    CALL nf(nf90_get_var(ncidin_map,varid,n_pre_arr, &
+      start=(/ib/),count=(/1/)))
+    n_pre = n_pre_arr(1)
+
+!   Read g-points
+    CALL nf(nf90_inq_varid(ncidin_map,'ig',varid))
+    CALL nf(nf90_get_var(ncidin_map,varid,ig, &
+      start=(/1,ib/),count=(/n_k(ib)+1,1/)))
+
+!   Read reference k-term weights
+    CALL nf(nf90_inq_varid(ncidin_map,'w_k',varid))
+    CALL nf(nf90_get_var(ncidin_map,varid,w_k(1:n_k(ib),ib), &
+      start=(/1,ib/),count=(/n_k(ib),1/)))
+
+!   Read pressure bin data
+    CALL nf(nf90_inq_varid(ncidin_map,'pstart',varid))
+    CALL nf(nf90_get_var(ncidin_map,varid,pstart, &
+      start=(/1,ib/),count=(/n_pre,1/)))
+    CALL nf(nf90_inq_varid(ncidin_map,'pend',varid))
+    CALL nf(nf90_get_var(ncidin_map,varid,pend, &
+      start=(/1,ib/),count=(/n_pre,1/)))
+    CALL nf(nf90_inq_varid(ncidin_map,'pcount',varid))
+    CALL nf(nf90_get_var(ncidin_map,varid,pcount, &
+      start=(/1,ib/),count=(/n_pre,1/)))
+
+!   Read pressure bin mapping
+    CALL nf(nf90_inq_varid(ncidin_map,'pmap',varid))
+    CALL nf(nf90_get_var(ncidin_map,varid,pmap, &
+      start=(/1,ib/),count=(/n_nu,1/)))
+
+  END SUBROUTINE input_wgt_band_cdf
 
 
   SUBROUTINE output_lbl_band_cdf_init
@@ -2344,7 +2855,11 @@ CONTAINS
       (/dimid1,dimid2/), varid))
     CALL nf(nf90_put_att(ncidout_lbl, varid, 'title', 'absorption' ))
     CALL nf(nf90_put_att(ncidout_lbl, varid, 'long_name', 'absorption' ))
-    CALL nf(nf90_put_att(ncidout_lbl, varid, 'units', 'm2 kg-1' ))
+    IF (l_fit_cont_data) THEN
+      CALL nf(nf90_put_att(ncidout_lbl, varid, 'units', 'm5 kg-2' ))
+    ELSE
+      CALL nf(nf90_put_att(ncidout_lbl, varid, 'units', 'm2 kg-1' ))
+    END IF
 
     CALL nf(nf90_enddef(ncidout_lbl))
 
@@ -2352,6 +2867,7 @@ CONTAINS
     n_nu_written=0
 
   END SUBROUTINE output_lbl_band_cdf_init
+
 
   SUBROUTINE output_lbl_band_cdf
 
@@ -2375,6 +2891,146 @@ CONTAINS
     n_nu_written=n_nu_written+n_nu
 
   END SUBROUTINE output_lbl_band_cdf
+
+
+  SUBROUTINE output_map_band_cdf_init
+
+    USE netcdf
+    IMPLICIT NONE
+    INTEGER :: dimid1, dimid2, dimid3, dimid4 ! dimension ID
+    INTEGER :: varid                          ! variable ID
+    INTEGER :: n_nu(n_band)                   ! number of frequency points
+    LOGICAL :: l_map_exist                    ! flag for mapping file existing 
+
+!   Calculate total number of frequency points
+    DO ib=1,n_band
+      band_width = band_max(ib) - band_min(ib)
+      DO jx = 1, n_band_exclude(ib)
+        band_width = band_width + &
+          band_min(index_exclude(jx, ib)) - band_max(index_exclude(jx, ib))
+      ENDDO
+      n_nu(ib)=NINT(band_width/nu_inc_0)
+    END DO
+
+    INQUIRE(FILE=file_map, EXIST=l_map_exist)
+
+!   Create or open for writing
+    IF (l_map_exist) THEN
+      CALL nf(nf90_open(TRIM(file_map),NF90_WRITE,ncidout_map))
+
+    ELSE
+      CALL nf(nf90_create(TRIM(file_map),NF90_NOCLOBBER,ncidout_map))
+
+!     Create dimensions
+      CALL nf(nf90_def_dim(ncidout_map, 'nu', MAXVAL(n_nu), dimid1))
+      CALL nf(nf90_def_dim(ncidout_map, 'nd_k_term', nd_k_term+1, dimid2))
+      CALL nf(nf90_def_dim(ncidout_map, 'pre', n_pt_pair, dimid3))
+      CALL nf(nf90_def_dim(ncidout_map, 'band', n_band, dimid4))
+
+      CALL nf(nf90_def_var(ncidout_map, 'nu', NF90_DOUBLE, &
+        (/ dimid1,dimid4 /), varid))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'title', 'wavenumber'))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'long_name', 'wavenumber'))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'units', 'm-1'))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'step', nu_inc_0))
+
+      CALL nf(nf90_def_var(ncidout_map, 'n_k', NF90_INT, (/ dimid4 /), varid))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'title', 'number of k-terms'))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'long_name', &
+        'number of k-terms'))
+
+      CALL nf(nf90_def_var(ncidout_map, 'n_pre', NF90_INT, (/ dimid4 /), varid))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'title', 'number of pbins'))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'long_name', &
+        'number of pressure bins'))
+
+      CALL nf(nf90_def_var(ncidout_map, 'ig', NF90_INT, &
+        (/ dimid2,dimid4 /), varid))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'title', 'g-points'))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'long_name', &
+        'g-quadrature points'))
+
+      CALL nf(nf90_def_var(ncidout_map, 'w_k', NF90_DOUBLE, &
+        (/dimid2,dimid4/), varid))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'title', 'weights' ))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'long_name', 'weights' ))
+
+      CALL nf(nf90_def_var(ncidout_map, 'pstart', NF90_INT, &
+        (/ dimid3,dimid4 /), varid))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'title', 'start of pbin'))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'long_name', &
+        'start of pressure bin'))
+
+      CALL nf(nf90_def_var(ncidout_map, 'pend', NF90_INT, &
+        (/ dimid3,dimid4 /), varid))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'title', 'end of pbin'))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'long_name', &
+        'end of pressure bin'))
+
+      CALL nf(nf90_def_var(ncidout_map, 'pcount', NF90_INT, &
+        (/ dimid3,dimid4 /), varid))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'title', 'size of pbin'))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'long_name', &
+        'number of points in pressure bin'))
+
+      CALL nf(nf90_def_var(ncidout_map, 'pmap', NF90_INT, &
+        (/dimid1,dimid4/), varid))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'title', &
+        'pressure bin mapping' ))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'long_name', &
+        'pressure bin mapping' ))
+
+      CALL nf(nf90_def_var(ncidout_map, 'map', NF90_INT, &
+        (/dimid1,dimid4/), varid))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'title', 'mapping' ))
+      CALL nf(nf90_put_att(ncidout_map, varid, 'long_name', 'mapping' ))
+
+      CALL nf(nf90_enddef(ncidout_map))
+    END IF
+
+  END SUBROUTINE output_map_band_cdf_init
+
+
+  SUBROUTINE output_map_band_cdf
+
+    USE netcdf
+    IMPLICIT NONE
+    INTEGER :: varid                   ! variable ID
+
+!   Write frequency array mapping arrays
+    CALL nf(nf90_inq_varid(ncidout_map,'nu',varid))
+    CALL nf(nf90_put_var(ncidout_map,varid,nu_wgt, &
+      start=(/1,ib/), count=(/n_nu,1/)))
+    CALL nf(nf90_inq_varid(ncidout_map,'n_k',varid))
+    CALL nf(nf90_put_var(ncidout_map,varid,(/n_k(ib)/), &
+      start=(/ib/), count=(/1/)))
+    CALL nf(nf90_inq_varid(ncidout_map,'n_pre',varid))
+    CALL nf(nf90_put_var(ncidout_map,varid,(/n_pre/), &
+      start=(/ib/), count=(/1/)))
+    CALL nf(nf90_inq_varid(ncidout_map,'ig',varid))
+    CALL nf(nf90_put_var(ncidout_map,varid,ig, &
+      start=(/1,ib/), count=(/n_k(ib)+1,1/)))
+    CALL nf(nf90_inq_varid(ncidout_map,'w_k',varid))
+    CALL nf(nf90_put_var(ncidout_map,varid,w_k(1:n_k(ib),ib), &
+      start=(/1,ib/), count=(/n_k(ib),1/)))
+    CALL nf(nf90_inq_varid(ncidout_map,'pstart',varid))
+    CALL nf(nf90_put_var(ncidout_map,varid,pstart(1:n_pre), &
+      start=(/1,ib/), count=(/n_pre,1/)))
+    CALL nf(nf90_inq_varid(ncidout_map,'pend',varid))
+    CALL nf(nf90_put_var(ncidout_map,varid,pend(1:n_pre), &
+      start=(/1,ib/), count=(/n_pre,1/)))
+    CALL nf(nf90_inq_varid(ncidout_map,'pcount',varid))
+    CALL nf(nf90_put_var(ncidout_map,varid,pcount(1:n_pre), &
+      start=(/1,ib/), count=(/n_pre,1/)))
+    CALL nf(nf90_inq_varid(ncidout_map,'pmap',varid))
+    CALL nf(nf90_put_var(ncidout_map,varid,pmap, &
+      start=(/1,ib/), count=(/n_nu,1/)))
+    CALL nf(nf90_inq_varid(ncidout_map,'map',varid))
+    CALL nf(nf90_put_var(ncidout_map,varid,map, &
+      start=(/1,ib/), count=(/n_nu,1/)))
+
+  END SUBROUTINE output_map_band_cdf
+
 
   SUBROUTINE output_ck_cdf
 
@@ -2433,27 +3089,46 @@ CONTAINS
       (/dimid1,dimid2,dimid3/), varid))
     Call nf(nf90_put_att(ncid, varid, 'title', 'k-term' ))
     Call nf(nf90_put_att(ncid, varid, 'long_name', 'k-term' ))
-    Call nf(nf90_put_att(ncid, varid, 'units', 'm2 kg-1' ))
+    IF (l_fit_cont_data) THEN
+      Call nf(nf90_put_att(ncid, varid, 'units', 'm5 kg-2' ))
+    ELSE
+      Call nf(nf90_put_att(ncid, varid, 'units', 'm2 kg-1' ))
+    END IF
     Call nf(nf90_enddef(ncid))
     Call nf(nf90_put_var(ncid, varid, kopt_all ))
 
     Call nf(nf90_close(ncid))
 
   END SUBROUTINE output_ck_cdf
-  
+
+
   SUBROUTINE close_lbl_files
-  
+
     use netcdf
     IMPLICIT NONE
-  
+
 !   Close files
     IF (l_lbl_exist) THEN
       CALL nf(nf90_close(ncidin_lbl))
     ELSE
       CALL nf(nf90_close(ncidout_lbl))
     ENDIF
-      
+
   END SUBROUTINE close_lbl_files
+
+  SUBROUTINE close_map_files
+  
+    use netcdf
+    IMPLICIT NONE
+  
+!   Close files
+    IF (l_load_map) THEN
+      CALL nf(nf90_close(ncidin_map))
+    ELSE IF (l_save_map) THEN
+      CALL nf(nf90_close(ncidout_map))
+    ENDIF
+      
+  END SUBROUTINE close_map_files
 
   Subroutine nf(status)
     USE netcdf

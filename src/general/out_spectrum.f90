@@ -68,6 +68,10 @@ SUBROUTINE out_spectrum(file_spectral, Spectrum, ierr)
     l_exist_k = l_exist_k .OR. &
      ANY(Spectrum%Gas%i_scale_fnc == ip_scale_lookup)
   END IF
+  IF (ALLOCATED(Spectrum%ContGen%i_band_k_cont)) THEN
+    l_exist_k = l_exist_k .OR. &
+      ANY(Spectrum%ContGen%i_band_k_cont > 0)
+  END IF
   IF (l_exist_k) THEN
     i=INDEX(file_spectral, ' ') - 1
     spectral_k = file_spectral(1:i) // '_k'
@@ -130,6 +134,9 @@ SUBROUTINE out_spectrum(file_spectral, Spectrum, ierr)
   ENDIF
   IF (Spectrum%Basic%l_present(17)) &
     CALL write_block_17(Spectrum%Basic, Spectrum%Var)
+  IF (Spectrum%Basic%l_present(18)) CALL write_block_18
+  IF (Spectrum%Basic%l_present(19)) &
+    CALL write_block_19(Spectrum%Basic, Spectrum%ContGen)
 
 ! Close the file.
   CLOSE(iu_spc)
@@ -150,9 +157,11 @@ CONTAINS
 !   Local variables.
     INTEGER :: i, j
 !     Loop variables
-    INTEGER, Pointer :: i_type
+    INTEGER, Pointer :: i_type, i_type_1, i_type_2
 !     Identifier for gas
-    INTEGER :: nd_k_term
+    INTEGER, Pointer :: i_index_1, i_index_2
+!     Indices of continuum gases
+    INTEGER :: nd_k_term, nd_k_term_cont
 !     Maximum number of k-terms in a band
 
 
@@ -175,8 +184,28 @@ CONTAINS
       IF (nd_k_term > 0) WRITE(iu_spc, '(a37, 1x, i5)') &
         'Maximum number of k-terms in a band =', nd_k_term
     END IF
-    WRITE(iu_spc, '(a26, 1x, i5)') &
-      'Total number of aerosols =', Spectrum%Aerosol%n_aerosol
+
+    IF (Spectrum%ContGen%n_cont > 0) THEN
+      WRITE(iu_spc, '(a, i5)') 'Total number of generalised continua = ', &
+        Spectrum%ContGen%n_cont
+      IF (ALLOCATED(Spectrum%ContGen%i_band_k_cont)) THEN
+        nd_k_term_cont = 0
+        DO i = 1, Spectrum%Basic%n_band
+          DO j = 1, Spectrum%ContGen%n_band_cont(i)
+            nd_k_term_cont = MAX(nd_k_term_cont, &
+              Spectrum%ContGen%i_band_k_cont(i, &
+                Spectrum%ContGen%index_cont(j, i)) )
+          END DO
+        END DO
+        IF (nd_k_term_cont > 0) WRITE(iu_spc, '(a, i5)') &
+            'Maximum number of continuum k-terms in a band = ', nd_k_term_cont
+      END IF
+    END IF
+
+    IF (Spectrum%Aerosol%n_aerosol > 0) THEN
+      WRITE(iu_spc, '(a26, 1x, i5)') &
+        'Total number of aerosols =', Spectrum%Aerosol%n_aerosol
+    END IF
 
     WRITE(iu_spc, '(a)') 'List of indexing numbers and absorbers.'
     WRITE(iu_spc, '(a)') &
@@ -187,14 +216,32 @@ CONTAINS
         i, i_type, name_absorb(i_type)
     END DO
 
-    WRITE(iu_spc, '(a)') 'List of indexing numbers of aerosols.'
-    WRITE(iu_spc, '(a)') &
-      'Index       Aerosol(type number and name)'
-    DO i=1, Spectrum%Aerosol%n_aerosol
-      i_type=Spectrum%Aerosol%type_aerosol(i)
-      WRITE(iu_spc, '(i5, 7x, i5, 7x, a)') &
-        i, i_type, name_aerosol_component(i_type)
-    END DO
+    IF (Spectrum%ContGen%n_cont > 0) THEN
+      WRITE(iu_spc, '(a)') 'Listing of continuum indexing numbers and gases.'
+      WRITE(iu_spc, '(a)') 'Index     ' // &
+        'Gas 1(index and name)              ' // &
+        'Gas 2(index and name)'
+      DO j = 1, Spectrum%ContGen%n_cont
+        i_index_1 => Spectrum%ContGen%index_cont_gas_1(j)
+        i_index_2 => Spectrum%ContGen%index_cont_gas_2(j)
+        i_type_1 => Spectrum%Gas%type_absorb(i_index_1)
+        i_type_2 => Spectrum%Gas%type_absorb(i_index_2)
+        WRITE(iu_spc, '(i5, 5x, i5, 5x, a, 5x, i5, 5x, a)') j, &
+          i_index_1, name_absorb(i_type_1), &
+          i_index_2, name_absorb(i_type_2)
+      END DO
+    END IF
+
+    IF (Spectrum%Aerosol%n_aerosol > 0) THEN
+      WRITE(iu_spc, '(a)') 'List of indexing numbers of aerosols.'
+      WRITE(iu_spc, '(a)') &
+        'Index       Aerosol(type number and name)'
+      DO i=1, Spectrum%Aerosol%n_aerosol
+        i_type=Spectrum%Aerosol%type_aerosol(i)
+        WRITE(iu_spc, '(i5, 7x, i5, 7x, a)') &
+          i, i_type, name_aerosol_component(i_type)
+      END DO
+    END IF
 
     WRITE(iu_spc, '(a4)') '*END'
 
@@ -1034,6 +1081,101 @@ CONTAINS
     END IF
 
   END SUBROUTINE write_block_17
+
+
+
+  SUBROUTINE write_block_18
+
+!   Local variables
+    INTEGER :: i_band
+!     Loop variable
+
+    WRITE(iu_spc, '(a19, a16, a16)') &
+      '*BLOCK: TYPE =   18', ': SUBTYPE =    0', ': VERSION =    0'
+    WRITE(iu_spc, '(a)') 'Generalised continua in each interval'
+    WRITE(iu_spc, '(a, /A)') &
+      '(The number is the indexing number of the continuum as set out', &
+      ' in the summary block 0.)'
+    WRITE(iu_spc, '(a)') &
+      'A zero indicates that there in no generalised continuum absorption ' // &
+      'in the interval.'
+    WRITE(iu_spc, '(a, 8x, a, /, 12x, a)') 'Band', &
+      'Number of active continua, flag for continuum being major absorber,', &
+      'followed by indexing numbers'
+
+    DO i_band = 1, Spectrum%Basic%n_band
+        WRITE(iu_spc, '(i5, 7x, i5, 7x, l5)') i_band, &
+          Spectrum%ContGen%n_band_cont(i_band), &
+          Spectrum%ContGen%l_cont_major(i_band)
+      IF (Spectrum%ContGen%n_band_cont(i_band) > 0) THEN
+        WRITE(iu_spc, '(5x, 4(2x, i3))') &
+          Spectrum%ContGen%index_cont(1:Spectrum%ContGen%n_band_cont(i_band), &
+          i_band)
+      ENDIF
+    ENDDO
+
+    WRITE(iu_spc, '(a4)') '*END'
+
+  END SUBROUTINE write_block_18
+
+
+
+  SUBROUTINE write_block_19(SpBasic, SpCont)
+
+    TYPE  (StrSpecBasic),   INTENT(IN) :: SpBasic
+    TYPE  (StrSpecContGen), INTENT(IN) :: SpCont
+
+!   Local variables.
+    INTEGER :: i, j, k
+!     Loop variables
+    INTEGER :: i_index
+!     Index of continuum
+
+    WRITE(iu_spc, '(a19, a16, a16)') &
+      '*BLOCK: TYPE =   19', ': SUBTYPE =    0', ': version =    0'
+    WRITE(iu_spc, '(a)') &
+      'Exponential sum fiting continuum coefficients: (exponents: m5/kg2)'
+    WRITE(iu_spc, '(a, i5)') &
+      'Number of temperatures in look-up table = ', SpCont%n_t_lookup_cont
+    WRITE(iu_spc, '(a4, 8x, a, /, 12x, a)') 'Band', &
+      'Continuum, number of k-terms, overlap treatment, ', &
+      'followed by, k-terms and weights.'
+
+    WRITE(iu_spc1,'(a)') '*BLOCK: continuum k-table'
+    WRITE(iu_spc1,'(/,2(a,i4),a)') 'Lookup table: ', &
+      SpCont%n_t_lookup_cont, ' temperatures.'
+    WRITE(iu_spc1,'(6(1PE13.6))') &
+      SpCont%t_lookup_cont(1:SpCont%n_t_lookup_cont)
+
+    DO i=1, SpBasic%n_band
+      DO j=1, SpCont%n_band_cont(i)
+        i_index = SpCont%index_cont(j, i)
+        WRITE(iu_spc, '(i5, 3(7x, i5))') &
+          i, i_index, SpCont%i_band_k_cont(i, i_index), &
+          SpCont%i_cont_overlap_band(i, i_index)
+        DO k=1, SpCont%i_band_k_cont(i, i_index)
+          IF (SpCont%i_scat_cont(k, i, i_index)==0) THEN
+            WRITE(iu_spc, '(2(3x, 1pe16.9))') &
+              SpCont%k_cont(k, i, i_index), SpCont%w_cont(k, i, i_index)
+          ELSE
+            WRITE(iu_spc, '(2(3x, 1pe16.9),i3)') &
+              SpCont%k_cont(k, i, i_index), SpCont%w_cont(k, i, i_index), &
+              SpCont%i_scat_cont(k, i, i_index)
+          END IF
+        ENDDO
+        WRITE(iu_spc1,'(/,3(a,i4))') 'Band: ',i,', continuum: ',i_index, &
+          ', k-terms: ',SpCont%i_band_k_cont(i, i_index)
+        DO k=1, SpCont%i_band_k_cont(i, i_index)
+          WRITE(iu_spc1,'(6(1PE13.6))') &
+            SpCont%k_lookup_cont(:,k,i_index,i)
+        END DO
+      ENDDO
+    ENDDO
+
+    WRITE(iu_spc, '(a4)') '*END'
+    WRITE(iu_spc1, '(a4)') '*END'
+
+  END SUBROUTINE write_block_19
 
 
 

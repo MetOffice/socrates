@@ -88,7 +88,13 @@ PROGRAM prep_spec
 !   Exclude regions from bands if required.
     CALL make_block_14(Spectrum, l_exclude, l_interactive, ierr)
     IF (ierr /= i_normal) STOP
-    
+
+!   Set the types of continua in each band
+    IF (Spectrum%ContGen%n_cont > 0) THEN
+      CALL make_block_18(Spectrum, l_interactive, ierr)
+      IF (ierr /= i_normal) STOP
+    END IF
+
 !   Set the index number of water vapour for use with the continuum.
     Spectrum%Cont%index_water = 0
     DO i=1, Spectrum%Gas%n_absorb
@@ -105,6 +111,7 @@ PROGRAM prep_spec
     Spectrum%Basic%l_present(4)   = .TRUE.
     Spectrum%Basic%l_present(8)   = .TRUE.
     Spectrum%Basic%l_present(14)  = l_exclude
+    Spectrum%Basic%l_present(18)  = Spectrum%ContGen%n_cont > 0
     Spectrum%Planck%l_planck_tbl  = .FALSE.
 
   ELSE
@@ -145,6 +152,7 @@ PROGRAM prep_spec
       '11.  Block 11: Aerosol parameters in each band.',                &
       '12.  Block 12: Ice crystal parameters in each band.',            &
       '17.  Block 17: Spectral variability data in sub-bands.',         &
+      '19.  Block 19: Continuum k-terms and T scaling data.',           &
       '-1.  To write spectral file and exit.',                          &
       '-2.  To quit without writing spectral file.'
     READ(*, *) i_block
@@ -187,6 +195,8 @@ PROGRAM prep_spec
       CALL make_block_12(Spectrum, ierr)
     CASE(17)
       CALL make_block_17(Spectrum, SolarSpec, ierr)
+    CASE(19)
+      CALL make_block_19(Spectrum, ierr)
     CASE DEFAULT
       WRITE(*, '(a)') '+++ Invalid block number.'
     END SELECT

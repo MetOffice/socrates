@@ -53,10 +53,12 @@ FUNCTION rayleigh_scatter_h2he(lambda, wavelength_refract_index_H2,            &
       temp
 !           Temporary storage of RHS in Lorentz-Lorentz equation
 !
+  REAL  (RealK), EXTERNAL :: interp1d
+!
 ! Refractive index at 0C for H2 and He
   lambda_m2=1.0_RealK/(lambda*lambda)
-  refract_index_H2_lambda = interp1(wavelength_refract_index_H2, &
-    refract_index_H2, lambda)
+  refract_index_H2_lambda = interp1d(wavelength_refract_index_H2, &
+    refract_index_H2, lambda, n_points)
   refract_index_He_lambda = 1.0_RealK + &
     0.01470091_RealK/(423.98_RealK-(lambda*1e+6_RealK)**(-2.0_RealK))
 !
@@ -90,48 +92,5 @@ FUNCTION rayleigh_scatter_h2he(lambda, wavelength_refract_index_H2,            &
 !
 !
   RETURN
-  
-CONTAINS
-  
-! Linear interpolation function
-  FUNCTION interp1(x ,y, xi) RESULT(yi)
-  
-    REAL(KIND=8), INTENT(IN) ::                                                &
-        x(:)                                                                   &
-!         Array with x-values
-      , y(:)                                                                   &
-!         Array with y-values
-      , xi
-!         Value at which the y-coordinate is wanted
-
-    REAL(KIND=8) ::                                                            &
-        yi
-!         Value at xi.
-
-    INTEGER ::                                                                 &
-        x_len                                                                  &
-!         Length of x-array
-      , i
-!         Loop index
-
-
-    x_len = SIZE(x)
-
-    IF (xi < x(1)) THEN
-      yi = y(1)
-      RETURN
-    ELSE IF (xi > x(x_len)) THEN
-      yi = y(x_len)
-      RETURN
-    ELSE
-      DO i=2,x_len
-        IF (xi <= x(i)) THEN
-          yi = (y(i) - y(i-1))/(x(i) - x(i-1))*(xi - x(i-1)) + y(i-1)
-          RETURN
-        END IF
-      END DO
-    END IF
-    
-  END FUNCTION interp1
   
 END

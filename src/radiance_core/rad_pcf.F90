@@ -393,8 +393,6 @@ INTEGER, PARAMETER :: ip_overlap_single              = 1
 !   One species only
 INTEGER, PARAMETER :: ip_overlap_random              = 2
 !   Random overlap
-INTEGER, PARAMETER :: ip_overlap_t_eqv               = 3
-!   Equivalent transmission
 INTEGER, PARAMETER :: ip_overlap_k_eqv_scl           = 4
 !   Equivalent extinction using correct scaling
 INTEGER, PARAMETER :: ip_overlap_k_eqv               = 5
@@ -463,10 +461,10 @@ INTEGER, PARAMETER :: ip_phase_ice   = 2
 ! scale_fnc_pcf, sclfnc3a
 ! ------------------------------------------------------------------
 ! Module to set types of scaling for absorber amounts
-INTEGER, PARAMETER :: npd_scale_fnc = 9
+INTEGER, PARAMETER :: npd_scale_fnc = 10
 !   Number of scaling functions
 INTEGER, PARAMETER :: n_scale_variable(0: npd_scale_fnc) = &
-  (/ 0, 2, 3, 4, 0, 0, 6, 8, 10, 0 /)
+  (/ 0, 2, 3, 4, 0, 0, 6, 8, 10, 0, 0 /)
 !   Number of parameters in scaling functions
 
 INTEGER, PARAMETER :: ip_scale_fnc_null     = 0
@@ -491,7 +489,9 @@ INTEGER, PARAMETER :: ip_scale_dbl_dop_quad = 8
 !   Power law for p; quadratic for T with implicit
 !   Doppler correction (two)
 INTEGER, PARAMETER :: ip_scale_lookup       = 9
-!   Scaling uses a look-up table
+!   Scaling uses a look-up table in P, T
+INTEGER, PARAMETER :: ip_scale_t_lookup     = 10
+!   Scaling uses a look-up table in T only
 
 ! -----------------------------------------------------------------
 ! scatter_method_pcf, sctmth3a

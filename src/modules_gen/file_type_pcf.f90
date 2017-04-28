@@ -69,5 +69,7 @@ MODULE file_type_pcf
   INTEGER, Parameter :: it_file_cloud_fit_phf           = 24
 !           File of fitted single scattering properties
 !           including higher momnets of the phase function
+  INTEGER, Parameter :: it_file_cont_gen_fit            = 25
+!           File of fits to generalised continuum data
 
 END MODULE file_type_pcf

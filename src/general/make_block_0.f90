@@ -46,6 +46,8 @@ SUBROUTINE make_block_0 &
 !   I/O error flag
   INTEGER :: i
 !   Loop variable
+  INTEGER :: i_type_1, i_type_2
+!   Types of continuum gases
 !
 !- End of Header
 !
@@ -115,6 +117,58 @@ SUBROUTINE make_block_0 &
       ENDDO
     ENDDO
   ENDIF
+!
+  WRITE(*, '(/A/)') &
+    'Enter the number of generalised continua to be included.'
+  DO
+    READ(iu_stdin, *, IOSTAT=ios) Spectrum%ContGen%n_cont
+    IF (ios == 0 .AND. Spectrum%ContGen%n_cont >= 0) THEN
+      EXIT
+    ELSE IF (l_interactive) THEN
+      WRITE(iu_err, '(A)') &
+        '+++ Invalid input: Please re-enter.'
+    ELSE
+      WRITE(iu_err, '(A)') &
+        '*** Error: Invalid number of continua.'
+      ierr = i_err_fatal
+      RETURN
+    END IF
+  END DO
+  Spectrum%Dim%nd_cont = Spectrum%ContGen%n_cont
+!
+! Prepare list of continuum gas pairs.
+  ALLOCATE(Spectrum%ContGen%index_cont_gas_1(Spectrum%ContGen%n_cont))
+  ALLOCATE(Spectrum%ContGen%index_cont_gas_2(Spectrum%ContGen%n_cont))
+  IF (Spectrum%ContGen%n_cont > 0) THEN
+    WRITE(iu_stdout, '(/A)') &
+      'Enter the physical types of the continuum gases.'
+    DO i = 1, Spectrum%ContGen%n_cont
+      WRITE(*,'(A,I5)') &
+        'Enter the gas identifiers for continuum ', i
+      DO
+        READ(iu_stdin, *, IOSTAT=ios) &
+          i_type_1, &
+          i_type_2
+        IF (ios == 0 .AND. &
+            ANY(i_type_1 == &
+                Spectrum%Gas%type_absorb(1:Spectrum%Gas%n_absorb)) .AND. &
+            ANY(i_type_2 == &
+                Spectrum%Gas%type_absorb(1:Spectrum%Gas%n_absorb))) THEN
+          Spectrum%ContGen%index_cont_gas_1(i) = type_index(i_type_1)
+          Spectrum%ContGen%index_cont_gas_2(i) = type_index(i_type_2)
+          EXIT
+        ELSE IF (l_interactive) THEN
+            WRITE(iu_err, '(A)') &
+              '+++ Invalid input: Please re-enter.'
+        ELSE
+          WRITE(iu_err, '(A)') &
+            '*** Error: Invalid gas identifiers.'
+          ierr = i_err_fatal
+          RETURN
+        END IF
+      END DO
+    END DO
+  END IF
 !
   WRITE(iu_stdout, '(/A/)') 'Enter number of aerosols.' 
   DO

@@ -12,13 +12,17 @@ SUBROUTINE set_condition_ck_90 &
  nd_pt, n_pt_pair, n_p, p, t, &
  nd_band, nd_species, &
  n_absorb, type_absorb, i_gas, i_index, &
+ i_gas_1, i_index_1, i_gas_2, i_index_2, &
  n_band, n_band_absorb, index_absorb, &
  nd_continuum, n_band_continuum, index_continuum, &
- l_fit_line_data, l_fit_frn_continuum, l_fit_self_continuum, &
+ l_fit_line_data, l_fit_frn_continuum, l_fit_self_continuum, l_fit_cont_data, &
  umin_c, umax_c, n_path_c, n_pp, l_access_HITRAN, l_access_xsc, &
- include_h2o_foreign_continuum, n_selected_band, list_band, &
- i_ck_fit, tol, max_path, n_k, nu_inc_0, line_cutoff, l_ckd_cutoff, &
- l_scale_pT, i_type_residual, i_scale_fnc, p_ref, t_ref, &
+ l_access_cia, include_h2o_foreign_continuum, &
+ l_use_h2o_frn_param, l_use_h2o_self_param, l_cont_line_abs_weight, &
+ n_selected_band, list_band, &
+ i_ck_fit, tol, max_path, max_path_wgt, n_k, nu_inc_0, line_cutoff, &
+ l_ckd_cutoff, l_scale_pT, i_type_residual, i_scale_fnc, p_ref, t_ref, &
+ l_load_map, l_load_wgt, l_save_map, file_map, &
  ierr &
 )
 !
@@ -75,6 +79,8 @@ SUBROUTINE set_condition_ck_90 &
 !   Flag for access to HITRAN database
   LOGICAL, Intent(IN) :: l_access_xsc
 !   Flag for HITRAN cross-section file
+  LOGICAL, Intent(IN) :: l_access_cia
+!   Flag for HITRAN CIA file
 !
   LOGICAL, Intent(OUT) :: l_fit_line_data
 !   Flag requiring the fitting of line data
@@ -82,18 +88,36 @@ SUBROUTINE set_condition_ck_90 &
 !   Flag requiring the fitting of foreign-broadened continuum data
   LOGICAL, Intent(OUT) :: l_fit_self_continuum
 !   Flag requiring the fitting of self-broadened continuum data
+  LOGICAL, Intent(OUT) :: l_fit_cont_data
+!   Flag requiring generation of generalised continuum data
 !
   INTEGER, Intent(OUT) :: i_gas
 !   Identifiers of gas for which data are to be generated
   INTEGER, Intent(OUT) :: i_index
 !   Identifiers of gas for which data are to be generated
+  INTEGER, Intent(OUT) :: i_gas_1
+!   Identifier of first continuum gas for which data are to be generated
+  INTEGER, Intent(OUT) :: i_index_1
+!   Identifier of first continuum gas for which data are to be generated
+  INTEGER, Intent(OUT) :: i_gas_2
+!   Identifier of second continuum gas for which data are to be generated
+  INTEGER, Intent(OUT) :: i_index_2
+!   Identifier of second continuum gas for which data are to be generated
   INTEGER, Intent(OUT) :: n_selected_band
 !   Number of spectral bands in the range where the gas is active
   INTEGER, Intent(OUT) :: list_band(nd_band)
 !   Number of spectral bands in the range where the gas is active
-  LOGICAL, Intent(OUT) ::  include_h2o_foreign_continuum
+  LOGICAL, Intent(OUT) :: include_h2o_foreign_continuum
 !   The foreign-broadened continuum is included with the H2O line
 !   absorption
+  LOGICAL, Intent(OUT) :: l_use_h2o_frn_param
+!   Use foreign-broadened water vapor continuum parametrisation provided
+!   in the code
+  LOGICAL, Intent(OUT) :: l_use_h2o_self_param
+!   Use self-broadened water vapor continuum parametrisation provided
+!   in the code
+  LOGICAL, Intent(OUT) :: l_cont_line_abs_weight
+!   Use line absorption as weighting in continuum absorption transmissions
 !
   REAL  (RealK), Intent(OUT) :: umin_c
 !   Minimum pathlength for continuum absorption
@@ -112,6 +136,9 @@ SUBROUTINE set_condition_ck_90 &
 !   Maximum pathlength to be considered for the absorber (this
 !   will be used to determine how weak absorption must be to be
 !   considered as grey)
+  REAL  (RealK), Intent(OUT) :: max_path_wgt
+!   Maximum pathlength to be considered for the absorber used for weighting
+!   in continuum transmissions
   INTEGER, Intent(OUT) :: n_k(nd_band)
 !   Number of terms in the fit
 !
@@ -142,6 +169,16 @@ SUBROUTINE set_condition_ck_90 &
 !   Reference pressures for scaling
   REAL  (RealK), Intent(OUT) :: t_ref(nd_band)
 !   Reference temperatures for scaling
+!
+  LOGICAL, Intent(OUT) :: l_load_map
+!   Use pre-defined mapping of wavenumbers to g-space
+  LOGICAL, Intent(OUT) :: l_load_wgt
+!   Use pre-defined k-term weights
+  LOGICAL, Intent(OUT) :: l_save_map
+!   Save mapping of wavenumbers to g-space
+  CHARACTER(LEN=*), Intent(OUT) :: file_map
+!   Name of file with mapping
+!
 !
   INTEGER, Intent(INOUT) :: ierr
 !   Error flag
@@ -211,7 +248,14 @@ SUBROUTINE set_condition_ck_90 &
 !
   CALL select_data_type_int
 !
-  IF (l_fit_line_data) CALL select_gas_int
+  IF (l_fit_line_data .OR. l_fit_cont_data) CALL select_gas_int
+!
+  l_use_h2o_frn_param = .FALSE.
+  l_use_h2o_self_param = .FALSE.
+  IF (l_fit_cont_data .AND. (.NOT. l_access_cia)) &
+    CALL select_h2o_cont
+!
+  IF (l_fit_cont_data) CALL select_cont_weight
 !
   CALL select_bands_int
 !
@@ -219,13 +263,15 @@ SUBROUTINE set_condition_ck_90 &
 !
   CALL select_scaling_int
 !
-  IF (l_access_HITRAN.OR.l_access_xsc) CALL select_line_details_int
+  IF (l_access_HITRAN .OR. l_access_xsc .OR. l_fit_cont_data) &
+    CALL select_line_details_int
 !
   IF (l_fit_self_continuum .OR. l_fit_frn_continuum) &
     CALL select_cont_details_int
 !
-  IF (l_fit_line_data) CALL select_fit_type_int
+  IF (l_fit_line_data .OR. l_fit_cont_data) CALL select_fit_type_int
 !
+  IF (l_fit_line_data .OR. l_fit_cont_data) CALL select_mapping_wgt
 !
 !
   RETURN
@@ -261,6 +307,31 @@ CONTAINS
       ENDIF
     ENDDO
 !
+    IF (.NOT. l_fit_line_data) THEN
+      WRITE(*, "(a)") &
+        "Are generalised continuum data to be generated? (Y/N)"
+      DO
+        READ(*, "(a)") char_yn
+        IF ( (char_yn == 'Y') .OR. (char_yn == 'y') ) THEN
+          l_fit_cont_data=.TRUE.
+          EXIT
+        ELSE IF ( (char_yn == 'N') .OR. (char_yn == 'n') ) THEN
+          l_fit_cont_data=.FALSE.
+          EXIT
+        ELSE
+          WRITE(iu_err, "(/a)") "Erroneous response"
+          IF (l_interactive) THEN
+            WRITE(*, "(a)") "Please re-enter."
+          ELSE
+            ierr=i_err_fatal
+            RETURN
+          ENDIF
+        ENDIF
+      ENDDO
+    ELSE
+      l_fit_cont_data=.FALSE.
+    END IF
+!
     WRITE(*, "(a)") "Are foreign continuum data to be generated? (Y/N)"
     DO
       READ(*, "(a)") char_yn
@@ -283,7 +354,7 @@ CONTAINS
     ENDDO
 !
     WRITE(*, "(a)") &
-      "Are self_broadened continuum data to be generated? (Y/N)"
+      "Are self-broadened continuum data to be generated? (Y/N)"
     DO
       READ(*, "(a)") char_yn
       IF ( (char_yn == 'Y') .OR. (char_yn == 'y') ) THEN
@@ -319,9 +390,16 @@ CONTAINS
 !
 !
 !   Select the gas to be considered.
-    WRITE(*, "(a)") "Enter the identifier for the gas to be considered."
+    WRITE(*, "(a)") "Enter the identifier(s) for the gas(es) to be considered."
     DO
-      READ(*, *, IOSTAT=ios) i_gas
+      IF (l_fit_cont_data) THEN
+        READ(*, *, IOSTAT=ios) i_gas_1, i_gas_2
+        i_gas=0
+      ELSE
+        READ(*, *, IOSTAT=ios) i_gas
+        i_gas_1=0
+        i_gas_2=0
+      END IF
       IF (ios /= 0) THEN
         WRITE(iu_err, "(/a)") "Erroneous response"
         IF (l_interactive) THEN
@@ -332,19 +410,44 @@ CONTAINS
         ENDIF
       ELSE
 !       Check that the gas is in the spectral file.
-        i_index=0
-        i=1
-        DO
-          IF (type_absorb(i) == i_gas) THEN
-            i_index=i
-            EXIT
-          ELSE IF (i == n_absorb) THEN
-            EXIT
+        IF (l_fit_cont_data) THEN
+          i_index_1=0
+          i_index_2=0
+          DO i=1,n_absorb
+            IF (type_absorb(i) == i_gas_1) THEN
+              i_index_1=i
+              EXIT
+            ENDIF
+          ENDDO
+          DO i=1,n_absorb
+            IF (type_absorb(i) == i_gas_2) THEN
+              i_index_2=i
+              EXIT
+            ENDIF
+          ENDDO
+        ELSE
+          i_index=0
+          DO i=1,n_absorb
+            IF (type_absorb(i) == i_gas) THEN
+              i_index=i
+              EXIT
+            ENDIF
+          ENDDO
+        END IF
+        IF (l_fit_cont_data) THEN
+          IF (i_index_1 == 0 .OR. i_index_2 == 0) THEN
+            WRITE(iu_err, "(a)") &
+              "One or both continuum gases is not in the spectral file."
+            IF (l_interactive) THEN
+              WRITE(*, "(a)") "Please re-enter."
+            ELSE
+              ierr=i_err_fatal
+              RETURN
+            ENDIF
           ELSE
-            i=i+1
-          ENDIF
-        ENDDO
-        IF (i_index == 0) THEN
+            EXIT
+          END IF
+        ELSE IF (i_index == 0) THEN
           WRITE(iu_err, "(a)") "This gas is not in the spectral file."
           IF (l_interactive) THEN
             WRITE(*, "(a)") "Please re-enter."
@@ -362,8 +465,135 @@ CONTAINS
 !
   END SUBROUTINE select_gas_int
 !
-!  
-!  
+!
+!
+  SUBROUTINE select_h2o_cont
+!
+!
+!
+!   Check if the selected continuum is one  of the two water vapour continua.
+    IF ((i_gas_1 == ip_h2o .AND. i_gas_2 == ip_air) .OR. &
+        (i_gas_1 == ip_air .AND. i_gas_2 == ip_h2o)) THEN
+!     This is the foreign broadened water vapour continuum
+!
+      WRITE(*, '(a)') 'Do you wish to use the foreign-broadened water ' // &
+        'vapour continuum included in the code? (Y/N)'
+      DO
+        READ(*, '(a)') char_yn
+        IF ( (char_yn == 'Y') .OR. (char_yn == 'y') ) THEN
+          l_use_h2o_frn_param=.TRUE.
+          CALL set_extern_ckd_frn_data(ierr)
+          EXIT
+        ELSE IF ( (char_yn == 'N') .OR. (char_yn == 'n') ) THEN
+          EXIT
+        ELSE
+          WRITE(iu_err, '(/a)') 'Erroneous response'
+          IF (l_interactive) THEN
+            WRITE(*, '(a)') 'Please re-enter.'
+          ELSE
+            ierr=i_err_fatal
+            RETURN
+          ENDIF
+        ENDIF
+      ENDDO
+!
+    ELSE IF (i_gas_1 == ip_h2o .AND. i_gas_2 == ip_h2o) THEN
+!     This is the self-broadened water vapour continuum
+!
+      WRITE(*, '(a)') 'Do you wish to use the self-broadened water ' // &
+        'vapour continuum included in the code? (Y/N)'
+      DO
+        READ(*, '(a)') char_yn
+        IF ( (char_yn == 'Y') .OR. (char_yn == 'y') ) THEN
+          l_use_h2o_self_param=.TRUE.
+          CALL set_extern_ckd_self_data(ierr)
+          EXIT
+        ELSE IF ( (char_yn == 'N') .OR. (char_yn == 'n') ) THEN
+          EXIT
+        ELSE
+          WRITE(iu_err, '(/a)') 'Erroneous response'
+          IF (l_interactive) THEN
+            WRITE(*, '(a)') 'Please re-enter.'
+          ELSE
+            ierr=i_err_fatal
+            RETURN
+          ENDIF
+        ENDIF
+      ENDDO
+!
+    END IF
+!
+!
+!
+  END SUBROUTINE select_h2o_cont
+!
+!
+!
+  SUBROUTINE select_cont_weight
+!
+!
+!
+!   Select weighting of continuum transmissions
+    WRITE(*, '(a)') 'Do you wish to use line absorption transmissions as ' // &
+        'weighting in continuum transmissions? (Y/N)'
+    DO
+      READ(*, '(a)') char_yn
+      IF ( (char_yn == 'Y') .OR. (char_yn == 'y') ) THEN
+        l_cont_line_abs_weight=.TRUE.
+        
+!       Select gas to use in weighting.
+        WRITE(*, "(a)") "Enter the identifier for the weighting gas."
+        DO
+          READ(*, *, IOSTAT=ios) i_gas
+          IF (ios /= 0) THEN
+            WRITE(iu_err, "(/a)") "Erroneous response"
+            IF (l_interactive) THEN
+              WRITE(*, "(a)") "Please re-enter."
+            ELSE
+              ierr=i_err_fatal
+              RETURN
+            ENDIF
+          ELSE
+            WRITE(*, "(a)") "Enter the maximum pathlength for this gas."
+            DO
+              READ(*, *, IOSTAT=ios) max_path_wgt
+              IF (ios /= 0) THEN
+                WRITE(iu_err, "(/a)") "Erroneous response"
+                IF (l_interactive) THEN
+                  WRITE(*, "(a)") "Please re-enter."
+                ELSE
+                  ierr=i_err_fatal
+                  RETURN
+                ENDIF
+              ELSE
+                EXIT
+              ENDIF
+            ENDDO
+            EXIT
+          ENDIF
+        ENDDO
+        EXIT
+      ELSE IF ( (char_yn == 'N') .OR. (char_yn == 'n') ) THEN
+        l_cont_line_abs_weight=.FALSE.
+        i_gas=0
+        EXIT
+      ELSE
+        WRITE(iu_err, '(/a)') 'Erroneous response'
+        IF (l_interactive) THEN
+          WRITE(*, '(a)') 'Please re-enter.'
+        ELSE
+          ierr=i_err_fatal
+          RETURN
+        ENDIF
+      ENDIF
+    ENDDO
+!
+!
+!
+  END SUBROUTINE select_cont_weight
+!
+!
+!
   SUBROUTINE select_bands_int
 !
 !
@@ -397,7 +627,7 @@ CONTAINS
             RETURN
           ENDIF
         ELSE
-          IF (l_fit_line_data) THEN
+          IF (l_fit_line_data .OR. l_fit_cont_data) THEN
 !           Make the list of valid bands for this absorber.
             n_selected_band=0
             DO i=first_band, last_band
@@ -551,7 +781,8 @@ CONTAINS
                  (i_scale_fnc /= IP_scale_dbl_pow_law) .AND. &
                  (i_scale_fnc /= IP_scale_dbl_pow_quad) .AND. &
                  (i_scale_fnc /= IP_scale_dbl_dop_quad) .AND. &
-                 (i_scale_fnc /= IP_scale_lookup) ) ) THEN
+                 (i_scale_fnc /= IP_scale_lookup) .AND. &
+                 (i_scale_fnc /= IP_scale_t_lookup) ) ) THEN
             WRITE(iu_err, "(a)") "Erroneous response."
             IF (l_interactive) THEN
               WRITE(*, "(a)") "Please re-enter"
@@ -564,7 +795,8 @@ CONTAINS
           ENDIF
         ENDDO
 
-        IF (i_scale_fnc == IP_scale_lookup) THEN
+        IF (i_scale_fnc == IP_scale_lookup .OR. &
+            i_scale_fnc == IP_scale_t_lookup) THEN
 !         Set to arbitrary values (not used).
           p_ref=1.0_RealK
           t_ref=200.0_RealK
@@ -656,15 +888,15 @@ CONTAINS
 !
   SUBROUTINE select_line_details_int
 !
-!  
-!  
+!
+!
     l_ckd_cutoff = .FALSE.
     include_h2o_foreign_continuum=.FALSE.
 
     IF (l_access_HITRAN) THEN
 !     Parameters for the integration over lines.
-      IF (i_gas == IP_H2O) THEN
-!     
+      IF (i_gas == ip_h2o) THEN
+!
 !       The CKD continuum model should be used only with a line cut-off 
 !       of 25 cm-1 (2500 m-1): the line absorption within the cut-off 
 !       is reduced by its value at the cut-off, and this absorption is
@@ -680,7 +912,7 @@ CONTAINS
         ELSE
           l_ckd_cutoff = .FALSE.
         ENDIF
-!     
+!
 !       Although the foreign broadened continuum depends on (p-e), e/p
 !       is generally small in regions of interest, so for fast application
 !       in a GCM we can effectively treat the foreign continuum as depending
@@ -709,7 +941,7 @@ CONTAINS
           ENDIF
         ENDDO
       ENDIF
-!     
+!
       WRITE(iu_stdout, '(/a)') &
         'Enter the line-cutoff in m-1'
       DO
@@ -721,7 +953,7 @@ CONTAINS
         ENDIF
       ENDDO
     END IF
-
+!
     WRITE(iu_stdout, '(/a)') &
       'Enter the frequency increment for integration in m-1'
     DO
@@ -870,6 +1102,84 @@ CONTAINS
 !
 !
   END SUBROUTINE select_fit_type_int
+!
+!
+!
+  SUBROUTINE select_mapping_wgt
+!
+    WRITE(*, '(/a)') 'Do you wish to use a pre-defined mapping of ' // &
+      'wavenumbers to g-space? (Y/N)'
+    DO
+      READ(*, '(a)') char_yn
+      IF ( (char_yn == 'Y') .OR. (char_yn == 'y') ) THEN
+        l_load_map=.TRUE.
+        EXIT
+      ELSE IF ( (char_yn == 'N') .OR. (char_yn == 'n') ) THEN
+        l_load_map=.FALSE.
+        EXIT
+      ELSE
+        WRITE(iu_err, "(/a)") "Erroneous response"
+        IF (l_interactive) THEN
+          WRITE(*, "(a)") "Please re-enter."
+        ELSE
+          ierr=i_err_fatal
+          RETURN
+        ENDIF
+      ENDIF
+    ENDDO
+!
+    IF (.NOT.l_load_map) THEN
+      WRITE(*, '(/a)') 'Do you wish to use pre-defined k-term weights? (Y/N)'
+      DO
+        READ(*, '(a)') char_yn
+        IF ( (char_yn == 'Y') .OR. (char_yn == 'y') ) THEN
+          l_load_wgt=.TRUE.
+          EXIT
+        ELSE IF ( (char_yn == 'N') .OR. (char_yn == 'n') ) THEN
+          l_load_wgt=.FALSE.
+          EXIT
+        ELSE
+          WRITE(iu_err, "(/a)") "Erroneous response"
+          IF (l_interactive) THEN
+            WRITE(*, "(a)") "Please re-enter."
+          ELSE
+            ierr=i_err_fatal
+            RETURN
+          ENDIF
+        ENDIF
+      ENDDO
+    END IF
+!
+    IF (.NOT.l_load_map .AND. .NOT. l_load_wgt) THEN
+      WRITE(*, '(/a)') 'Do you wish to save the mapping of ' // &
+        'wavenumbers to g-space and k-term weights? (Y/N)'
+      DO
+        READ(*, '(a)') char_yn
+        IF ( (char_yn == 'Y') .OR. (char_yn == 'y') ) THEN
+          l_save_map=.TRUE.
+          EXIT
+        ELSE IF ( (char_yn == 'N') .OR. (char_yn == 'n') ) THEN
+          l_save_map=.FALSE.
+          EXIT
+        ELSE
+          WRITE(iu_err, "(/a)") "Erroneous response"
+          IF (l_interactive) THEN
+            WRITE(*, "(a)") "Please re-enter."
+          ELSE
+            ierr=i_err_fatal
+            RETURN
+          ENDIF
+        ENDIF
+      ENDDO
+    END IF
+!
+    IF (l_load_map .OR. l_save_map .OR. l_load_wgt) THEN
+      WRITE(iu_stdout, '(/a)') &
+        'Give the name of the mapping file.'
+      READ(iu_stdin, '(a)') file_map
+    END IF
+!
+  END SUBROUTINE select_mapping_wgt
 !
 !
 !

@@ -139,9 +139,6 @@ SUBROUTINE diff_planck_source_tbl(n_profile, n_layer                    &
 !       Loop variable
     , l
 !       Loop variable
-  REAL (RealK) ::                                                       &
-      t_ratio(nd_profile)
-!       Temperature ratio
 
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
@@ -157,14 +154,11 @@ SUBROUTINE diff_planck_source_tbl(n_profile, n_layer                    &
 !   Calculate the Planckian radiance on viewing levels.
     DO i=1, n_viewing_level
       DO l=1, n_profile
-!       Interpolate linearly in the temperature.
-        t_ratio(l)=(t_level(l, i_rad_layer(i)-1)                        &
+!       Interpolate linearly in temperature. Use the second differences
+!       of the Planckian as temporary storage.
+        planck_radiance(l, i)=planck(t_level(l, i_rad_layer(i)-1)       &
           +(t_level(l, i_rad_layer(i))-t_level(l, i_rad_layer(i)-1))    &
-          *frac_rad_layer(i))/t_ref_planck
-!       Use the second differences of the Planckian as temporary
-!       storage.
-        planck_radiance(l, i)                                           &
-          =interp(theta_planck_tbl, thermal_coefficient, t_ratio(l))
+          *frac_rad_layer(i))
         planck_radiance(l, i)=planck_radiance(l, i)/pi
       END DO
     END DO
@@ -173,15 +167,11 @@ SUBROUTINE diff_planck_source_tbl(n_profile, n_layer                    &
 
 ! Calculate the change in the Planckian flux across each layer.
   DO l=1, n_profile
-    t_ratio(l)=t_level(l, 0)/t_ref_planck
-    planck_flux(l, 0)                                                   &
-      =interp(theta_planck_tbl, thermal_coefficient, t_ratio(l))
+    planck_flux(l, 0)=planck(t_level(l, 0))
   END DO
   DO i=1, n_layer
     DO l=1, n_profile
-      t_ratio(l)=t_level(l, i)/t_ref_planck
-      planck_flux(l, i)                                                 &
-        =interp(theta_planck_tbl, thermal_coefficient, t_ratio(l))
+      planck_flux(l, i)=planck(t_level(l, i))
       diff_planck(l, i)=planck_flux(l, i)                               &
         -planck_flux(l, i-1)
     END DO
@@ -193,9 +183,7 @@ SUBROUTINE diff_planck_source_tbl(n_profile, n_layer                    &
 !     Use the second difference for temporary storage.
 !     of the Planckian at the middle of the layer.
       DO l=1, n_profile
-        t_ratio(l)=t(l, i)/t_ref_planck
-        diff_planck_2(l, i)                                             &
-          =interp(theta_planck_tbl, thermal_coefficient, t_ratio(l))
+        diff_planck_2(l, i)=planck(t(l, i))
         diff_planck_2(l, i)=2.0e+00_RealK*(planck_flux(l, i)            &
           +planck_flux(l, i-1)-2.0e+00_RealK*diff_planck_2(l, i))
       END DO
@@ -204,9 +192,7 @@ SUBROUTINE diff_planck_source_tbl(n_profile, n_layer                    &
 
 ! Planckian flux at the surface.
   DO l=1, n_profile
-    t_ratio(l)=t_ground(l)/t_ref_planck
-    planck_ground(l)=                                                   &
-      interp(theta_planck_tbl, thermal_coefficient, t_ratio(l))
+    planck_ground(l)=planck(t_ground(l))
   END DO
 
 ! Local Planckian fluxes will be required on tiled surfaces.
@@ -219,9 +205,7 @@ SUBROUTINE diff_planck_source_tbl(n_profile, n_layer                    &
 
     DO k=1, n_tile
       DO l=1, n_point_tile
-        t_ratio(l)=t_tile(l, k)/t_ref_planck
-        planck_flux_tile(l, k)=                                         &
-          interp(theta_planck_tbl, thermal_coefficient, t_ratio(l))
+        planck_flux_tile(l, k)=planck(t_tile(l, k))
       END DO
     END DO
 
@@ -243,68 +227,18 @@ SUBROUTINE diff_planck_source_tbl(n_profile, n_layer                    &
 CONTAINS
 
 ! Wrapper for the interpolation function.
-  FUNCTION interp(x ,y, xi) RESULT(yi)
+  REAL(RealK) FUNCTION planck(tmp)
 
-    IMPLICIT NONE
+!   Input variables
+    REAL(RealK), INTENT(IN) :: tmp
+!     Temperature at which to evaluate Planck function
 
-    REAL(RealK), INTENT(IN) ::                                          &
-        x(:)                                                            &
-!         Array with x-values
-      , y(:)                                                            &
-!         Array with y-values
-      , xi
-!         Value at which the y-coordinate is wanted
+    REAL(RealK), EXTERNAL :: interp1d
 
-    REAL(RealK) ::                                                      &
-        yi
-!         Value at xi.
+! DEPENDS ON: interp1d
+    planck=interp1d(theta_planck_tbl, thermal_coefficient,              &
+      tmp/t_ref_planck, nd_thermal_coeff)
 
-    yi = interp1(x, y, xi)
-
-
-  END FUNCTION interp
-
-! Liner interpolation function
-  FUNCTION interp1(x ,y, xi) RESULT(yi)
-
-    IMPLICIT NONE
-
-    REAL(RealK), INTENT(IN) ::                                          &
-        x(:)                                                            &
-!         Array with x-values
-      , y(:)                                                            &
-!         Array with y-values
-      , xi
-!         Value at which the y-coordinate is wanted
-
-    REAL(RealK) ::                                                      &
-        yi
-!         Value at xi.
-
-    INTEGER ::                                                          &
-        x_len                                                           &
-!         Length of x-array
-      , i
-!         Loop index
-
-
-    x_len = SIZE(x)
-
-    IF (xi < x(1)) THEN
-      yi = y(1)
-      RETURN
-    ELSE IF (xi > x(x_len)) THEN
-      yi = y(x_len)
-      RETURN
-    ELSE
-      DO i=2,x_len
-        IF (xi <= x(i)) THEN
-          yi = (y(i) - y(i-1))/(x(i) - x(i-1))*(xi - x(i-1)) + y(i-1)
-          RETURN
-        END IF
-      END DO
-    END IF
-
-  END FUNCTION interp1
+  END FUNCTION planck
 
 END SUBROUTINE diff_planck_source_tbl

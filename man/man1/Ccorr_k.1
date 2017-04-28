@@ -3,14 +3,18 @@
 Ccorr_k \- Generate gaseous absorption and water vapour continuum data
 .SH USAGE
 Ccorr_k \fB\-D\fR \fIhitran\-par\-file\fR | \fB\-X\fR \fIhitran\-xsc\-file\fR
+        [\fB\-CIA\fR \fIhitran\-cia\-file\fR]
         \fB\-s\fR \fIspectral\-file\fR [\fB\-I\fR \fIinstrument\-file\fR]
         \fB\-R\fR \fIfirst\-band\fR \fIlast\-band\fR \fB\-F\fR \fIpt\-file\fR  [\fB\-r\fR \fIref\-pt\-file\fR]
-        [\fB\-l\fR \fIgas\fR \fImax\-path\fR \fB\-n\fR \fIk_terms\fR \fB| \-t\fR \fItol\fR \fB| \-b\fR \fItol\fR]
+        [\fB\-l\fR \fIgas\fR \fImax\-path\fR | \fB\-ct\fR \fIgas1\fR \fIgas2\fR \fImax\-path\fR [\fB\-cw\fR \fIgas\fR \fImax\-path\fR]
+        \fB\-n\fR \fIk_terms\fR \fB| \-t\fR \fItol\fR \fB| \-b\fR \fItol\fR]
         \fB\-p|\-q|\-d|-p2|\-q2|\-d2|-lk\fR
         [\fB\-k\fR] [\fB\-x\fR \fIfilename\fR] [\fB\-c\fR \fIwavenumber\fR] \fB\-i\fR \fIincrement\fR
         [\fB\-f\fR \fIfilename\fR] [\fB\-e\fR \fIname1\fR \fIname2\fR] [\fB\-C\fR \fIn1\fR \fIn2\fR \fIn3\fR] [\fB\-P\fR \fIn1\fR]
         \fB\+S\fR \fIfilename\fR \fB| \+p | \+d | \-u\fR
-        \fB\-o\fR \fIfilename\fR \fB\-m\fR \fIfilename\fR \fB\-L\fR \fIfilename\fR [\fB\-np\fR \fIomp_threads\fR] [\fB\-T\fR]
+        \fB\-o\fR \fIfilename\fR \fB\-m\fR \fIfilename\fR \fB\-L\fR \fIfilename\fR
+        [\fB\-lm\fR \fIfilename\fR | \fB\-lw\fR \fIfilename\fR | \fB\-sm\fR \fIfilename\fR]
+        [\fB\-np\fR \fIomp_threads\fR] [\fB\-T\fR]
 
 .SH DESCRIPTION
 This program calculates correlated-k coefficients for prescribed
@@ -29,6 +33,10 @@ Pathname of HITRAN line database. This is a .par file and may be in either 100 o
 .TP
 \fB\-X\fR \fIhitran\-xsc\-file\fR
 Pathname of HITRAN cross-section database. This is a .xsc file.
+
+.TP
+\fB\-CIA\fR \fIhitran\-cia\-file\fR
+Pathname of HITRAN collision-induced absorption database. This is a .cia file.
 
 .TP
 \fB\-s\fR \fIspectral\-file\fR 
@@ -55,6 +63,14 @@ Note: The mapping to g-space for line absorption data no longer uses the referen
 .TP
 \fB\-l\fR \fIgas\fR \fImax\-path\fR
 Generate line absorption data. \fIgas\fR is the type number (identifier) of the gas to be considered. \fImax\-path\fR is the maximum absorptive pathlength (kg/m2) for the gas. This is used in a number of ways: transmission errors are only considered for path-lengths up to this value; used to decide whether the absorption is small enough to be considered as grey; used (along with the maximum pressure) to order the k-terms in g-space depending on the approximate height where optical depth equals 1.
+
+.TP
+\fB\-ct\fR \fIgas1\fR \fIgas2\fR \fImax\-path\fR
+Generate generalised continuum absorption data. \fIgas1\fR and \fIgas2\fR are the type numbers (identifiers) of the gases to be considered. \fImax\-path\fR is the maximum absorptive pathlength (kg2/m5) for the gas pair. This is used in a number of ways: transmission errors are only considered for path-lengths up to this value; used to decide whether the absorption is small enough to be considered as grey. If \fIgas1\fR and \fIgas2\fR correspond to either the foreign- or self-broadened water vapour continuum the paths to the CKD data can be provided with \fB\-f\fR or \fB\-e\fR, respectively.
+
+.TP
+\fB\-cw\fR \fIgas\fR \fImax\-path\fR
+In the calculation of generalised continuum transmissions, use the transmission of \fIgas\fR with maximum absorptive pathlength \fImax\-path\fR as weighting. Line-by-line absorption coefficients are calculated at the (effective) pressure specified in pt\-file.
 
 .TP
 \fB\-n\fR \fIk_terms\fR
@@ -155,6 +171,18 @@ Pathname of monitoring file.
 .TP
 \fB\-L\fR \fIfilename\fR
 Pathname of LbL data file. This is a netCDF file containing the absorption coefficients at line-by-line resolution for each pressure/temperature pair. If the file does not exist it will be generated using data from the HITRAN database file. If the file alrady exists the data will be used directly for the correlated-k fits. Care should be taken to ensure that an existing file matches the wavenumber resolution and pressure/temperature pairs specified on the command line.
+
+.TP
+\fB\-lm\fR \fIfilename\fR
+Use mapping from wavenumber- to g-space and k-term weights specified in the netCDF file \fIfilename\fR.
+
+.TP
+\fB\-lw\fR \fIfilename\fR
+Use k-term weights specified in the netCDF file \fIfilename\fR.
+
+.TP
+\fB\-sm\fR \fIfilename\fR
+Save mapping from wavenumber- to g-space and corresponding k-term weights to the netCDF file \fIfilename\fR.
 
 .TP
 \fB\-np\fR \fIomp_threads\fR

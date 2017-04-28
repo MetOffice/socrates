@@ -14,9 +14,9 @@
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE gas_optical_properties(n_profile, n_layer                    &
-     , n_gas, i_gas_pointer, k_esft_mono, gas_mix_ratio                 &
+     , n_abs, i_abs_pointer, k_layer                                    &
      , k_gas_abs                                                        &
-     , nd_profile, nd_layer, nd_species                                 &
+     , nd_profile, nd_layer, nd_abs                                     &
      )
 
 
@@ -28,12 +28,12 @@ SUBROUTINE gas_optical_properties(n_profile, n_layer                    &
 
 ! Sizes of dummy arrays.
   INTEGER, INTENT(IN) ::                                                &
-       nd_profile                                                       &
+      nd_profile                                                        &
 !       Size allocated for atmospheric profiles
     , nd_layer                                                          &
 !       Size allocated for atmospheric layers
-    , nd_species
-!       Size allocated for gaseous species
+    , nd_abs
+!       Size allocated for gaseous absorbers
 
 ! Dummy variables.
   INTEGER, INTENT(IN) ::                                                &
@@ -41,23 +41,21 @@ SUBROUTINE gas_optical_properties(n_profile, n_layer                    &
 !       Number of profiles
     , n_layer                                                           &
 !       Number of layers
-    , n_gas                                                             &
+    , n_abs                                                             &
 !       Number of gases
-    , i_gas_pointer(nd_species)
+    , i_abs_pointer(nd_abs)
 !       Pointers to active gases
   REAL (RealK), INTENT(IN) ::                                           &
-      k_esft_mono(nd_species)                                           &
-!       ESFT exponents for each gas
-    , gas_mix_ratio(nd_profile, nd_layer, nd_species)
-!       Gas mixing ratios
+      k_layer(nd_profile, nd_layer, nd_abs)
+!       Continuum ESFT/k-terms scaled by the gas mixing ratios
   REAL (RealK), INTENT(OUT) ::                                          &
       k_gas_abs(nd_profile, nd_layer)
 !       Clear absorptive extinction
 
 ! Local variables.
   INTEGER                                                               &
-      i_gas                                                             &
-!       Temporary gas `index'
+      i_abs                                                             &
+!       Temporary absorber `index'
     , l                                                                 &
 !       Loop variable
     , i                                                                 &
@@ -75,19 +73,19 @@ SUBROUTINE gas_optical_properties(n_profile, n_layer                    &
   IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Calculate the absorption for the first gas and add on the rest.
-  i_gas=i_gas_pointer(1)
+  i_abs=i_abs_pointer(1)
   DO j=1, n_layer
     DO l=1, n_profile
       k_gas_abs(l, j)                                                   &
-        =k_esft_mono(i_gas)*gas_mix_ratio(l, j, i_gas)
+        =k_layer(l, j, i_abs)
     END DO
   END DO
-  DO i=2, n_gas
-  i_gas=i_gas_pointer(i)
+  DO i=2, n_abs
+    i_abs=i_abs_pointer(i)
     DO j=1, n_layer
       DO l=1, n_profile
         k_gas_abs(l, j)=k_gas_abs(l, j)                                 &
-          +k_esft_mono(i_gas)*gas_mix_ratio(l, j, i_gas)
+          +k_layer(l, j, i_abs)
       END DO
     END DO
   END DO

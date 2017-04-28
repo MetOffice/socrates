@@ -6,7 +6,7 @@
 
 FILE=$RAD_BIN/$1
 
-  sed -n -e '/::/p' $FILE | grep -i Parameter | cut -d : -f 3 \
+  sed -n -e '/::/p' $FILE | grep -i Parameter | grep -v "&" | cut -d : -f 3 \
     | tr "[:lower:]" "[:upper:]" | grep = | sed -e 's/ *//g' >> /tmp/param.$$
 
 chmod a+x /tmp/param.$$

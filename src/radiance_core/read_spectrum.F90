@@ -104,6 +104,12 @@ INTEGER :: nd_sub_band
 !   Size allocated for spectral sub-bands (for spectral variability)
 INTEGER :: nd_times
 !   Size allocated for times (for spectral variability)
+INTEGER :: nd_cont
+!   Size allocated for generalised continua
+INTEGER :: nd_t_lookup_cont
+!   Size allocated for temperatures in generalised continua look-up table
+INTEGER :: nd_k_term_cont
+!   Size allocated for continuum k-terms
 
 CHARACTER (LEN=errormessagelength) :: cmessage
 CHARACTER (LEN=*), PARAMETER       :: RoutineName = 'READ_SPECTRUM'
@@ -132,6 +138,9 @@ nd_mix = 0
 nd_band_mix_gas = 0
 nd_sub_band = 0
 nd_times = 0
+nd_cont = 0
+nd_t_lookup_cont = 0
+nd_k_term_cont = 0
 
 Sp%Dim%nd_type = npd_type
 
@@ -142,6 +151,7 @@ Sp%Planck%n_deg_fit = 0
 Sp%Aerosol%n_aerosol = 0
 Sp%Aerosol%n_aerosol_mr = 0
 Sp%Aerosol%n_aod_wavel = 0
+Sp%ContGen%n_cont = 0
 
 ! It is important to know which gas is water vapour for some
 ! applications: here we initialize INDEX_WATER to 0 to
@@ -268,6 +278,9 @@ Sp%Dim%nd_mix = nd_mix
 Sp%Dim%nd_band_mix_gas = nd_band_mix_gas
 Sp%Dim%nd_sub_band = nd_sub_band
 Sp%Dim%nd_times = nd_times
+Sp%Dim%nd_cont = nd_cont
+Sp%Dim%nd_t_lookup_cont = nd_t_lookup_cont
+Sp%Dim%nd_k_term_cont = nd_k_term_cont
 
 ! Allocate spectrum arrays that remain unallocated
 CALL allocate_spectrum(Sp)
@@ -475,6 +488,20 @@ ELSE IF (i_type == 17) THEN
       l_block_read= .TRUE.
     END IF
   END IF
+ELSE IF (i_type == 18) THEN
+  IF (i_subtype == 0) THEN
+    IF (i_version == 0) THEN
+      CALL read_block_18_0_0
+      l_block_read= .TRUE.
+    END IF
+  END IF
+ELSE IF (i_type == 19) THEN
+  IF (i_subtype == 0) THEN
+    IF (i_version == 0) THEN
+      CALL read_block_19_0_0
+      l_block_read= .TRUE.
+    END IF
+  END IF
 END IF
 
 IF (ierr /= i_normal) THEN
@@ -606,6 +633,9 @@ DO
     READ(line(desc_end+1:),*,IOSTAT=ios, IOMSG=iomessage) &
                                                      Sp%Aerosol%n_aerosol
     nd_aerosol_species=MAX(Sp%Aerosol%n_aerosol, 1)
+  CASE ('Total number of generalised continua', 'nd_cont')
+    READ(line(desc_end+1:),*,IOSTAT=ios, IOMSG=iomessage) Sp%ContGen%n_cont
+    nd_cont = Sp%ContGen%n_cont
   CASE ('List of indexing numbers and absorbers.')
     ALLOCATE(Sp%Gas%type_absorb(nd_species))
     READ(iu_spc, *)
@@ -620,8 +650,19 @@ DO
       READ(iu_spc, '(i5, 7x, i5, 7x, a)') &
         idum, Sp%Aerosol%type_aerosol(i), chdum
     END DO
+  CASE ('Listing of continuum indexing numbers and gases.')
+    ALLOCATE(Sp%ContGen%index_cont_gas_1(nd_cont))
+    ALLOCATE(Sp%ContGen%index_cont_gas_2(nd_cont))
+    READ(iu_spc, *)
+    DO i = 1, Sp%ContGen%n_cont
+      READ(iu_spc, '(i5, 5x, i5, 5x, 20x, 5x, i5)') &
+        idum, Sp%ContGen%index_cont_gas_1(i), &
+        Sp%ContGen%index_cont_gas_2(i)
+    END DO
   CASE ('Maximum number of k-terms in a band','nd_k_term')
     READ(line(desc_end+1:),*,IOSTAT=ios, IOMSG=iomessage) nd_k_term
+  CASE ('Maximum number of continuum k-terms in a band', 'nd_k_term_cont')
+    READ(line(desc_end+1:),*,IOSTAT=ios, IOMSG=iomessage) nd_k_term_cont
 
   END SELECT
   IF (ios /= 0) THEN
@@ -971,7 +1012,7 @@ LOGICAL :: l_lookup
 ALLOCATE(Sp%Gas%i_band_k(nd_band, nd_species))
 ALLOCATE(Sp%Gas%i_scale_k(nd_band, nd_species))
 ALLOCATE(Sp%Gas%i_scale_fnc(nd_band, nd_species))
-Sp%Gas%i_scale_fnc=0.0_RealK
+Sp%Gas%i_scale_fnc=0
 ALLOCATE(Sp%Gas%k(nd_k_term, nd_band, nd_species))
 ALLOCATE(Sp%Gas%w(nd_k_term, nd_band, nd_species))
 ALLOCATE(Sp%Gas%p_ref(nd_species, nd_band))
@@ -1152,7 +1193,7 @@ LOGICAL :: l_k_table_exists
 ALLOCATE(Sp%Gas%i_band_k(nd_band, nd_species))
 ALLOCATE(Sp%Gas%i_scale_k(nd_band, nd_species))
 ALLOCATE(Sp%Gas%i_scale_fnc(nd_band, nd_species))
-Sp%Gas%i_scale_fnc=0.0_RealK
+Sp%Gas%i_scale_fnc=0
 ALLOCATE(Sp%Gas%k(nd_k_term, nd_band, nd_species))
 ALLOCATE(Sp%Gas%w(nd_k_term, nd_band, nd_species))
 ALLOCATE(Sp%Gas%p_ref(nd_species, nd_band))
@@ -2458,8 +2499,6 @@ INTEGER :: i_parametrization_ice
 !   Dummy index of parameter scheme
 INTEGER :: n_parameter
 !   Number of parameters
-INTEGER :: k
-!   Loop variable
 INTEGER :: i_dummy
 !   Dummy reading variable
 
@@ -2546,8 +2585,6 @@ INTEGER :: i_parametrization_ice
 !   Dummy index of parameter scheme
 INTEGER :: n_parameter
 !   Number of parameters
-INTEGER :: k
-!   Loop variable
 INTEGER :: i_dummy
 !   Dummy reading variable
 
@@ -2765,8 +2802,6 @@ SUBROUTINE read_block_15_1_0
 IMPLICIT NONE
 
 ! Local variables.
-INTEGER :: idum_band
-!   Dummy integer
 INTEGER :: j
 !   AOD type
 INTEGER :: k
@@ -3030,6 +3065,199 @@ DO
 END DO
 
 END SUBROUTINE read_block_17_0_0
+
+
+
+SUBROUTINE read_block_18_0_0
+
+! Local variables
+INTEGER :: i_band, i_cont
+!   Loop variables
+
+
+! Skip over the headers.
+READ(iu_spc, '(/////)')
+
+! Read in the list of absorbers in each band.
+ALLOCATE(Sp%ContGen%n_band_cont(nd_band))
+ALLOCATE(Sp%ContGen%index_cont(nd_cont, nd_band))
+ALLOCATE(Sp%ContGen%l_cont_major(nd_band))
+DO i_band = 1, Sp%Basic%n_band
+  Sp%ContGen%l_cont_major(i_band)=.FALSE.
+  READ(iu_spc, FMT='(12x, i5, 7x, l5)', IOSTAT=ios, IOMSG=iomessage) &
+    Sp%ContGen%n_band_cont(i_band), Sp%ContGen%l_cont_major(i_band)
+  IF (ios /= 0) THEN
+    cmessage = '*** Error in subroutine read_block_18_0_0. ' // &
+      'The list of continua is not correct: '// TRIM(iomessage)
+    ierr=i_err_fatal
+    RETURN
+  END IF
+  IF (Sp%ContGen%n_band_cont(i_band) > 0) THEN
+    READ(iu_spc, '(5x, 4(2x, i3))', IOSTAT=ios, IOMSG=iomessage) &
+      ( Sp%ContGen%index_cont(i_cont, i_band), &
+        i_cont = 1, Sp%ContGen%n_band_cont(i_band) )
+  END IF
+  IF (ios /= 0) THEN
+    cmessage = '*** Error in subroutine read_block_18_0_0. ' // &
+      'The index of continua is not correct: ' // TRIM(iomessage)
+    ierr=i_err_fatal
+    RETURN
+  END IF
+END DO
+
+END SUBROUTINE read_block_18_0_0
+
+
+
+SUBROUTINE read_block_19_0_0
+
+! Local variables.
+INTEGER :: i_band
+!   Band
+INTEGER :: i_index, index_cont(nd_cont, nd_band)
+!   Index of continuum in spectral file
+INTEGER :: number_term
+!   Number of ESFT/k-terms terms
+INTEGER :: i_cont_overlap
+!   Overlap treatment for continuum
+INTEGER :: j, i_term, it
+!   Loop variables
+! LOGICAL :: l_lookup
+! !   True if a k-table is used
+LOGICAL :: l_k_cont_table_exists
+!   True if the continuum k-table is present in the extended spectral file
+
+
+! Allocate space for the arrays of k-terms.
+ALLOCATE(Sp%ContGen%i_band_k_cont(nd_band, nd_cont))
+ALLOCATE(Sp%ContGen%k_cont(nd_k_term_cont, nd_band, nd_cont))
+ALLOCATE(Sp%ContGen%w_cont(nd_k_term_cont, nd_band, nd_cont))
+ALLOCATE(Sp%ContGen%i_scat_cont(nd_k_term_cont, nd_band, nd_cont))
+ALLOCATE(Sp%ContGen%i_cont_overlap_band(nd_band, nd_cont))
+
+READ(iu_spc, *)
+
+READ(iu_spc, '(42x, i5)') Sp%ContGen%n_t_lookup_cont
+nd_t_lookup_cont = Sp%ContGen%n_t_lookup_cont
+
+READ(iu_spc, '(/)')
+
+! Read in the number of k-terms in each band.
+DO i=1, Sp%Basic%n_band
+  DO j=1, Sp%ContGen%n_band_cont(i)
+    READ(iu_spc, FMT='(i5, 3(7x, i5))', IOSTAT=ios, IOMSG=iomessage) &
+      i_band, i_index, number_term, i_cont_overlap
+    IF (ios /= 0) THEN
+      cmessage = '*** Error in subroutine read_block_19_0_0.\n' // &
+        'k-distribution data are not consistent with the summary: ' // &
+        '\nError: ' // TRIM(iomessage)
+      ierr=i_err_fatal
+      RETURN
+    END IF
+    index_cont(j,i) = i_index
+    IF (number_term > nd_k_term_cont) THEN
+      cmessage = '*** Error in subroutine read_block_19_0_0. ' // &
+        'Too many esft terms have been given. ' // &
+        'Increase npd_k_term and recompile.'
+      ierr=i_err_fatal
+      RETURN
+    END IF
+    Sp%ContGen%i_band_k_cont(i_band, i_index) = number_term
+    IF (i_cont_overlap /= 0 .AND. &
+        (i_cont_overlap < 0 .OR. i_cont_overlap > Sp%Gas%n_absorb)) THEN
+      cmessage = '*** Error in subroutine read_block_19_0_0. ' // &
+        'Invalid overlap method for continuum.'
+      ierr=i_err_fatal
+      RETURN
+    END IF
+    Sp%ContGen%i_cont_overlap_band(i_band, i_index) = i_cont_overlap
+
+    ! Read the reference temperature and pressure.
+    IF (.NOT. l_exist_k) THEN
+      cmessage = 'Extended spectral file cannot be opened, ' // &
+        'Continuum k-term lookup table for BLOCK 19 cannot be read.'
+      ierr=i_err_fatal
+      RETURN
+    END IF
+
+    ! For each band read in the k-terms and weights.
+    DO i_term=1, number_term
+      READ(iu_spc, '(2(3x, 1pe16.9),i3)', IOSTAT=ios, IOMSG=iomessage) &
+          Sp%ContGen%k_cont(i_term, i_band, i_index), &
+          Sp%ContGen%w_cont(i_term, i_band, i_index), &
+          Sp%ContGen%i_scat_cont(i_term, i_band, i_index)
+      IF (ios /= 0) THEN
+        cmessage = '*** Error in subroutine read_block_19_0_0.\n' // &
+          'Continuum k-distribution data are not consistent with ' // &
+          'the summary:\nError: ' // TRIM(iomessage)
+        ierr=i_err_fatal
+        RETURN
+      END IF
+    END DO
+
+  END DO
+END DO
+
+ALLOCATE(Sp%ContGen%t_lookup_cont(nd_t_lookup_cont))
+ALLOCATE(Sp%ContGen%k_lookup_cont(nd_t_lookup_cont, &
+                                  nd_k_term_cont, nd_cont, nd_band))
+
+! Locate correct block in extended spectral file
+l_k_cont_table_exists=.FALSE.
+REWIND(iu_spc1)
+DO
+  READ(iu_spc1, '(a80)') char_dum
+  IF ( char_dum(1:6) == '*BLOCK' ) THEN
+    IF ( char_dum(9:25) == 'continuum k-table' ) THEN
+      l_k_cont_table_exists=.TRUE.
+      EXIT
+    END IF
+  END IF
+END DO
+
+! Return with error if the k-table does not exist
+IF (.NOT. l_k_cont_table_exists) THEN
+  cmessage = 'No continuum k-table in extended spectral file.'
+  ierr = i_err_fatal
+  RETURN
+END IF
+
+! Read look-up temperatures from extended spectral file
+READ(iu_spc1, '(/)')
+READ(iu_spc1, '(6(1PE13.6))', IOSTAT=ios, IOMSG=iomessage) &
+  (Sp%ContGen%t_lookup_cont(it), it=1, Sp%ContGen%n_t_lookup_cont)
+IF (ios /= 0) THEN
+  WRITE(cmessage,'(a, a)') &
+    '*** Error in subroutine read_block_19_0_0.\n' // &
+    'Error occurred reading continuum temperature table.', &
+    '\nError: ' // TRIM(iomessage)
+  ierr=i_err_fatal
+  RETURN
+END IF
+
+! Read ESFT/k-table from extended spectral file
+DO i=1, Sp%Basic%n_band
+  DO j=1, Sp%ContGen%n_band_cont(i)
+    i_index = index_cont(j,i)
+    READ(iu_spc1, '(/)')
+    DO i_term=1, Sp%ContGen%i_band_k_cont(i, i_index)
+      READ(iu_spc1, '(6(1PE13.6))', IOSTAT=ios, IOMSG=iomessage) &
+        (Sp%ContGen%k_lookup_cont(it,i_term,i_index,i), &
+         it=1, Sp%ContGen%n_t_lookup_cont)
+      IF (ios /= 0) THEN
+        WRITE(cmessage,'(a, 3i4, a)') &
+          '*** Error in subroutine read_block_19_0_0:\n' // &
+          'Look-up table entry:', i, i_term, i_index, &
+          '\nError: ' // TRIM(iomessage)
+        ierr=i_err_fatal
+        RETURN
+      END IF
+    END DO
+  END DO
+END DO
+
+END SUBROUTINE read_block_19_0_0
+
 
 
 END SUBROUTINE read_spectrum

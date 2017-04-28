@@ -9,8 +9,9 @@
 SUBROUTINE set_g_point_90 &
 !
 (n_nu, nu_inc, kabs, wgt, integ_wgt, &
- i_ck_fit, tol, max_path, nd_k_term, &
- iu_monitor, &
+ i_ck_fit, tol, max_path, &
+ l_kabs_wgt, kabs_wgt, l_wgt_scale_sqrt, u_wgt_scale, &
+ nd_k_term, iu_monitor, &
  n_k, w_k, k_opt, k_ave, &
  ig, ierr)
 !
@@ -63,12 +64,22 @@ SUBROUTINE set_g_point_90 &
 !   Tolerance for the c-k fit
   REAL  (RealK), Intent(IN) :: max_path
 !   Maximum pathlength to be considered for the absorber
+  REAL  (RealK), Intent(IN) :: kabs_wgt(:)
+!   Monochromatic absorption coefficients to use in weighting
+  REAL  (RealK), Intent(IN) :: u_wgt_scale
+!   Factor to scale continuum column mass to gas column mass
   REAL  (RealK), Intent(OUT) :: w_k(:)
 !   Weights for the k-terms
   REAL  (RealK), Intent(OUT) :: k_opt(:)
 !   Optimal absorption coefficients for each k-term
   REAL  (RealK), Intent(OUT) :: k_ave(:)
 !   Mean absorption coefficients for each k-term
+!
+  LOGICAL, Intent(IN) :: l_kabs_wgt
+!   Use k_wgt as additional weights in transmissions
+  LOGICAL, Intent(IN) :: l_wgt_scale_sqrt
+!   If true gas column mass is scaled using the square root of the continuum
+!   column mass. Otherwise a linear scaling is used. 
 !   
 !
 ! Local Variables:
@@ -121,7 +132,9 @@ SUBROUTINE set_g_point_90 &
   INTERFACE
 !
     SUBROUTINE optimal_k &
-      (n_nu, nu_inc, k, wgt, integ_k, k_mean, tol, k_opt, error, ierr)
+      (n_nu, nu_inc, k, wgt, integ_k, k_mean, tol, &
+       l_k_wgt, k_wgt, l_wgt_scale_sqrt, u_wgt_scale, &
+       k_opt, error, ierr)
 !
       USE realtype_rd
 !
@@ -133,8 +146,12 @@ SUBROUTINE set_g_point_90 &
       REAL  (RealK), Intent(IN) :: integ_k
       REAL  (RealK), Intent(IN) :: k_mean
       REAL  (RealK), Intent(IN) :: tol
+      REAL  (RealK), Intent(IN) :: k_wgt(:)
+      REAL  (RealK), Intent(IN) :: u_wgt_scale
       REAL  (RealK), Intent(OUT) :: k_opt
       REAL  (RealK), Intent(OUT) :: error
+      LOGICAL, Intent(IN) :: l_k_wgt
+      LOGICAL, Intent(IN) :: l_wgt_scale_sqrt
 !
     END SUBROUTINE
 !
@@ -241,7 +258,9 @@ SUBROUTINE set_g_point_90 &
       k_ave(i)=nu_inc * SUM(wgt_k(i0:i1))/integ_k
       w_k(i)=integ_k/integ_wgt
       CALL optimal_k(n_nu_k, nu_inc, kabs(i0:i1), wgt(i0:i1), &
-         integ_k, k_ave(i), tol, k_opt(i), err_norm_k, ierr)
+         integ_k, k_ave(i), tol, &
+         l_kabs_wgt, kabs_wgt(i0:i1), l_wgt_scale_sqrt, u_wgt_scale, &
+         k_opt(i), err_norm_k, ierr)
 !     The error norm is constructed by weighting the squared error 
 !     for each k-term by the weight applied to the term. It's not
 !     clear that this is necessarily the best measure for applications.

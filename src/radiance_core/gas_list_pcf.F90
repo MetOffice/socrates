@@ -21,7 +21,7 @@ USE realtype_rd
 
 IMPLICIT NONE
 
-INTEGER, PARAMETER :: npd_gases = 37
+INTEGER, PARAMETER :: npd_gases = 38
 !   Number of indexed gases
 
 INTEGER, PARAMETER :: IP_h2o = 1
@@ -69,9 +69,9 @@ INTEGER, PARAMETER :: IP_tio = 21
 INTEGER, PARAMETER :: IP_vo = 22
 !   Identifier for VO
 INTEGER, PARAMETER :: IP_h2 = 23
-!   Identifier for H2-H2 CIA
+!   Identifier for hydrogen
 INTEGER, PARAMETER :: IP_he = 24
-!   Identifier for H2-He CIA
+!   Identifier for helium
 INTEGER, PARAMETER :: IP_ocs = 25
 !   Identifier for carbonyl sulphide
 INTEGER, PARAMETER :: IP_na = 26
@@ -98,6 +98,8 @@ INTEGER, PARAMETER :: IP_h2s = 36
 !   Identifier for hydrogen sulphide
 INTEGER, PARAMETER :: IP_ar = 37
 !   Identifier for argon
+INTEGER, PARAMETER :: IP_air = 38
+!   Identifier for all other gases, used by generalised continuum
 
 CHARACTER (LEN=20), PARAMETER :: name_absorb(npd_gases) = (/ &
                                    "Water Vapour        ", &
@@ -122,8 +124,8 @@ CHARACTER (LEN=20), PARAMETER :: name_absorb(npd_gases) = (/ &
                                    "CFC114              ", &
                                    "Titanium oxide      ", &
                                    "Vanadium oxide      ", &
-                                   "H2-H2 CIA           ", &
-                                   "H2-He CIA           ", &
+                                   "Hydrogen            ", &
+                                   "Helium              ", &
                                    "Carbonyl sulphide   ", &
                                    "Sodium              ", &
                                    "Potassium           ", &
@@ -136,7 +138,8 @@ CHARACTER (LEN=20), PARAMETER :: name_absorb(npd_gases) = (/ &
                                    "Acetylene           ", &
                                    "Hydrogen cyanide    ", &
                                    "Hydrogen sulphide   ", &
-                                   "Argon               " /)
+                                   "Argon               ", &
+                                   "Dry air             " /)
 
 
 ! Molecular weights taken from "General Inorganic Chemistry"
@@ -178,7 +181,8 @@ REAL (RealK), PARAMETER :: molar_weight(npd_gases) = (/ &
   26.0373_RealK,     & ! C2H2 (from NIST)
   27.0253_RealK,     & ! HCN (from NIST)
   34.081_RealK,      & ! H2S (from NIST)
-  39.948_RealK      /) ! Ar (from NIST)
+  39.948_RealK,      & ! Ar (from NIST)
+  28.966_RealK      /) ! Dry air
 
 
 ! Array of identifiers in HITRAN for each gas in the radiation code.
@@ -219,7 +223,8 @@ INTEGER, PARAMETER :: hitran_number(npd_gases) = (/ &
   26,  & ! C2H2
   23,  & ! HCN
   31,  & ! H2S
-  0   /) ! Ar
+  0,   & ! Ar
+  0   /) ! Dry air
 
 ! Depolarization factors used to compute the Rayleigh scattering coefficients
 REAL (RealK), PARAMETER :: depolarization_factor(npd_gases) = (/ &
@@ -259,6 +264,7 @@ REAL (RealK), PARAMETER :: depolarization_factor(npd_gases) = (/ &
   0.0_RealK,     & ! C2H2
   0.0_RealK,     & ! HCN
   0.0_RealK,     & ! H2S
-  0.0006_RealK  /) ! Ar (Parthasarathy, Indian J. Phys. 25, 21 (1951))
+  0.0006_RealK,  & ! Ar (Parthasarathy, Indian J. Phys. 25, 21 (1951))
+  0.0279_RealK  /) ! Dry air
 
 END MODULE gas_list_pcf

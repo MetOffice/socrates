@@ -40,6 +40,8 @@ PROGRAM corr_k
 !   End of program
   INTEGER :: iu_lbl
 !   Unit number for input of the LbL database in HITRAN format
+  INTEGER :: iu_cia
+!   Unit number for input of the CIA database in HITRAN format
   INTEGER :: ierr = i_normal
 !   Error flag
   INTEGER :: ios
@@ -70,10 +72,14 @@ PROGRAM corr_k
 !   Flag requiring the fitting of foreign-broadened continuum data
   LOGICAL :: l_fit_self_continuum
 !   Flag requiring the fitting of self-broadened continuum data
+  LOGICAL :: l_fit_cont_data
+!   Flag requiring the fitting of generalised continuum data
   LOGICAL :: l_access_HITRAN
 !   Flag for HITRAN database file
   LOGICAL :: l_access_xsc
 !   Flag for HITRAN cross-section file
+  LOGICAL :: l_access_cia
+!   Flag for HITRAN CIA file
   LOGICAL :: l_lbl_exist
 !   Flag for lbl absorption coefficient file
 !
@@ -84,8 +90,23 @@ PROGRAM corr_k
 !   the k-distribution
   LOGICAL :: include_h2o_foreign_continuum
 !   Flag to generate continuum data
+  LOGICAL :: l_use_h2o_frn_param
+!   Flag to use foreign broadened H2O continuum parametrisation
+  LOGICAL :: l_use_h2o_self_param
+!   Flag to use self broadened H2O continuum parametrisation
   LOGICAL :: l_scale_pT
 !   Flag for deriving a scaling function in pressure and temperature
+!
+  LOGICAL :: l_cont_line_abs_weight
+!   Flag to use line absorption data for weighting in continuum transmissions
+  INTEGER :: i_gas_1
+!   Actual type of first continuum gas to be considered
+  INTEGER :: i_index_1
+!   Index of first continuum gas in the spectral file
+  INTEGER :: i_gas_2
+!   Actual type of second continuum gas to be considered
+  INTEGER :: i_index_2
+!   Index of second continuum gas in the spectral file
 !
   CHARACTER (LEN=256) :: file_spectral
 !   Name of the spectral file
@@ -127,6 +148,9 @@ PROGRAM corr_k
 !   Tolerance for the c-k fit
   REAL  (RealK) :: max_path
 !   Maximum pathlength to be considered
+  REAL  (RealK) :: max_path_wgt
+!   Maximum pathlength to be considered for the absorber used for weighting
+!   in continuum transmissions
 !
 ! Continuum data:
   REAL  (RealK) :: umin_c
@@ -157,6 +181,16 @@ PROGRAM corr_k
   REAL  (RealK), Allocatable :: scale_cont(:, :, :)
 !   Parameters of the scaling function for the continuum
 !
+! Mapping
+  LOGICAL :: l_load_map
+!   Use pre-defined mapping of wavenumbers to g-space
+  LOGICAL :: l_load_wgt
+!   Use pre-defined k-term weights
+  LOGICAL :: l_save_map
+!   Save mapping of wavenumbers to g-space
+  CHARACTER(LEN=132) :: file_map
+!   Name of file with mapping
+!
   INTEGER :: iu_k_out
 !   Unit number for output of the k-fit
   INTEGER :: iu_monitor
@@ -178,23 +212,26 @@ PROGRAM corr_k
 !
     SUBROUTINE corr_k_single &
 !
-      (i_gas, i_index, n_band, n_selected_band, list_band, &
+      (i_gas, i_index, i_gas_1, i_index_1, i_gas_2, i_index_2, &
+       n_band, n_selected_band, list_band, &
        n_pt_pair, n_p, p_calc, t_calc, p_ref, t_ref, l_scale_pt, &
-       iu_lbl, nu_inc_0, line_cutoff, l_ckd_cutoff, &
+       iu_lbl, iu_cia, nu_inc_0, line_cutoff, l_ckd_cutoff, &
        wavelength_long, wavelength_short, &
        n_band_exclude, index_exclude, &
        i_weight, solarspec, &
        include_h2o_foreign_continuum, &
-       l_access_HITRAN, l_access_xsc, l_lbl_exist, &
+       l_use_h2o_frn_param, l_use_h2o_self_param, l_cont_line_abs_weight, &
+       l_access_HITRAN, l_access_xsc, l_access_cia, l_lbl_exist, &
        l_fit_line_data, l_fit_self_continuum, l_fit_frn_continuum, &
-       n_path_c, umin_c, umax_c, n_pp, &
+       l_fit_cont_data, n_path_c, umin_c, umax_c, n_pp, &
        include_instrument_response, filter, &
-       i_ck_fit, tol, max_path, &
+       i_ck_fit, tol, max_path, max_path_wgt, &
        nd_k_term, n_k, w_k, k_ave, k_opt, &
        k_opt_self, k_opt_frn, &
        i_type_residual, i_scale_function, scale_vector, &
        scale_cont, &
        iu_k_out, file_k, iu_monitor, file_monitor, file_lbl, &
+       l_load_map, l_load_wgt, l_save_map, file_map, &
        n_omp_threads, ierr &
       )
 !
@@ -211,13 +248,19 @@ PROGRAM corr_k
       INTEGER, Intent(IN), Dimension(:, :) :: index_exclude
       INTEGER, Intent(IN) :: i_gas
       INTEGER, Intent(IN) :: i_index
+      INTEGER, Intent(IN) :: i_gas_1
+      INTEGER, Intent(IN) :: i_index_1
+      INTEGER, Intent(IN) :: i_gas_2
+      INTEGER, Intent(IN) :: i_index_2
       INTEGER, Intent(IN) :: iu_lbl
+      INTEGER, Intent(IN) :: iu_cia
       REAL  (RealK), Intent(IN) :: nu_inc_0
       INTEGER, Intent(IN) :: i_weight
       INTEGER, Intent(IN) :: i_ck_fit
       LOGICAL, Intent(IN) :: l_scale_pt
       REAL  (RealK), Intent(IN) :: tol
       REAL  (RealK), Intent(IN) :: max_path
+      REAL  (RealK), Intent(IN) :: max_path_wgt
       REAL  (RealK), Intent(IN) :: line_cutoff
       LOGICAL, Intent(IN) :: l_ckd_cutoff
       INTEGER, Intent(IN) :: n_pt_pair
@@ -228,12 +271,17 @@ PROGRAM corr_k
       REAL  (RealK), Intent(IN), Dimension(:) :: t_ref
       TYPE  (StrSolarSpec), Intent(IN) :: SolarSpec
       LOGICAL, Intent(IN) :: include_h2o_foreign_continuum
+      LOGICAL, Intent(IN) :: l_use_h2o_frn_param
+      LOGICAL, Intent(IN) :: l_use_h2o_self_param
+      LOGICAL, Intent(IN) :: l_cont_line_abs_weight
       LOGICAL, Intent(IN) :: l_access_HITRAN
       LOGICAL, Intent(IN) :: l_access_xsc
+      LOGICAL, Intent(IN) :: l_access_cia
       LOGICAL, Intent(IN) :: l_lbl_exist
       LOGICAL, Intent(IN) :: l_fit_line_data
       LOGICAL, Intent(IN) :: l_fit_frn_continuum
       LOGICAL, Intent(IN) :: l_fit_self_continuum
+      LOGICAL, Intent(IN) :: l_fit_cont_data
       INTEGER, Intent(IN) :: n_path_c
       REAL  (RealK), Intent(IN) :: umin_c
       REAL  (RealK), Intent(IN) :: umax_c
@@ -258,6 +306,10 @@ PROGRAM corr_k
       INTEGER, Intent(IN) :: iu_monitor
       CHARACTER  (LEN=*), Intent(IN) :: file_monitor
       CHARACTER  (LEN=*), Intent(IN) :: file_lbl
+      LOGICAL, Intent(IN) :: l_load_map
+      LOGICAL, Intent(IN) :: l_load_wgt
+      LOGICAL, Intent(IN) :: l_save_map
+      CHARACTER  (LEN=*), Intent(IN) :: file_map
 !
     END SUBROUTINE corr_k_single
 !
@@ -329,6 +381,42 @@ PROGRAM corr_k
 !
   ENDDO
 
+! Acquire the line data-base.
+  WRITE(iu_stdout, "(/a)") &
+    "Will a HITRAN CIA (.cia) database be provided? (Y/N)"
+  DO
+!
+    READ(iu_stdin, '(A)') char_if
+!
+    IF ( (char_if == 'Y') .OR. (char_if == 'y') ) THEN
+!
+      l_access_cia=.TRUE.
+      CALL get_free_unit(ierr, iu_cia)
+      IF (ierr /= i_normal) STOP
+      CALL open_file_in(ierr, iu_cia, &
+        "Give the name of the HITRAN .cia database.")
+      IF (ierr /= i_normal) STOP
+      EXIT
+      EXIT
+!
+    ELSE IF ( (char_if == 'N') .OR. (char_if == 'n') ) THEN
+!
+      l_access_cia=.FALSE.
+      EXIT
+!
+    ELSE
+!
+      WRITE(iu_err, '(/A)') '*** Error: Unrecognized input'
+      IF (l_interactive) THEN
+        WRITE(iu_stdout, '(/A)') 'Please re-enter.'
+      ELSE
+        STOP
+      ENDIF
+!
+    ENDIF
+!
+  ENDDO
+
 ! Read in the spectral file.
   WRITE(*, "(/ a)") "Enter the name of the spectral file."
   READ(*, "(a)") file_spectral
@@ -379,16 +467,21 @@ PROGRAM corr_k
   CALL set_condition_ck_90(l_interactive, &
     npd_pt, n_pt_pair, n_p, p, t, &
     Spectrum%Dim%nd_band, Spectrum%Dim%nd_species, &
-    Spectrum%Gas%n_absorb, Spectrum%Gas%type_absorb, i_gas, i_index, &
+    Spectrum%Gas%n_absorb, Spectrum%Gas%type_absorb, &
+    i_gas, i_index, i_gas_1, i_index_1, i_gas_2, i_index_2, &
     Spectrum%Basic%n_band, Spectrum%Gas%n_band_absorb, &
     Spectrum%Gas%index_absorb, &
     Spectrum%Dim%nd_continuum, Spectrum%Cont%n_band_continuum, &
     Spectrum%Cont%index_continuum, &
     l_fit_line_data, l_fit_frn_continuum, l_fit_self_continuum, &
-    umin_c, umax_c, n_path_c, n_pp, l_access_HITRAN, l_access_xsc, &
-    include_h2o_foreign_continuum, n_selected_band, list_band, &
-    i_ck_fit, tol, max_path, n_k, nu_inc_0, line_cutoff, l_ckd_cutoff, &
-    l_scale_pT, i_type_residual, i_scale_fnc, p_ref, t_ref, ierr)
+    l_fit_cont_data, umin_c, umax_c, n_path_c, n_pp, &
+    l_access_HITRAN, l_access_xsc, l_access_cia, &
+    include_h2o_foreign_continuum, &
+    l_use_h2o_frn_param, l_use_h2o_self_param, l_cont_line_abs_weight, &
+    n_selected_band, list_band, &
+    i_ck_fit, tol, max_path, max_path_wgt, n_k, nu_inc_0, line_cutoff, &
+    l_ckd_cutoff, l_scale_pT, i_type_residual, i_scale_fnc, p_ref, t_ref, &
+    l_load_map, l_load_wgt, l_save_map, file_map, ierr)
 !
 ! Allocate arrays for the k-fit, now that the size of the scaling 
 ! vector is known.
@@ -456,23 +549,25 @@ PROGRAM corr_k
        " at ",start_time(5),":",start_time(6),":",start_time(7), &
        " on ",start_time(3),"/",start_time(2),"/",start_time(1)
 !
-  CALL corr_k_single(i_gas, i_index, Spectrum%Basic%n_band, &
-    n_selected_band, list_band, &
+  CALL corr_k_single(i_gas, i_index, i_gas_1, i_index_1, i_gas_2, i_index_2, &
+    Spectrum%Basic%n_band, n_selected_band, list_band, &
     n_pt_pair, n_p, p, t, p_ref, t_ref, l_scale_pt, &
-    iu_lbl, nu_inc_0, line_cutoff, l_ckd_cutoff, &
+    iu_lbl, iu_cia, nu_inc_0, line_cutoff, l_ckd_cutoff, &
     Spectrum%Basic%wavelength_long, Spectrum%Basic%wavelength_short, &
     Spectrum%Basic%n_band_exclude, Spectrum%Basic%index_exclude, &
     i_weight, solarspec, &
     include_h2o_foreign_continuum, &
-    l_access_HITRAN, l_access_xsc, l_lbl_exist, &
+    l_use_h2o_frn_param, l_use_h2o_self_param, l_cont_line_abs_weight, &
+    l_access_HITRAN, l_access_xsc, l_access_cia, l_lbl_exist, &
     l_fit_line_data, l_fit_self_continuum, l_fit_frn_continuum, &
-    n_path_c, umin_c, umax_c, n_pp, &
+    l_fit_cont_data, n_path_c, umin_c, umax_c, n_pp, &
     include_instrument_response, filter, &
-    i_ck_fit, tol, max_path, &
+    i_ck_fit, tol, max_path, max_path_wgt, &
     npd_k_term, n_k, w_k, k_ave, k_opt, &
     k_opt_self, k_opt_frn, &
     i_type_residual, i_scale_fnc, scale, scale_cont, &
     iu_k_out, file_k, iu_monitor, file_monitor, file_lbl, &
+    l_load_map, l_load_wgt, l_save_map, file_map, &
     n_omp_threads, ierr )
 !
   IF (include_instrument_response) THEN
@@ -483,6 +578,7 @@ PROGRAM corr_k
 !
   CLOSE(iu_k_out)
   CLOSE(iu_lbl)
+  CLOSE(iu_cia)
 !
   WRITE(*,"(a)")"==============================="
   WRITE(*,"(a)")"corr_k : Execution ends   "

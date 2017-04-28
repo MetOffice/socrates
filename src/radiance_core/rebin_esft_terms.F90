@@ -66,7 +66,7 @@ SUBROUTINE rebin_esft_terms(i_band_esft_mix, n_esft_red                 &
 !       Current weight for the gas mixture
     , w_esft_part                                                       &
 !       Weight used when splitting mixed weight over several bins
-    , eps = 1.0e-08_RealK
+    , eps = 1.0E-08_RealK
 !       Tolerance used to take into account loss of precision due to
 !       number of decimal points on weights in spectral files
   INTEGER ::                                                            &

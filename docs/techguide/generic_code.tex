@@ -353,19 +353,21 @@ Scattering Properties for Individual Processes}
 \subsubsection{Gaseous Absorption}
 
 If there are $M$ active absorbing gases, $j=1,\dots, M$   in a band, each 
-will enter a single 
-quasi-monochromatic calculation with an effective mass extinction 
-coefficient $K^{(g)}_{j}$, calculated at reference conditions of
-temperature and pressure. 
+will enter a single quasi-monochromatic calculation with mass extinction
+coefficients appropriate for the conditions of temperature and pressure
+at each layer of the atmosphere.
 The total contribution to the mass extinction coefficient is then
 \beq
 k^{(e,g)}=\sum^{M}_{j}K^{(g)}_{j} q_{j} f_{j}(p,\theta)
 \label{p2_eq28}
 \eeq
-where $q_{j}$ is the mixing ratio of the $j^{th}$ gas and $f_{j}$ is 
+where $K^{(g)}_{j}$ is a mass extinction coefficient at reference pressure
+and temperature, $q_{j}$ is the mixing ratio of the $j^{th}$ gas and $f_{j}$ is 
 the  scaling function, which allows for variations in the
-pressure, $p$, and the temperature, $\theta$.  Two forms for $f$ are 
-allowed within the code:
+pressure, $p$, and the temperature, $\theta$. The scaled extinction
+coefficients may be interpolated directly from a look-up table in the
+spectral file which is now the preferred method. Alternatively, scaling
+functions may be used of which two forms for $f$ are allowed within the code:
 \beq
 f=\bigg(\frac{p+\Delta}{p_{0}+\Delta}\bigg)^{\alpha} 
 \bigg(\frac{\theta}{\theta_{0}}\bigg)^{\beta}
@@ -431,6 +433,19 @@ originally based on the CKD model of \cite{Clough89}, which has been
 developed as new observations to constrain it become available. The
 updating of this model is an issue in the generation of spectral files,
 rather than in the radiation code itself.
+
+A more general continuum absorption parametrisation, which also
+supports collision-induced absorption (CIA), is also available. Continuum
+$k$-terms are derived in the same way as gaseous absorption $k$-terms. These
+are tabulated as a function temperature only in units of absorption per mass
+density of each of the two continuum gases [m$^5$/kg$^2$]. Overlapping
+absorption between different continua, and continua and gaseous absorption is
+treated as overlapping gaseous absorption, however, a continuum absorption
+spectrum can also be assumed to be perfectly correlated to that of a
+particular gas. The latter assumption is generally more accurate for the
+water vapour continua than random overlap. The overlap treatment for a
+particular continuum is specified in the spectral file, and defaults to
+that selected for gases.
 
 \subsubsection{Absorption and Scattering by Aerosols}
 

@@ -46,6 +46,8 @@ TYPE StrCtrl
 !   Flag for Rayleigh scattering
   LOGICAL :: l_continuum                                          = .FALSE.
 !   Flag for the continuum
+  LOGICAL :: l_cont_gen                                           = .FALSE.
+!   Flag for the generalised continua
   LOGICAL :: l_cloud                                              = .FALSE.
 !   Flag for clouds
   LOGICAL :: l_drop                                               = .FALSE.
@@ -107,9 +109,9 @@ TYPE StrCtrl
   LOGICAL :: l_vo                                                 = .FALSE.
 !   Flag for absorption by vanadium oxide
   LOGICAL :: l_h2                                                 = .FALSE.
-!   Flag for absorption by H2-H2 CIA
+!   Flag for absorption by hydrogen
   LOGICAL :: l_he                                                 = .FALSE.
-!   Flag for absorption by H2-He CIA
+!   Flag for absorption by helium
   LOGICAL :: l_na                                                 = .FALSE.
 !   Flag for absorption by sodium
   LOGICAL :: l_k                                                  = .FALSE.

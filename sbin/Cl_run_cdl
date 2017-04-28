@@ -35,6 +35,7 @@ do case $1 in
       -B) base_name=$2 ; shift 2 ;;
       -C) cloud_scheme=$2 ; shift 2 ;;
       -c) c_continuum=c ; shift ;;
+      -u) c_cont_gen=u ; shift ;;
       -ch) n_channel=$2 ; shift 2 ;;
       -d) c_drop=d ; drop_type=$2 ; shift 2 ;;
       +d) convective_drop_type=$2 ; shift 2 ;;
@@ -89,7 +90,7 @@ done
 #
 # ASSEMBLE PROCESS FLAG
 #
-process_flag=$c_gas$c_continuum$c_rayleigh$c_drop$c_ice$c_aerosol
+process_flag=$c_gas$c_continuum$c_cont_gen$c_rayleigh$c_drop$c_ice$c_aerosol
 #
 # CHECK FLAGS FOR CONVECTIVE CLOUDS HERE
 #
