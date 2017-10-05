@@ -172,7 +172,7 @@
 !                          ip_ocff_fresh
 !                          ip_ocff_aged
 !                          ip_nitrate
-!
+!                          ip_delta
 !
 !     Growth factors for biomass-burning aerosols as a function of relative
 !     humidity. They were computed to match water uptake properties observed 
@@ -524,7 +524,8 @@
 !
 ! Ammonium nitrate (taken from Fitzgerald, 1975).
 !
-      ELSE IF ( ( ichem_type == IP_NITRATE ) ) THEN
+      ELSE IF ( ( ichem_type == IP_NITRATE ) .OR.
+     &          ( ichem_type == IP_DELTA ) ) THEN
       
         alpha = 1.0_RealK
         beta = 1.0_RealK

@@ -282,6 +282,7 @@ SUBROUTINE set_condition_ck_90 &
   IF (l_fit_line_data) THEN
     CALL select_self_broadening
   ELSE
+    l_self_broadening = .FALSE.
     n_gas_frac=1
     gas_frac=0.0_RealK
   END IF
@@ -290,7 +291,10 @@ SUBROUTINE set_condition_ck_90 &
     CALL select_cont_details_int
 !
   IF (l_fit_line_data .OR. l_fit_cont_data) CALL select_fit_type_int
-!
+
+  l_load_map = .FALSE.
+  l_load_wgt = .FALSE.
+  l_save_map = .FALSE.
   IF (l_fit_line_data .OR. l_fit_cont_data) CALL select_mapping_wgt
 !
 !

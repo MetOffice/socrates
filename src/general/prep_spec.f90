@@ -141,7 +141,7 @@ PROGRAM prep_spec
 
   DO
 !   Now decide which blocks are to be written.
-    WRITE(*, '(/a/,12(6x, a/),/)')                                      &
+    WRITE(*, '(/a/,13(6x, a/),/)')                                      &
       'Select from the following types of data:',                       &
       '2.   Block 2: Solar spectrum in each band.',                     &
       '3.   Block 3: Rayleigh scattering in each band.',                &
@@ -151,6 +151,7 @@ PROGRAM prep_spec
       '10.  Block 10: Droplet parameters in each band.',                &
       '11.  Block 11: Aerosol parameters in each band.',                &
       '12.  Block 12: Ice crystal parameters in each band.',            &
+      '15.  Block 15: Parameters for aerosol optical depths.',          &
       '17.  Block 17: Spectral variability data in sub-bands.',         &
       '19.  Block 19: Continuum k-terms and T scaling data.',           &
       '-1.  To write spectral file and exit.',                          &
@@ -193,6 +194,8 @@ PROGRAM prep_spec
       CALL make_block_11(Spectrum, ierr)
     CASE(12)
       CALL make_block_12(Spectrum, ierr)
+    CASE(15)
+      CALL make_block_15(Spectrum, ierr)
     CASE(17)
       CALL make_block_17(Spectrum, SolarSpec, ierr)
     CASE(19)

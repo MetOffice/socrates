@@ -59,6 +59,7 @@ diff -q sp_sw_ga7 ../../data/spectra/ga7/sp_sw_ga7 || ierr=1
 if [ $ierr -gt 0 ] ; then
   exit 1
 else
+  rm -f sp_sw_ga7*
   rm -f *.txt 2>/dev/null
   echo OK
   exit 0

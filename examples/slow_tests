@@ -22,9 +22,9 @@ cd setup_atmos
 cd ../
 
 echo ---
-echo "Testing Cscatter for generating monochromatic aerosol data:"
+echo "Testing Cscatter, Cscatter_average and prep_spec for generating aerosol data:"
 cd aerosols
-./run_scatter || err=1
+./make_ga8_aerosol || err=1
 cd ../
 
 echo ---

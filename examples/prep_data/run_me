@@ -2,7 +2,7 @@
 #
 # This example requires npd_band=220 or more.
 
-yes | rm sulp_scat sulp_scatav sp_with_aer 2> /dev/null
+rm -f sulp_scat sulp_scatav sp_with_aer 2> /dev/null
 
 echo "Running scatter_90..."
 scatter_90 > /dev/null <<EOF

@@ -4,9 +4,9 @@
 #
 # Clear out files from previous runs:
 resrm x_cl
-yes | rm x_cl.tl x_cl.op_water x_cl.co2 x_input_level_list 2>/dev/null
-yes | rm xcla1 xcla2 x_cl.o3 xcl1 xcl2 x_cl.clfr 2>/dev/null
-yes | rm x_cl.pstar x_cl.tstar x_cl.q x_cl.t x_cl.o2 2>/dev/null
+rm -f x_cl.tl x_cl.op_water x_cl.co2 x_input_level_list 2>/dev/null
+rm -f xcla1 xcla2 x_cl.o3 xcl1 xcl2 x_cl.clfr 2>/dev/null
+rm -f x_cl.pstar x_cl.tstar x_cl.q x_cl.t x_cl.o2 2>/dev/null
 #
 # Process the input data
 #
