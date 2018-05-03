@@ -4,21 +4,15 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to set the pentadiagonal matrix for the fluxes.
-!
-! Method:
-!   Straightforward.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
+! Subroutine to set the pentadiagonal matrix for the fluxes.
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE set_matrix_pentadiagonal(n_profile, n_layer                  &
      , trans, reflect                                                   &
      , s_down, s_up                                                     &
-     , diffuse_albedo, direct_albedo                                    &
-     , flux_direct_ground, flux_inc_down                                &
-     , d_planck_flux_surface                                            &
+     , diffuse_albedo                                                   &
+     , flux_inc_down                                                    &
+     , source_ground                                                    &
      , a5, b                                                            &
      , nd_profile, nd_layer                                             &
      )
@@ -56,14 +50,10 @@ SUBROUTINE set_matrix_pentadiagonal(n_profile, n_layer                  &
 !       Upward diffuse source
     , diffuse_albedo(nd_profile)                                        &
 !       Diffuse surface albedo
-    , direct_albedo(nd_profile)                                         &
-!       Direct surface albedo
-    , d_planck_flux_surface(nd_profile)                                 &
-!       Difference in Planckian fluxes at the surface
     , flux_inc_down(nd_profile)                                         &
 !       Incident total flux
-    , flux_direct_ground(nd_profile)
-!       Direct flux at ground level
+    , source_ground(nd_profile)
+!       Source from ground
   REAL (RealK), INTENT(OUT) ::                                          &
       a5(nd_profile, 5, 2*nd_layer+2)                                   &
 !       Pentadiagonal matrix
@@ -123,10 +113,7 @@ SUBROUTINE set_matrix_pentadiagonal(n_profile, n_layer                  &
     a5(l, 4, 2*n_layer+1)=0.0e+00_RealK
     a5(l, 3, 2*n_layer+1)=1.0e+00_RealK
     a5(l, 2, 2*n_layer+1)=-diffuse_albedo(l)
-    b(l, 2*n_layer+1)                                                   &
-      =(1.0e+00_RealK-diffuse_albedo(l))*d_planck_flux_surface(l)       &
-      +(direct_albedo(l)-diffuse_albedo(l))                             &
-      *flux_direct_ground(l)
+    b(l, 2*n_layer+1)=source_ground(l)
   END DO
 
 

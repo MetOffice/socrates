@@ -459,7 +459,7 @@ CONTAINS
       IF (ANY(Spectrum%Gas%l_self_broadening)) THEN
         WRITE(iu_spc1,'(/,a,i4,a)') 'Lookup table: ', &
           Spectrum%Gas%n_gas_frac, ' gas fractions.'
-        WRITE(iu_spc1,'(6(1PE13.6))') , &
+        WRITE(iu_spc1,'(6(1PE13.6))') &
           Spectrum%Gas%gf_lookup(1:Spectrum%Gas%n_gas_frac)
       END IF
     END IF

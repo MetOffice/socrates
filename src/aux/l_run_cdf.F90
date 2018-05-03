@@ -33,7 +33,8 @@ PROGRAM l_run_cdf
   USE rad_pcf
   USE gas_list_pcf
   USE input_head_pcf
-  USE rad_ccf, ONLY: seconds_per_day, grav_acc, cp_air_dry, r, c_virtual
+  USE rad_ccf, ONLY: seconds_per_day, grav_acc, cp_air_dry, r, c_virtual, &
+    earth_radius, pi
   USE mcica_mod
 
   IMPLICIT NONE
@@ -126,6 +127,10 @@ PROGRAM l_run_cdf
 ! Fluxes and radiances calculated
   REAL  (RealK), ALLOCATABLE :: flux_diffuse_down(:,:,:)
 !       Diffuse downward flux
+  REAL  (RealK), ALLOCATABLE :: flux_direct(:,:,:)
+!       Direct flux
+  REAL  (RealK), ALLOCATABLE :: flux_total(:,:,:)
+!       Total downward flux
   REAL  (RealK), ALLOCATABLE :: flux_net(:,:,:)
 !       Net flux
   REAL  (RealK), ALLOCATABLE :: heating_rate(:,:,:)
@@ -282,6 +287,10 @@ PROGRAM l_run_cdf
 
   ALLOCATE( flux_diffuse_down(dimen%nd_profile, 0:dimen%nd_layer,       &
               dimen%nd_channel)                                       )
+  ALLOCATE( flux_direct(dimen%nd_profile, 0:dimen%nd_layer,             &
+              dimen%nd_channel)                                       )
+  ALLOCATE( flux_total(dimen%nd_profile, 0:dimen%nd_layer,              &
+              dimen%nd_channel)                                       )
   ALLOCATE( flux_net(dimen%nd_profile, 0: dimen%nd_layer,               &
               dimen%nd_channel)                                       )
   ALLOCATE( heating_rate(dimen%nd_profile, dimen%nd_layer,              &
@@ -326,8 +335,8 @@ PROGRAM l_run_cdf
       dimen%nd_profile, npd_latitude, npd_longitude,                    &
       npd_cdl_dimen, npd_cdl_dimen_size,                                &
       npd_cdl_data, npd_cdl_var )
-
     IF (ierr /= i_normal) STOP
+
 !   The solar azimuthal angles.
     file_name(1: length_name+1+len_file_suffix) =                       &
       base_name(1: length_name) // '.' //                               &
@@ -537,6 +546,12 @@ PROGRAM l_run_cdf
         STOP
       ENDIF
 
+    ELSE IF (process_flag(j: j) == 's') THEN
+      control%l_spherical_solar=.TRUE.
+      control%l_spherical_path_diag=.TRUE.
+      DO l=1, atm%n_profile
+        bound%cos_zen(l, :) = COS(pi*bound%zen_0(l)/180.0_RealK)
+      END DO
     ENDIF
   ENDDO
 
@@ -1002,6 +1017,37 @@ PROGRAM l_run_cdf
 
 
 ! ------------------------------------------------------------------
+! Determination of heights, and lit layers
+! ------------------------------------------------------------------
+  IF (control%l_spherical_solar) THEN
+    DO l=1, atm%n_profile
+      atm%r_level(l, atm%n_layer)=earth_radius
+    END DO
+    DO i=atm%n_layer, 1, -1
+      DO l=1, atm%n_profile
+        atm%r_level(l, i-1) = &
+          atm%mass(l, i)/atm%density(l, i) + atm%r_level(l, i)
+        atm%r_layer(l, i) = &
+          (atm%r_level(l, i-1) + atm%r_level(l, i)) / 2.0_RealK
+      END DO
+    END DO
+    DO i=0, atm%n_layer+1
+      DO l=1, atm%n_profile
+        IF (bound%cos_zen(l, i) > 0.0_RealK .OR. &
+            atm%r_layer(l, i)*SQRT(1.0_RealK - bound%cos_zen(l, i)**2) > &
+            atm%r_level(l, atm%n_layer)) THEN
+          ! Layer is lit if the sun is above the horizontal or if the impact
+          ! parameter for the beam is higher than the surface.
+          bound%lit(l, i) = 1.0_RealK
+        ELSE
+          bound%lit(l, i) = 0.0_RealK
+        END IF
+      END DO
+    END DO
+  END IF
+
+
+! ------------------------------------------------------------------
 ! Subgrid cloud generator
 ! ------------------------------------------------------------------
   IF (control%i_cloud == IP_cloud_mcica) THEN
@@ -1103,21 +1149,73 @@ END IF
             radout%flux_down(l, i, ic)-radout%flux_up(l, i, ic)
         ENDDO
       ENDDO
-      DO i=1, atm%n_layer
-        DO l=1, atm%n_profile
-          heating_rate(l, i, ic) =                                      &
-            (flux_net(l, i-1, ic)-flux_net(l, i, ic)) /                 &
-            (atm%mass(l, i)*cp_air_dry)
-!         Convert heating rates to the conventional units of K/day.
-          heating_rate(l, i, ic) =                                      &
-            seconds_per_day*heating_rate(l, i, ic)
+      IF (control%l_spherical_solar) THEN
+        DO i=1, atm%n_layer
+          DO l=1, atm%n_profile
+            heating_rate(l, i, ic) = ( radout%flux_direct_div(l, i, ic)   &
+              + flux_net(l, i-1, ic)-flux_net(l, i, ic) ) /               &
+              (atm%mass(l, i)*cp_air_dry)
+!           Convert heating rates to the conventional units of K/day.
+            heating_rate(l, i, ic) =                                      &
+              seconds_per_day*heating_rate(l, i, ic)
+          ENDDO
         ENDDO
-      ENDDO
+        print*, 'Spherical path 1: ', radout%spherical_path(1,1:atm%n_layer,1)
+        print*, 'Spherical path 2: ', radout%spherical_path(1,1:atm%n_layer,2)
+        print*, 'Spherical path surface: ', &
+          radout%spherical_path(1,1:atm%n_layer,atm%n_layer+1)
+      ELSE
+        DO i=1, atm%n_layer
+          DO l=1, atm%n_profile
+            heating_rate(l, i, ic) =                                      &
+              (flux_net(l, i-1, ic)-flux_net(l, i, ic)) /                 &
+              (atm%mass(l, i)*cp_air_dry)
+!           Convert heating rates to the conventional units of K/day.
+            heating_rate(l, i, ic) =                                      &
+              seconds_per_day*heating_rate(l, i, ic)
+          ENDDO
+        ENDDO
+      END IF
       IF (control%isolir == IP_solar) THEN
+        IF (control%l_spherical_solar) THEN
+          DO i=0, atm%n_layer-1
+            DO l=1, atm%n_profile
+              flux_diffuse_down(l, i, ic) = radout%flux_down(l, i, ic)
+              flux_direct(l, i, ic) = radout%flux_direct_sph(l, i+1, ic)
+              IF (bound%cos_zen(l, i+1) > 0.0) THEN
+                ! In the layers the direct flux output is along the beam
+                ! direction so we take the vertical component in the total
+                ! flux diagnostic (for comparison to the plane-parallel case).
+                flux_total(l, i, ic) = flux_diffuse_down(l, i, ic) &
+                  + flux_direct(l, i, ic) * bound%cos_zen(l, i+1)
+              ELSE
+                flux_total(l, i, ic) = flux_diffuse_down(l, i, ic)
+              END IF
+            ENDDO
+          ENDDO
+          ! At the surface the direct flux output is already the
+          ! vertical component.
+          i=atm%n_layer
+          DO l=1, atm%n_profile
+            flux_diffuse_down(l, i, ic) = radout%flux_down(l, i, ic)
+            flux_direct(l, i, ic) = radout%flux_direct_sph(l, i+1, ic)
+            flux_total(l, i, ic) = &
+              flux_diffuse_down(l, i, ic)+flux_direct(l, i, ic)
+          ENDDO
+        ELSE
+          DO i=0, atm%n_layer
+            DO l=1, atm%n_profile
+              flux_diffuse_down(l, i, ic) =                               &
+                radout%flux_down(l, i, ic)-radout%flux_direct(l, i, ic)
+              flux_direct(l, i, ic) = radout%flux_direct(l, i, ic)
+              flux_total(l, i, ic) = radout%flux_down(l, i, ic)
+            ENDDO
+          ENDDO
+        END IF
+      ELSE
         DO i=0, atm%n_layer
           DO l=1, atm%n_profile
-            flux_diffuse_down(l, i, ic) =                               &
-              radout%flux_down(l, i, ic)-radout%flux_direct(l, i, ic)
+            flux_total(l, i, ic) = radout%flux_down(l, i, ic)
           ENDDO
         ENDDO
       ENDIF
@@ -1132,9 +1230,9 @@ END IF
       trim(name_vert_coord), len(trim(name_vert_coord)),                &
       atm%p, atm%p_level,                                               &
       n_channel,                                                        &
-      radout%flux_down, flux_diffuse_down,                              &
+      flux_total, flux_diffuse_down,                                    &
       radout%flux_up, flux_net,                                         &
-      radout%flux_direct, heating_rate,                                 &
+      flux_direct, heating_rate,                                        &
       dimen%nd_profile, npd_latitude, npd_longitude, dimen%nd_layer,    &
       dimen%nd_channel,                                                 &
       npd_cdl_dimen, npd_cdl_dimen_size,                                &
@@ -1194,6 +1292,8 @@ END IF
   CALL deallocate_out(radout)
 
   DEALLOCATE( flux_diffuse_down         )
+  DEALLOCATE( flux_direct               )
+  DEALLOCATE( flux_total                )
   DEALLOCATE( flux_net                  )
   DEALLOCATE( heating_rate              )
 

@@ -13,9 +13,6 @@
 !   selected, an appropriate set of matrix equations is formulated
 !   and solved to give the fluxes.
 !
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
-!
 !- ---------------------------------------------------------------------
 SUBROUTINE two_stream(ierr                                              &
     , control, bound                                                    &
@@ -36,6 +33,8 @@ SUBROUTINE two_stream(ierr                                              &
     , flux_inc_down, flux_inc_direct, sec_0                             &
 !                 Surface Conditions
     , diffuse_albedo, direct_albedo, d_planck_flux_surface              &
+!                 Spherical geometry
+    , sph                                                               &
 !                 Single Scattering Properties
     , tau_noscal, tau, omega, asymmetry                                 &
 !                 Fluxes Calculated
@@ -48,6 +47,7 @@ SUBROUTINE two_stream(ierr                                              &
   USE realtype_rd, ONLY: RealK
   USE def_control, ONLY: StrCtrl
   USE def_bound,   ONLY: StrBound
+  USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
@@ -125,6 +125,8 @@ SUBROUTINE two_stream(ierr                                              &
 !       Direct flux
     , flux_total(nd_profile, 2*nd_layer+2)
 !       Total fluxes
+  TYPE(StrSphGeo), INTENT(INOUT) :: sph
+!       Spherical geometry fields
 
 
 ! Local variables.
@@ -170,7 +172,7 @@ SUBROUTINE two_stream(ierr                                              &
       , n_profile, 1, n_layer                                           &
       , i_2stream, l_ir_source_quad                                     &
       , asymmetry, omega, tau_noscal, tau                               &
-      , isolir, sec_0                                                   &
+      , isolir, sec_0, sph%common%path_div                              &
       , trans, reflect, trans_0_noscal, trans_0                         &
       , source_coeff                                                    &
       , nd_profile, 1, nd_layer, 1, nd_layer, nd_source_coeff           &
@@ -197,7 +199,7 @@ SUBROUTINE two_stream(ierr                                              &
   END IF
 
 ! DEPENDS ON: column_solver
-  CALL column_solver(ierr, control, bound                               &
+  CALL column_solver(ierr, control, bound, sph%common, sph%allsky       &
     , n_profile, n_layer                                                &
     , i_scatter_method, i_solver                                        &
     , trans, reflect, trans_0_noscal, trans_0, source_coeff             &

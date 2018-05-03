@@ -10,9 +10,6 @@
 !   This module contains the declaration of the structure
 !   used to store atmospheric data in the radiation code.
 !
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
-!
 !------------------------------------------------------------------------------
 MODULE def_atm
 
@@ -56,6 +53,12 @@ TYPE StrAtm
 !   Temperatures at the centres of layers
   REAL (RealK), ALLOCATABLE :: t_level(:, :)
 !   Temperatures at the edges of layers
+
+! Heights (from the centre of the planet)
+  REAL (RealK), ALLOCATABLE :: r_layer(:, :)
+!   Height / radius at the centres of layers
+  REAL (RealK), ALLOCATABLE :: r_level(:, :)
+!   Height / radius at the edges of layers
 
 ! Gaseous Fields:
   REAL (RealK), ALLOCATABLE :: gas_mix_ratio(:, :, :)
@@ -115,6 +118,14 @@ IF (.NOT. ALLOCATED(atm%t_level))                                              &
   ALLOCATE(atm%t_level       ( dimen%nd_profile,                               &
                                0 : dimen%nd_layer                            ))
 
+IF (.NOT. ALLOCATED(atm%r_layer))                                              &
+  ALLOCATE(atm%r_layer       ( dimen%nd_profile,                               &
+                               dimen%nd_layer                                ))
+
+IF (.NOT. ALLOCATED(atm%r_level))                                              &
+  ALLOCATE(atm%r_level       ( dimen%nd_profile,                               &
+                               0 : dimen%nd_layer                            ))
+
 IF (.NOT. ALLOCATED(atm%gas_mix_ratio))                                        &
   ALLOCATE(atm%gas_mix_ratio ( dimen%nd_profile,                               &
                                dimen%nd_layer,                                 &
@@ -129,6 +140,8 @@ IMPLICIT NONE
 TYPE (StrAtm), INTENT(INOUT) :: atm
 
 IF (ALLOCATED(atm%gas_mix_ratio)) DEALLOCATE(atm%gas_mix_ratio)
+IF (ALLOCATED(atm%r_level))       DEALLOCATE(atm%r_level)
+IF (ALLOCATED(atm%r_layer))       DEALLOCATE(atm%r_layer)
 IF (ALLOCATED(atm%t_level))       DEALLOCATE(atm%t_level)
 IF (ALLOCATED(atm%p_level))       DEALLOCATE(atm%p_level)
 IF (ALLOCATED(atm%t))             DEALLOCATE(atm%t)

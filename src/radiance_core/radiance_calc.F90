@@ -33,6 +33,9 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
   USE parkind1,     ONLY: jprb, jpim
   USE ereport_mod,  ONLY: ereport
 
+  USE def_spherical_geometry, ONLY: StrSphGeo, allocate_sph, deallocate_sph
+  USE spherical_path_mod,     ONLY: spherical_path
+  
   IMPLICIT NONE
 
 
@@ -233,6 +236,9 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
   TYPE(str_ss_prop) :: ss_prop
 !   Single scattering properties of the atmosphere
 
+  TYPE(StrSphGeo) :: sph
+!   Spherical geometry fields
+  
   REAL (RealK) ::                                                              &
       k_esft_layer(dimen%nd_profile, dimen%nd_layer, spectrum%dim%nd_k_term,   &
                    spectrum%dim%nd_species)                                    &
@@ -751,9 +757,22 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
   END IF
 
 
+! Allocate fields and calculate the path for spherical geometry
+  IF (control%l_spherical_solar) THEN
+    CALL allocate_sph(sph, dimen)
+    CALL spherical_path(dimen, atm, bound, sph)
+    IF (control%l_spherical_path_diag) THEN
+      radout%spherical_path = sph%common%path
+    END IF
+    radout%flux_direct = 0.0_RealK
+    radout%flux_direct_clear = 0.0_RealK
+  ELSE
+    ! path_div is passed as an argument so must always be allocated
+    ALLOCATE(sph%common%path_div(dimen%nd_profile,dimen%nd_layer))
+  END IF
+  
 ! Solve the equation of transfer in each band and
 ! increment the fluxes.
-
   DO i_band=control%first_band, control%last_band
 
 !   Set the flag to initialize the diagnostic arrays.
@@ -770,6 +789,22 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       ELSE
         radout%flux_direct_band(:,:,i_band)                                    &
           = radout%flux_direct(:,:,control%map_channel(i_band))
+      END IF
+    END IF
+    IF (control%l_flux_direct_div_band) THEN
+      IF (l_initial) THEN
+        radout%flux_direct_div_band(:,:,i_band) = 0.0
+      ELSE
+        radout%flux_direct_div_band(:,:,i_band)                                &
+          = radout%flux_direct_div(:,:,control%map_channel(i_band))
+      END IF
+    END IF
+    IF (control%l_flux_direct_sph_band) THEN
+      IF (l_initial) THEN
+        radout%flux_direct_sph_band(:,:,i_band) = 0.0
+      ELSE
+        radout%flux_direct_sph_band(:,:,i_band)                                &
+          = radout%flux_direct_sph(:,:,control%map_channel(i_band))
       END IF
     END IF
     IF (control%l_flux_down_band) THEN
@@ -790,13 +825,41 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
     END IF
     IF (control%l_cloud_extinction     .OR.                                    &
         control%l_ls_cloud_extinction  .OR.                                    &
-        control%l_cnv_cloud_extinction .OR.                                    &
-        control%l_flux_direct_clear_band) THEN
+        control%l_cnv_cloud_extinction) THEN
       IF (l_initial) THEN
         flux_direct_clear_prev = 0.0
+      ELSE IF (control%l_spherical_solar) THEN
+        flux_direct_clear_prev(:, 0:atm%n_layer)                               &
+          = radout%flux_direct_clear_sph(:,                                    &
+                                         0:atm%n_layer,                        &
+                                         control%map_channel(i_band))
       ELSE
         flux_direct_clear_prev                                                 &
           = radout%flux_direct_clear(:,:,control%map_channel(i_band))
+      END IF
+    END IF
+    IF (control%l_flux_direct_clear_band) THEN
+      IF (l_initial) THEN
+        radout%flux_direct_clear_band(:,:,i_band) = 0.0
+      ELSE
+        radout%flux_direct_clear_band(:,:,i_band)                              &
+          = radout%flux_direct_clear(:,:,control%map_channel(i_band))
+      END IF
+    END IF
+    IF (control%l_flux_direct_clear_div_band) THEN
+      IF (l_initial) THEN
+        radout%flux_direct_clear_div_band(:,:,i_band) = 0.0
+      ELSE
+        radout%flux_direct_clear_div_band(:,:,i_band)                          &
+          = radout%flux_direct_clear_div(:,:,control%map_channel(i_band))
+      END IF
+    END IF
+    IF (control%l_flux_direct_clear_sph_band) THEN
+      IF (l_initial) THEN
+        radout%flux_direct_clear_sph_band(:,:,i_band) = 0.0
+      ELSE
+        radout%flux_direct_clear_sph_band(:,:,i_band)                          &
+          = radout%flux_direct_clear_sph(:,:,control%map_channel(i_band))
       END IF
     END IF
     IF (control%l_flux_down_clear_band) THEN
@@ -820,12 +883,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
     END IF
 
 !   Determine whether clear-sky fluxes are required for this band
-    l_clear_band = control%l_clear
-    IF (i_band == control%first_band) THEN
-!     As currently implemented diagnostic (UV) flux must be in band 1
-      l_clear_band = l_clear_band .OR. control%l_flux_down_clear_diag_surf
-    END IF
-
+    l_clear_band = control%l_clear .OR. control%l_clear_band(i_band)
 
 !   Rescale amounts of continua.
     l_grey_cont = .FALSE.
@@ -1129,7 +1187,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
                   jgf0=jgf(l,i,i_gas_band_sb)
                   jgf1=jgfp1(l,i,i_gas_band_sb)
                   k_esft_layer(l,i,k,i_gas_band) = MAX(0.0_RealK,              &
-                      fgf(l,i,i_gas_band_sb)                                   &  
+                      fgf(l,i,i_gas_band_sb)                                   &
                     *(fac00(l,i)*spectrum%gas%k_lookup_sb(                     &
                       jt(l,i),  jp(l,i), jgf0, k, i_gas_band_sb, i_band )      &
                     + fac10(l,i)*spectrum%gas%k_lookup_sb(                     &
@@ -1175,10 +1233,33 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
       IF (control%isolir == ip_solar) THEN
 !       Convert normalized band fluxes to actual energy fluxes.
-        DO l=1, atm%n_profile
-          solar_irrad_band(l)=bound%solar_irrad(l)                             &
-            *spectrum%solar%solar_flux_band(i_band)
-        END DO
+        IF (control%l_spherical_solar) THEN
+          DO l=1, atm%n_profile
+            ! For the surface and TOA it's OK to use cos_zen, which may equal
+            ! zero, as in that case zero flux would be appropriate.
+            sph%common%flux_inc_direct(l,0) = bound%solar_irrad(l)             &
+              * bound%lit(l,0) * spectrum%solar%solar_flux_band(i_band)        &
+              * bound%cos_zen(l,0)
+            DO i=1, atm%n_layer
+              ! For the flux arriving at the layers we solve directly along
+              ! the beam direction but scale the area normal to the beam to
+              ! maintain a constant volume for the column element.
+              sph%common%flux_inc_direct(l,i) = bound%solar_irrad(l)           &
+                * bound%lit(l,i) * spectrum%solar%solar_flux_band(i_band)      &
+                / sph%common%path_div(l,i)
+            END DO
+            i=atm%n_layer+1
+            sph%common%flux_inc_direct(l,i) = bound%solar_irrad(l)             &
+              * bound%lit(l,i) * spectrum%solar%solar_flux_band(i_band)        &
+              * bound%cos_zen(l,i)
+            solar_irrad_band(l)=0.0_RealK
+          END DO
+        ELSE
+          DO l=1, atm%n_profile
+            solar_irrad_band(l)=bound%solar_irrad(l)                           &
+              *spectrum%solar%solar_flux_band(i_band)
+          END DO
+        END IF
       END IF
 
     END IF
@@ -1599,7 +1680,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Spectral region
         , control%isolir                                                       &
 !                 Solar properties
-        , bound%zen_0, solar_irrad_band                                        &
+        , bound%zen_0, solar_irrad_band, sph                                   &
 !                 Infra-red properties
         , planck_flux_band(1, 0), planck_flux_band(1, atm%n_layer)             &
         , diff_planck_band, control%l_ir_source_quad, diff_planck_band_2       &
@@ -1631,6 +1712,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
         , radout%flux_direct(1, 0, control%map_channel(i_band))                &
         , radout%flux_down(1, 0, control%map_channel(i_band))                  &
         , radout%flux_up(1, 0, control%map_channel(i_band))                    &
+        , radout%flux_direct_sph(1, 0, control%map_channel(i_band))            &
+        , radout%flux_direct_div(1, 1, control%map_channel(i_band))            &
 !                 Radiances
         , i_direct, radout%radiance(1, 1, 1, control%map_channel(i_band))      &
 !                 Rate of photolysis
@@ -1641,6 +1724,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
         , radout%flux_direct_clear(1, 0, control%map_channel(i_band))          &
         , radout%flux_down_clear(1, 0, control%map_channel(i_band))            &
         , radout%flux_up_clear(1, 0, control%map_channel(i_band))              &
+        , radout%flux_direct_clear_sph(1, 0, control%map_channel(i_band))      &
+        , radout%flux_direct_clear_div(1, 1, control%map_channel(i_band))      &
 !                 Tiled Surface Fluxes
         , radout%flux_up_tile(1, 1, control%map_channel(i_band))               &
         , radout%flux_up_blue_tile(1, 1, control%map_channel(i_band))          &
@@ -1692,7 +1777,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Spectral region
           , control%isolir                                                     &
 !                 Solar properties
-          , bound%zen_0, solar_irrad_band                                      &
+          , bound%zen_0, solar_irrad_band, sph                                 &
 !                 Infra-red properties
           , planck_flux_band(1, 0)                                             &
           , planck_flux_band(1, atm%n_layer)                                   &
@@ -1727,6 +1812,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , radout%flux_direct(1, 0, control%map_channel(i_band))              &
           , radout%flux_down(1, 0, control%map_channel(i_band))                &
           , radout%flux_up(1, 0, control%map_channel(i_band))                  &
+          , radout%flux_direct_sph(1, 0, control%map_channel(i_band))          &
+          , radout%flux_direct_div(1, 1, control%map_channel(i_band))          &
 !                 Radiances
           , i_direct, radout%radiance(1, 1, 1, control%map_channel(i_band))    &
 !                 Rate of photolysis
@@ -1737,6 +1824,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , radout%flux_direct_clear(1, 0, control%map_channel(i_band))        &
           , radout%flux_down_clear(1, 0, control%map_channel(i_band))          &
           , radout%flux_up_clear(1, 0, control%map_channel(i_band))            &
+          , radout%flux_direct_clear_sph(1, 0, control%map_channel(i_band))    &
+          , radout%flux_direct_clear_div(1, 1, control%map_channel(i_band))    &
 !                 Tiled Surface Fluxes
           , radout%flux_up_tile(1, 1, control%map_channel(i_band))             &
           , radout%flux_up_blue_tile(1, 1, control%map_channel(i_band))        &
@@ -1782,7 +1871,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Spectral region
           , control%isolir                                                     &
 !                 Solar properties
-          , bound%zen_0, solar_irrad_band                                      &
+          , bound%zen_0, solar_irrad_band, sph                                 &
 !                 Infra-red properties
           , planck_flux_band(1, 0)                                             &
           , planck_flux_band(1, atm%n_layer)                                   &
@@ -1817,6 +1906,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , radout%flux_direct(1, 0, control%map_channel(i_band))              &
           , radout%flux_down(1, 0, control%map_channel(i_band))                &
           , radout%flux_up(1, 0, control%map_channel(i_band))                  &
+          , radout%flux_direct_sph(1, 0, control%map_channel(i_band))          &
+          , radout%flux_direct_div(1, 1, control%map_channel(i_band))          &
 !                 Radiances
           , i_direct, radout%radiance(1, 1, 1, control%map_channel(i_band))    &
 !                 Rate of photolysis
@@ -1827,6 +1918,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , radout%flux_direct_clear(1, 0, control%map_channel(i_band))        &
           , radout%flux_down_clear(1, 0, control%map_channel(i_band))          &
           , radout%flux_up_clear(1, 0, control%map_channel(i_band))            &
+          , radout%flux_direct_clear_sph(1, 0, control%map_channel(i_band))    &
+          , radout%flux_direct_clear_div(1, 1, control%map_channel(i_band))    &
 !                 Tiled Surface Fluxes
           , radout%flux_up_tile(1, 1, control%map_channel(i_band))             &
           , radout%flux_up_blue_tile(1, 1, control%map_channel(i_band))        &
@@ -1875,7 +1968,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Spectral region
           , control%isolir                                                     &
 !                 Solar properties
-          , bound%zen_0, solar_irrad_band                                      &
+          , bound%zen_0, solar_irrad_band, sph                                 &
 !                 Infra-red properties
           , planck_flux_band(1, 0)                                             &
           , planck_flux_band(1, atm%n_layer)                                   &
@@ -1910,6 +2003,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , radout%flux_direct(1, 0, control%map_channel(i_band))              &
           , radout%flux_down(1, 0, control%map_channel(i_band))                &
           , radout%flux_up(1, 0, control%map_channel(i_band))                  &
+          , radout%flux_direct_sph(1, 0, control%map_channel(i_band))          &
+          , radout%flux_direct_div(1, 1, control%map_channel(i_band))          &
 !                 Radiances
           , i_direct, radout%radiance(1, 1, 1, control%map_channel(i_band))    &
 !                 Rate of photolysis
@@ -1920,6 +2015,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , radout%flux_direct_clear(1, 0, control%map_channel(i_band))        &
           , radout%flux_down_clear(1, 0, control%map_channel(i_band))          &
           , radout%flux_up_clear(1, 0, control%map_channel(i_band))            &
+          , radout%flux_direct_clear_sph(1, 0, control%map_channel(i_band))    &
+          , radout%flux_direct_clear_div(1, 1, control%map_channel(i_band))    &
 !                 Tiled Surface Fluxes
           , radout%flux_up_tile(1, 1, control%map_channel(i_band))             &
           , radout%flux_up_blue_tile(1, 1, control%map_channel(i_band))        &
@@ -1964,7 +2061,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Spectral region
           , control%isolir                                                     &
 !                 Solar properties
-          , bound%zen_0, solar_irrad_band                                      &
+          , bound%zen_0, solar_irrad_band, sph                                 &
 !                 Infra-red properties
           , planck_flux_band                                                   &
           , diff_planck_band                                                   &
@@ -2003,6 +2100,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , radout%flux_direct(1, 0, control%map_channel(i_band))              &
           , radout%flux_down(1, 0, control%map_channel(i_band))                &
           , radout%flux_up(1, 0, control%map_channel(i_band))                  &
+          , radout%flux_direct_sph(1, 0, control%map_channel(i_band))          &
+          , radout%flux_direct_div(1, 1, control%map_channel(i_band))          &
 !                 Radiances
           , i_direct, radout%radiance(1, 1, 1, control%map_channel(i_band))    &
 !                 Rate of photolysis
@@ -2013,6 +2112,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , radout%flux_direct_clear(1, 0, control%map_channel(i_band))        &
           , radout%flux_down_clear(1, 0, control%map_channel(i_band))          &
           , radout%flux_up_clear(1, 0, control%map_channel(i_band))            &
+          , radout%flux_direct_clear_sph(1, 0, control%map_channel(i_band))    &
+          , radout%flux_direct_clear_div(1, 1, control%map_channel(i_band))    &
 !                 Tiled Surface Fluxes
           , radout%flux_up_tile(1, 1, control%map_channel(i_band))             &
           , radout%flux_up_blue_tile(1, 1, control%map_channel(i_band))        &
@@ -2064,7 +2165,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Spectral region
           , control%isolir                                                     &
 !                 Solar properties
-          , bound%zen_0, solar_irrad_band                                      &
+          , bound%zen_0, solar_irrad_band, sph                                 &
 !                 Infra-red properties
           , planck_flux_band                                                   &
           , diff_planck_band                                                   &
@@ -2103,6 +2204,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , radout%flux_direct(1, 0, control%map_channel(i_band))              &
           , radout%flux_down(1, 0, control%map_channel(i_band))                &
           , radout%flux_up(1, 0, control%map_channel(i_band))                  &
+          , radout%flux_direct_sph(1, 0, control%map_channel(i_band))          &
+          , radout%flux_direct_div(1, 1, control%map_channel(i_band))          &
 !                 Radiances
           , i_direct, radout%radiance(1, 1, 1, control%map_channel(i_band))    &
 !                 Rate of photolysis
@@ -2113,6 +2216,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , radout%flux_direct_clear(1, 0, control%map_channel(i_band))        &
           , radout%flux_down_clear(1, 0, control%map_channel(i_band))          &
           , radout%flux_up_clear(1, 0, control%map_channel(i_band))            &
+          , radout%flux_direct_clear_sph(1, 0, control%map_channel(i_band))    &
+          , radout%flux_direct_clear_div(1, 1, control%map_channel(i_band))    &
 !                 Tiled Surface Fluxes
           , radout%flux_up_tile(1, 1, control%map_channel(i_band))             &
           , radout%flux_up_blue_tile(1, 1, control%map_channel(i_band))        &
@@ -2164,7 +2269,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Spectral region
           , control%isolir                                                     &
 !                 Solar properties
-          , bound%zen_0, solar_irrad_band_ses, control%l_solar_tail_flux       &
+          , bound%zen_0, solar_irrad_band_ses, control%l_solar_tail_flux, sph  &
 !                 Infra-red properties
           , planck_flux_band(1, 0)                                             &
           , planck_flux_band(1, atm%n_layer)                                   &
@@ -2203,6 +2308,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , radout%flux_direct(1, 0, control%map_channel(i_band))              &
           , radout%flux_down(1, 0, control%map_channel(i_band))                &
           , radout%flux_up(1, 0, control%map_channel(i_band))                  &
+          , radout%flux_direct_sph(1, 0, control%map_channel(i_band))          &
+          , radout%flux_direct_div(1, 1, control%map_channel(i_band))          &
 !                 Radiances
           , i_direct, radout%radiance(1, 1, 1, control%map_channel(i_band))    &
 !                 Rate of photolysis
@@ -2213,6 +2320,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , radout%flux_direct_clear(1, 0, control%map_channel(i_band))        &
           , radout%flux_down_clear(1, 0, control%map_channel(i_band))          &
           , radout%flux_up_clear(1, 0, control%map_channel(i_band))            &
+          , radout%flux_direct_clear_sph(1, 0, control%map_channel(i_band))    &
+          , radout%flux_direct_clear_div(1, 1, control%map_channel(i_band))    &
 !                 Tiled Surface Fluxes
           , radout%flux_up_tile(1, 1, control%map_channel(i_band))             &
           , radout%flux_up_blue_tile(1, 1, control%map_channel(i_band))        &
@@ -2244,54 +2353,6 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
     END IF
 
-    IF (i_band == control%first_band) THEN
-
-!     Calculate weighted diagnostic fluxes
-!     (Note: as presently coded these diagnostics will only work if
-!      the weight is non-zero for band 1 only. A complete
-!      treatment would require passing WEIGHT_DIAG through to the
-!      routine AUGMENT_RADIANCE as done for WEIGHT_BLUE.)
-
-      IF (control%l_flux_direct_diag) THEN
-        DO i=0, atm%n_layer
-          DO l=1, atm%n_profile
-            radout%flux_direct_diag(l,i,1)=                                    &
-              control%weight_diag(i_band)*radout%flux_direct(l,i,1)
-          END DO
-        END DO
-      END IF
-      IF (control%l_flux_up_diag) THEN
-        DO i=0, atm%n_layer
-          DO l=1, atm%n_profile
-            radout%flux_up_diag(l,i,1)=                                        &
-              control%weight_diag(i_band)*radout%flux_up(l,i,1)
-          END DO
-        END DO
-      END IF
-      IF (control%l_flux_down_diag) THEN
-        DO i=0, atm%n_layer
-          DO l=1, atm%n_profile
-            radout%flux_down_diag(l,i,1)=                                      &
-              control%weight_diag(i_band)*radout%flux_down(l,i,1)
-          END DO
-        END DO
-      END IF
-      IF (control%l_flux_down_diag_surf) THEN
-        DO l=1, atm%n_profile
-          radout%flux_down_diag_surf(l)=                                       &
-            control%weight_diag(i_band)*radout%flux_down(l,atm%n_layer,1)
-        END DO
-      END IF
-      IF (control%l_flux_down_clear_diag_surf) THEN
-        DO l=1, atm%n_profile
-          radout%flux_down_clear_diag_surf(l)=                                 &
-            control%weight_diag(i_band)*radout%flux_down_clear(l,atm%n_layer,1)
-        END DO
-      END IF
-
-    END IF
-
-
 !   Spectral diagnostics for clouds:
 
     IF (control%l_cloud_extinction) THEN
@@ -2305,21 +2366,39 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !     This definition has the advantage of convenience, but there
 !     appears to be no optimal definition of an average extinction.
 
-      DO i=n_cloud_top, atm%n_layer
+      IF (control%l_spherical_solar) THEN
+        DO i=n_cloud_top, atm%n_layer
 !CDIR NODEP
-        DO ll=1, n_cloud_profile(i)
-           l=i_cloud_profile(ll, i)
-           radout%cloud_weight_extinction(l, i)                                &
-              =radout%cloud_weight_extinction(l, i) + cld%w_cloud(l, i)*       &
-              (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))    &
-              -flux_direct_clear_prev(l, i-1))
-           radout%cloud_extinction(l, i)                                       &
-              =radout%cloud_extinction(l, i) + cld%w_cloud(l, i)*              &
-              (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))    &
-              -flux_direct_clear_prev(l, i-1))                                 &
-              *cloud_extinction_band(l, i)
+          DO ll=1, n_cloud_profile(i)
+             l=i_cloud_profile(ll, i)
+             radout%cloud_weight_extinction(l, i)                              &
+                =radout%cloud_weight_extinction(l, i) + cld%w_cloud(l, i)*ABS( &
+                 radout%flux_direct_clear_sph(l,i,control%map_channel(i_band)) &
+                -flux_direct_clear_prev(l, i-1) )
+             radout%cloud_extinction(l, i)                                     &
+                =radout%cloud_extinction(l, i) + cld%w_cloud(l, i)*ABS(        &
+                 radout%flux_direct_clear_sph(l,i,control%map_channel(i_band)) &
+                -flux_direct_clear_prev(l, i-1) )                              &
+                *cloud_extinction_band(l, i)
+          END DO
         END DO
-      END DO
+      ELSE
+        DO i=n_cloud_top, atm%n_layer
+!CDIR NODEP
+          DO ll=1, n_cloud_profile(i)
+             l=i_cloud_profile(ll, i)
+             radout%cloud_weight_extinction(l, i)                              &
+                =radout%cloud_weight_extinction(l, i) + cld%w_cloud(l, i)*     &
+                (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))  &
+                -flux_direct_clear_prev(l, i-1))
+             radout%cloud_extinction(l, i)                                     &
+                =radout%cloud_extinction(l, i) + cld%w_cloud(l, i)*            &
+                (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))  &
+                -flux_direct_clear_prev(l, i-1))                               &
+                *cloud_extinction_band(l, i)
+          END DO
+        END DO
+      END IF
 
     END IF
 
@@ -2364,23 +2443,43 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !     This definition has the advantage of convenience, but there
 !     appears to be no optimal definition of an average extinction.
 
-      DO i=n_cloud_top, atm%n_layer
+      IF (control%l_spherical_solar) THEN
+        DO i=n_cloud_top, atm%n_layer
 !CDIR NODEP
-        DO ll=1, n_cloud_profile(i)
-           l=i_cloud_profile(ll, i)
-           radout%ls_cloud_weight_extinction(l, i)                             &
-              =radout%ls_cloud_weight_extinction(l, i)                         &
-              +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2)) &
-              *(radout%flux_direct_clear(l, i-1,control%map_channel(i_band))   &
-               -flux_direct_clear_prev(l, i-1))
-           radout%ls_cloud_extinction(l, i)                                    &
-              =radout%ls_cloud_extinction(l, i)                                &
-              +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2)) &
-              *(radout%flux_direct_clear(l, i-1,control%map_channel(i_band))   &
-               -flux_direct_clear_prev(l, i-1))                                &
-              *ls_cloud_extinction_band(l, i)
+          DO ll=1, n_cloud_profile(i)
+             l=i_cloud_profile(ll, i)
+             radout%ls_cloud_weight_extinction(l, i)                           &
+                =radout%ls_cloud_weight_extinction(l, i)+cld%w_cloud(l, i)*    &
+                (cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2))*ABS(             &
+                 radout%flux_direct_clear_sph(l,i,control%map_channel(i_band)) &
+                -flux_direct_clear_prev(l, i-1) )
+             radout%ls_cloud_extinction(l, i)                                  &
+                =radout%ls_cloud_extinction(l, i)+cld%w_cloud(l, i)*           &
+                (cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2))*ABS(             &
+                 radout%flux_direct_clear_sph(l,i,control%map_channel(i_band)) &
+                -flux_direct_clear_prev(l, i-1) )                              &
+                *ls_cloud_extinction_band(l, i)
+          END DO
         END DO
-      END DO
+      ELSE
+        DO i=n_cloud_top, atm%n_layer
+!CDIR NODEP
+          DO ll=1, n_cloud_profile(i)
+             l=i_cloud_profile(ll, i)
+             radout%ls_cloud_weight_extinction(l, i)                           &
+                =radout%ls_cloud_weight_extinction(l, i)+cld%w_cloud(l, i)*    &
+                (cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2))*                 &
+                (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))  &
+                -flux_direct_clear_prev(l, i-1))
+             radout%ls_cloud_extinction(l, i)                                  &
+                =radout%ls_cloud_extinction(l, i)+cld%w_cloud(l, i)*           &
+                (cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2))*                 &
+                (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))  &
+                -flux_direct_clear_prev(l, i-1))                               &
+                *ls_cloud_extinction_band(l, i)
+          END DO
+        END DO
+      END IF
 
     END IF
 
@@ -2427,23 +2526,43 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !     This definition has the advantage of convenience, but there
 !     appears to be no optimal definition of an average extinction.
 
-      DO i=n_cloud_top, atm%n_layer
+      IF (control%l_spherical_solar) THEN
+        DO i=n_cloud_top, atm%n_layer
 !CDIR NODEP
-        DO ll=1, n_cloud_profile(i)
-           l=i_cloud_profile(ll, i)
-           radout%cnv_cloud_weight_extinction(l, i)                            &
-              =radout%cnv_cloud_weight_extinction(l, i)                        &
-              +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4)) &
-              *(radout%flux_direct_clear(l, i-1,control%map_channel(i_band))   &
-               -flux_direct_clear_prev(l, i-1))
-           radout%cnv_cloud_extinction(l, i)                                   &
-              =radout%cnv_cloud_extinction(l, i)                               &
-              +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4)) &
-              *(radout%flux_direct_clear(l, i-1,control%map_channel(i_band))   &
-               -flux_direct_clear_prev(l, i-1))                                &
-              *cnv_cloud_extinction_band(l, i)
+          DO ll=1, n_cloud_profile(i)
+             l=i_cloud_profile(ll, i)
+             radout%cnv_cloud_weight_extinction(l, i)                          &
+                =radout%cnv_cloud_weight_extinction(l, i)+cld%w_cloud(l, i)*   &
+                (cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4))*ABS(             &
+                 radout%flux_direct_clear_sph(l,i,control%map_channel(i_band)) &
+                -flux_direct_clear_prev(l, i-1) )
+             radout%cnv_cloud_extinction(l, i)                                 &
+                =radout%cnv_cloud_extinction(l, i)+cld%w_cloud(l, i)*          &
+                (cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4))*ABS(             &
+                 radout%flux_direct_clear_sph(l,i,control%map_channel(i_band)) &
+                -flux_direct_clear_prev(l, i-1) )                              &
+                *cnv_cloud_extinction_band(l, i)
+          END DO
         END DO
-      END DO
+      ELSE
+        DO i=n_cloud_top, atm%n_layer
+!CDIR NODEP
+          DO ll=1, n_cloud_profile(i)
+             l=i_cloud_profile(ll, i)
+             radout%cnv_cloud_weight_extinction(l, i)                          &
+                =radout%cnv_cloud_weight_extinction(l, i)+cld%w_cloud(l, i)*   &
+                (cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4))*                 &
+                (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))  &
+                -flux_direct_clear_prev(l, i-1))
+             radout%cnv_cloud_extinction(l, i)                                 &
+                =radout%cnv_cloud_extinction(l, i)+cld%w_cloud(l, i)*          &
+                (cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4))*                 &
+                (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))  &
+                -flux_direct_clear_prev(l, i-1))                               &
+                *cnv_cloud_extinction_band(l, i)
+          END DO
+        END DO
+      END IF
 
     END IF
 
@@ -2549,6 +2668,16 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
         = radout%flux_direct(:,:,control%map_channel(i_band))                  &
         - radout%flux_direct_band(:,:,i_band)
     END IF
+    IF (control%l_flux_direct_div_band) THEN
+      radout%flux_direct_div_band(:,:,i_band)                                  &
+        = radout%flux_direct_div(:,:,control%map_channel(i_band))              &
+        - radout%flux_direct_div_band(:,:,i_band)
+    END IF
+    IF (control%l_flux_direct_sph_band) THEN
+      radout%flux_direct_sph_band(:,:,i_band)                                  &
+        = radout%flux_direct_sph(:,:,control%map_channel(i_band))              &
+        - radout%flux_direct_sph_band(:,:,i_band)
+    END IF
     IF (control%l_flux_down_band) THEN
       radout%flux_down_band(:,:,i_band)                                        &
         = radout%flux_down(:,:,control%map_channel(i_band))                    &
@@ -2562,7 +2691,17 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
     IF (control%l_flux_direct_clear_band) THEN
       radout%flux_direct_clear_band(:,:,i_band)                                &
         = radout%flux_direct_clear(:,:,control%map_channel(i_band))            &
-        - flux_direct_clear_prev(:,:)
+        - radout%flux_direct_clear_band(:,:,i_band)
+    END IF
+    IF (control%l_flux_direct_clear_div_band) THEN
+      radout%flux_direct_clear_div_band(:,:,i_band)                            &
+        = radout%flux_direct_clear_div(:,:,control%map_channel(i_band))        &
+        - radout%flux_direct_clear_div_band(:,:,i_band)
+    END IF
+    IF (control%l_flux_direct_clear_sph_band) THEN
+      radout%flux_direct_clear_sph_band(:,:,i_band)                            &
+        = radout%flux_direct_clear_sph(:,:,control%map_channel(i_band))        &
+        - radout%flux_direct_clear_sph_band(:,:,i_band)
     END IF
     IF (control%l_flux_down_clear_band) THEN
       radout%flux_down_clear_band(:,:,i_band)                                  &
@@ -2577,6 +2716,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
   END DO ! i_band
 
+  CALL deallocate_sph(sph)
+  
   9999 CONTINUE
   IF (ierr /= i_normal) THEN
     CALL ereport(RoutineName, ierr, cmessage)

@@ -4,7 +4,7 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to solve the two-stream equations in a mixed column.
+! Subroutine to solve the two-stream equations in a mixed column.
 !
 ! Method:
 !   The two-stream coefficients are calculated in clear regions
@@ -13,9 +13,6 @@
 !   determined. The coefficients for convective and stratiform
 !   clouds are appropriately mixed to form single cloudy values
 !   and an appropriate solver is called.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE mix_column(ierr                                              &
@@ -37,6 +34,8 @@ SUBROUTINE mix_column(ierr                                              &
      , flux_inc_down, flux_inc_direct, sec_0                            &
 !                 Conditions at surface
      , diffuse_albedo, direct_albedo, d_planck_flux_surface             &
+!                 Spherical geometry
+     , sph                                                              &
 !                 Optical Properties
      , ss_prop                                                          &
 !                 Cloud geometry
@@ -62,6 +61,7 @@ SUBROUTINE mix_column(ierr                                              &
   USE def_cld,     ONLY: StrCld
   USE def_bound,   ONLY: StrBound
   USE def_ss_prop
+  USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
@@ -133,6 +133,9 @@ SUBROUTINE mix_column(ierr                                              &
 !       Flag to scale solar
     , l_ir_source_quad
 !       Use quadratic source term
+
+  TYPE(StrSphGeo), INTENT(INOUT) :: sph
+!       Spherical geometry fields
 
 ! Optical properties
   TYPE(STR_ss_prop), INTENT(INOUT) :: ss_prop
@@ -302,7 +305,7 @@ SUBROUTINE mix_column(ierr                                              &
     , i_2stream, l_ir_source_quad                                       &
     , ss_prop%phase_fnc_clr                                             &
     , ss_prop%omega_clr, ss_prop%tau_clr_noscal, ss_prop%tau_clr        &
-    , isolir, sec_0                                                     &
+    , isolir, sec_0, sph%common%path_div                                &
     , trans_free, reflect_free, trans_0_free_noscal, trans_0_free       &
     , source_coeff_free                                                 &
     , nd_profile, 1, nd_layer_clr, 1, nd_layer, nd_source_coeff         &
@@ -313,7 +316,7 @@ SUBROUTINE mix_column(ierr                                              &
     , ss_prop%phase_fnc(:, :, :, 0)                                     &
     , ss_prop%omega(:, :, 0)                                            &
     , ss_prop%tau_noscal(:, :, 0), ss_prop%tau(:, :, 0)                 &
-    , isolir, sec_0                                                     &
+    , isolir, sec_0, sph%common%path_div                                &
     , trans_free, reflect_free, trans_0_free_noscal, trans_0_free       &
     , source_coeff_free                                                 &
     , nd_profile, id_ct, nd_layer, 1, nd_layer, nd_source_coeff         &
@@ -372,7 +375,7 @@ SUBROUTINE mix_column(ierr                                              &
     , ss_prop%phase_fnc(:, :, :, 1:)                                    &
     , ss_prop%omega(:, :, 1:)                                           &
     , ss_prop%tau_noscal(:, :, 1:), ss_prop%tau(:, :, 1:)               &
-    , isolir, sec_0                                                     &
+    , isolir, sec_0, sph                                                &
     , trans_cloud, reflect_cloud, trans_0_cloud_noscal, trans_0_cloud   &
     , source_coeff_cloud                                                &
     , nd_profile, nd_layer, id_ct, nd_max_order                         &
@@ -531,7 +534,7 @@ SUBROUTINE mix_column(ierr                                              &
   IF (l_clear) THEN
 
 ! DEPENDS ON: column_solver
-    CALL column_solver(ierr, control, bound                             &
+    CALL column_solver(ierr, control, bound, sph%common, sph%clear      &
       , n_profile, n_layer                                              &
       , i_scatter_method, i_solver_clear                                &
       , trans_free, reflect_free, trans_0_free_noscal                   &

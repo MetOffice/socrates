@@ -4,22 +4,15 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to calculate the basic coefficients for the solar beam.
-!
-! Method:
-!   Straightforward.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
+! Subroutine to calculate the basic coefficients for the solar beam.
 !
 !- ---------------------------------------------------------------------
-SUBROUTINE solar_coefficient_basic(ierr                                 &
+SUBROUTINE solar_coefficient_basic(control                              &
     , n_profile, i_layer_first, i_layer_last                            &
-    , omega, asymmetry, sec_0                                           &
-    , i_2stream                                                         &
+    , omega, asymmetry, sec_0, path_div                                 &
     , sum, diff, lambda                                                 &
     , gamma_up, gamma_down                                              &
-    , nd_profile, id_lt, id_lb                                          &
+    , nd_profile, id_lt, id_lb, id_trs_lt, id_trs_lb                    &
     )
 
 
@@ -27,11 +20,15 @@ SUBROUTINE solar_coefficient_basic(ierr                                 &
   USE rad_pcf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
+  USE def_control, ONLY: StrCtrl
   USE ereport_mod, ONLY: ereport
   USE errormessagelength_mod, ONLY: errormessagelength
 
   IMPLICIT NONE
 
+
+! Control options:
+  TYPE(StrCtrl), INTENT(IN) :: control
 
 ! Sizes of dummy arrays.
   INTEGER                                                               &
@@ -39,30 +36,32 @@ SUBROUTINE solar_coefficient_basic(ierr                                 &
 !       Size allocated for atmospheric profiles
     , id_lt                                                             &
 !       Topmost declared layer
-    , id_lb
+    , id_lb                                                             &
 !       Bottom declared layer
+    , id_trs_lt                                                         &
+!       Topmost declared layer for transmission coefficients
+    , id_trs_lb
+!       Bottom declared layer for transmission coefficients
+
 
 ! Dummy variables.
-  INTEGER, INTENT(INOUT) ::                                             &
-      ierr
-!       Error flag
   INTEGER, INTENT(IN) ::                                                &
       n_profile                                                         &
 !       Number of profiles
     , i_layer_first                                                     &
 !       First layer to consider
-    , i_layer_last                                                      &
+    , i_layer_last
 !       First layer to consider
-    , i_2stream
-!       Two-stream scheme
 
   REAL (RealK), INTENT(IN) ::                                           &
       omega(nd_profile, id_lt: id_lb)                                   &
 !       Albedo of single scattering
     , asymmetry(nd_profile, id_lt: id_lb)                               &
 !       Asymmetry
-    , sec_0(nd_profile)
+    , sec_0(nd_profile)                                                 &
 !       Secant of solar zenith angle
+    , path_div(nd_profile, id_trs_lt: id_trs_lb)
+!       Scaled path for spherical geometry
 
 ! Basic two-stream coefficients:
   REAL (RealK), INTENT(INOUT) ::                                        &
@@ -106,7 +105,9 @@ SUBROUTINE solar_coefficient_basic(ierr                                 &
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
-  CHARACTER (LEN=errormessagelength)           :: cmessage
+
+  INTEGER :: ierr
+  CHARACTER (LEN=errormessagelength) :: cmessage
   CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'SOLAR_COEFFICIENT_BASIC'
 
 
@@ -117,36 +118,64 @@ SUBROUTINE solar_coefficient_basic(ierr                                 &
   tol_perturb=3.2e+01_RealK*EPSILON(sec_0(1))
 
 ! If LAMBDA is too close to SEC_0 it must be perturbed.
-  DO i=i_layer_first, i_layer_last
-    DO l=1, n_profile
-      IF ((ABS(lambda(l, i)-sec_0(l))) <  tol_perturb) THEN
-        sum(l, i)=(1.0e+00_RealK+tol_perturb)*sum(l, i)
-        diff(l, i)=(1.0e+00_RealK+tol_perturb)*diff(l, i)
-        lambda(l, i)=(1.0e+00_RealK+tol_perturb)*lambda(l, i)
-      END IF
-    END DO
-  END DO
-
-  IF ( (i_2stream == ip_eddington).OR.                                  &
-       (i_2stream == ip_elsasser).OR.                                   &
-       (i_2stream == ip_pifm85).OR.                                     &
-       (i_2stream == ip_2s_test).OR.                                    &
-       (i_2stream == ip_hemi_mean).OR.                                  &
-       (i_2stream == ip_pifm80) ) THEN
-
+  IF (control%l_spherical_solar) THEN
     DO i=i_layer_first, i_layer_last
       DO l=1, n_profile
-        ksi_0(l, i)=1.5e+00_RealK*asymmetry(l, i)/sec_0(l)
+        IF (ABS(lambda(l, i)-path_div(l, i)) < tol_perturb) THEN
+          sum(l, i)=(1.0e+00_RealK+tol_perturb)*sum(l, i)
+          diff(l, i)=(1.0e+00_RealK+tol_perturb)*diff(l, i)
+          lambda(l, i)=(1.0e+00_RealK+tol_perturb)*lambda(l, i)
+        END IF
       END DO
     END DO
-
-  ELSE IF (i_2stream == ip_discrete_ord) THEN
-
+  ELSE
     DO i=i_layer_first, i_layer_last
       DO l=1, n_profile
-        ksi_0(l, i)=root_3*asymmetry(l, i)/sec_0(l)
+        IF ((ABS(lambda(l, i)-sec_0(l))) < tol_perturb) THEN
+          sum(l, i)=(1.0e+00_RealK+tol_perturb)*sum(l, i)
+          diff(l, i)=(1.0e+00_RealK+tol_perturb)*diff(l, i)
+          lambda(l, i)=(1.0e+00_RealK+tol_perturb)*lambda(l, i)
+        END IF
       END DO
     END DO
+  END IF
+
+  IF ( (control%i_2stream == ip_eddington).OR.                          &
+       (control%i_2stream == ip_elsasser).OR.                           &
+       (control%i_2stream == ip_pifm85).OR.                             &
+       (control%i_2stream == ip_2s_test).OR.                            &
+       (control%i_2stream == ip_hemi_mean).OR.                          &
+       (control%i_2stream == ip_pifm80) ) THEN
+
+    IF (control%l_spherical_solar) THEN
+      DO i=i_layer_first, i_layer_last
+        DO l=1, n_profile
+          ksi_0(l, i)=1.5e+00_RealK*asymmetry(l, i)/path_div(l, i)
+        END DO
+      END DO
+    ELSE
+      DO i=i_layer_first, i_layer_last
+        DO l=1, n_profile
+          ksi_0(l, i)=1.5e+00_RealK*asymmetry(l, i)/sec_0(l)
+        END DO
+      END DO
+    END IF
+
+  ELSE IF (control%i_2stream == ip_discrete_ord) THEN
+
+    IF (control%l_spherical_solar) THEN
+      DO i=i_layer_first, i_layer_last
+        DO l=1, n_profile
+          ksi_0(l, i)=root_3*asymmetry(l, i)/path_div(l, i)
+        END DO
+      END DO
+    ELSE
+      DO i=i_layer_first, i_layer_last
+        DO l=1, n_profile
+          ksi_0(l, i)=root_3*asymmetry(l, i)/sec_0(l)
+        END DO
+      END DO
+    END IF
 
   ELSE
 
@@ -159,16 +188,29 @@ SUBROUTINE solar_coefficient_basic(ierr                                 &
 
 
 ! Determine the basic solar coefficients for the two-stream equations.
-  DO i=i_layer_first, i_layer_last
-    DO l=1, n_profile
-      factor=0.5e+00_RealK*omega(l, i)*sec_0(l)                         &
-        /((lambda(l, i)-sec_0(l))*(lambda(l, i)+sec_0(l)))
-      gamma_up(l, i)=factor*(sum(l, i)-sec_0(l)                         &
-        -ksi_0(l, i)*(diff(l, i)-sec_0(l)))
-      gamma_down(l, i)=factor*(sum(l, i)+sec_0(l)                       &
-        +ksi_0(l, i)*(diff(l, i)+sec_0(l)))
+  IF (control%l_spherical_solar) THEN
+    DO i=i_layer_first, i_layer_last
+      DO l=1, n_profile
+        factor=0.5e+00_RealK*omega(l, i)*path_div(l, i)                 &
+          /((lambda(l, i)-path_div(l, i))*(lambda(l, i)+path_div(l, i)))
+        gamma_up(l, i)=factor*(sum(l, i)-path_div(l, i)                 &
+          -ksi_0(l, i)*(diff(l, i)-path_div(l, i)))
+        gamma_down(l, i)=factor*(sum(l, i)+path_div(l, i)               &
+          +ksi_0(l, i)*(diff(l, i)+path_div(l, i)))
+      END DO
     END DO
-  END DO
+  ELSE
+    DO i=i_layer_first, i_layer_last
+      DO l=1, n_profile
+        factor=0.5e+00_RealK*omega(l, i)*sec_0(l)                       &
+          /((lambda(l, i)-sec_0(l))*(lambda(l, i)+sec_0(l)))
+        gamma_up(l, i)=factor*(sum(l, i)-sec_0(l)                       &
+          -ksi_0(l, i)*(diff(l, i)-sec_0(l)))
+        gamma_down(l, i)=factor*(sum(l, i)+sec_0(l)                     &
+          +ksi_0(l, i)*(diff(l, i)+sec_0(l)))
+      END DO
+    END DO
+  END IF
 
 
   IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)

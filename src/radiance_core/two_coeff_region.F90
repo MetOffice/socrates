@@ -23,7 +23,7 @@ SUBROUTINE two_coeff_region(ierr, control                               &
      , tau_clr_noscal, tau_clr                                          &
      , phase_fnc, omega                                                 &
      , tau_noscal, tau                                                  &
-     , isolir, sec_0                                                    &
+     , isolir, sec_0, sph                                               &
      , trans, reflect, trans_0_noscal, trans_0, source_coeff            &
      , nd_profile, nd_layer, nd_layer_clr, id_ct                        &
      , nd_max_order, nd_source_coeff                                    &
@@ -32,6 +32,7 @@ SUBROUTINE two_coeff_region(ierr, control                               &
 
 
   USE realtype_rd, ONLY: RealK
+  USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
@@ -122,6 +123,9 @@ SUBROUTINE two_coeff_region(ierr, control                               &
       sec_0(nd_profile)
 !       Secant of zenith angle
 
+  TYPE(StrSphGeo), INTENT(INOUT) :: sph
+!       Spherical geometry fields
+
 
 ! Coefficients in the two-stream equations:
   REAL (RealK), INTENT(OUT) ::                                          &
@@ -181,7 +185,9 @@ SUBROUTINE two_coeff_region(ierr, control                               &
     , asymmetry_gathered(nd_profile, 1)                                 &
 !       Gathered asymmetry
     , sec_0_gathered(nd_profile)                                        &
-!       Gathered asymmetry
+!       Gathered secant of the solar zenith angle
+    , path_div_gathered(nd_profile, 1)                                  &
+!       Gathered path scaling for calculating direct flux divergence
     , tmp_inv(nd_profile)
 !       Temporary work array
 
@@ -205,7 +211,7 @@ SUBROUTINE two_coeff_region(ierr, control                               &
     , n_profile, 1, n_cloud_top-1                                       &
     , i_2stream, l_ir_source_quad                                       &
     , phase_fnc_clr, omega_clr, tau_clr_noscal, tau_clr                 &
-    , isolir, sec_0                                                     &
+    , isolir, sec_0, sph%common%path_div                                &
     , trans(1, 1, ip_region_clear)                                      &
     , reflect(1, 1, ip_region_clear)                                    &
     , trans_0_noscal(1, 1, ip_region_clear)                             &
@@ -218,7 +224,7 @@ SUBROUTINE two_coeff_region(ierr, control                               &
     , n_profile, n_cloud_top, n_layer                                   &
     , i_2stream, l_ir_source_quad                                       &
     , phase_fnc, omega, tau_noscal, tau                                 &
-    , isolir, sec_0                                                     &
+    , isolir, sec_0, sph%common%path_div                                &
     , trans(1, 1, ip_region_clear)                                      &
     , reflect(1, 1, ip_region_clear)                                    &
     , trans_0_noscal(1, 1, ip_region_clear)                             &
@@ -309,9 +315,15 @@ SUBROUTINE two_coeff_region(ierr, control                               &
           END DO
         END IF
         IF (isolir == ip_solar) THEN
-          DO l=1, n_list
-            sec_0_gathered(l)=sec_0(l_list(l))
-          END DO
+          IF (control%l_spherical_solar) THEN
+            DO l=1, n_list
+              path_div_gathered(l,1)=sph%common%path_div(l_list(l),i)
+            END DO
+          ELSE
+            DO l=1, n_list
+              sec_0_gathered(l)=sec_0(l_list(l))
+            END DO
+          END IF
         END IF
 
 
@@ -321,7 +333,7 @@ SUBROUTINE two_coeff_region(ierr, control                               &
           , i_2stream, l_ir_source_quad                                 &
           , asymmetry_gathered, omega_gathered                          &
           , tau_gathered_noscal, tau_gathered                           &
-          , isolir, sec_0_gathered                                      &
+          , isolir, sec_0_gathered, path_div_gathered                   &
           , trans_temp, reflect_temp                                    &
           , trans_0_temp_noscal, trans_0_temp                           &
           , source_coeff_temp                                           &

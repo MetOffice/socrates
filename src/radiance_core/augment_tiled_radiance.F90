@@ -4,22 +4,20 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to increment upward fluxes on a tiled surface.
+! Subroutine to increment upward fluxes on a tiled surface.
 !
 ! Method:
-!       The arrays holding the local cumulative fluxes or radiances
-!       on each tile are incremented by the variables suffixed
-!       with _INCR, multiplied by appropriate weights. The routine
-!       can be called to initialize fluxes.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
+!   The arrays holding the local cumulative fluxes or radiances
+!   on each tile are incremented by the variables suffixed
+!   with _INCR, multiplied by appropriate weights. The routine
+!   can be called to initialize fluxes.
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE augment_tiled_radiance(ierr                                  &
     , n_point_tile, n_tile, list_tile                                   &
     , i_angular_integration, isolir, l_initial                          &
     , weight_incr, l_blue_flux_surf, weight_blue_incr                   &
+    , l_spherical_solar                                                 &
 !                 Surface characteristics
     , rho_alb                                                           &
 !                 Actual radiances
@@ -71,12 +69,13 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
 !       Spectral region
     , i_angular_integration
 !       Treatment of angular integration
-  LOGICAL, INTENT(INOUT) ::                                             &
-      l_initial
-!       Flag to call the routine to initialize the outputs
   LOGICAL, INTENT(IN) ::                                                &
-      l_blue_flux_surf
+      l_initial                                                         &
+!       Flag to call the routine to initialize the outputs
+    , l_blue_flux_surf                                                  &
 !       Flag to increment blue surface fluxes
+    , l_spherical_solar
+!       Spherical geometry for the direct beam
   REAL (RealK), INTENT(IN) ::                                           &
       weight_incr                                                       &
 !       Weight to apply to increments
@@ -141,31 +140,53 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
 !     Increment the actual fluxes.
       IF (isolir == ip_solar) THEN
 
-        DO k=1, n_tile
-          DO ll=1, n_point_tile
-            l=list_tile(ll)
-            flux_up_tile(ll, k)=flux_up_tile(ll, k)                     &
-              +weight_incr                                              &
-              *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l)      &
-              +(rho_alb(ll, ip_surf_alb_dir, k)                         &
-              -rho_alb(ll, ip_surf_alb_diff, k))                        &
-              *flux_direct_incr(l))
-          END DO
-        END DO
-
-        IF (l_blue_flux_surf) THEN
+        IF (l_spherical_solar) THEN
           DO k=1, n_tile
             DO ll=1, n_point_tile
               l=list_tile(ll)
-              flux_up_blue_tile(ll, k)=flux_up_blue_tile(ll, k)         &
-                +weight_blue_incr                                       &
-                *(rho_alb(ll, ip_surf_alb_diff, k)                      &
-                *flux_down_incr(l)                                      &
+              flux_up_tile(ll, k)=flux_up_tile(ll, k)                   &
+                +weight_incr                                            &
+                *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l)    &
+                + rho_alb(ll, ip_surf_alb_dir, k)*flux_direct_incr(l))
+            END DO
+          END DO  
+          IF (l_blue_flux_surf) THEN
+            DO k=1, n_tile
+              DO ll=1, n_point_tile
+                l=list_tile(ll)
+                flux_up_blue_tile(ll, k)=flux_up_blue_tile(ll, k)       &
+                  +weight_blue_incr                                     &
+                  *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l)  &
+                  + rho_alb(ll, ip_surf_alb_dir, k)*flux_direct_incr(l))
+              END DO
+            END DO
+          END IF
+        ELSE
+          DO k=1, n_tile
+            DO ll=1, n_point_tile
+              l=list_tile(ll)
+              flux_up_tile(ll, k)=flux_up_tile(ll, k)                   &
+                +weight_incr                                            &
+                *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l)    &
                 +(rho_alb(ll, ip_surf_alb_dir, k)                       &
                 -rho_alb(ll, ip_surf_alb_diff, k))                      &
                 *flux_direct_incr(l))
             END DO
           END DO
+          IF (l_blue_flux_surf) THEN
+            DO k=1, n_tile
+              DO ll=1, n_point_tile
+                l=list_tile(ll)
+                flux_up_blue_tile(ll, k)=flux_up_blue_tile(ll, k)       &
+                  +weight_blue_incr                                     &
+                  *(rho_alb(ll, ip_surf_alb_diff, k)                    &
+                  *flux_down_incr(l)                                    &
+                  +(rho_alb(ll, ip_surf_alb_dir, k)                     &
+                  -rho_alb(ll, ip_surf_alb_diff, k))                    &
+                  *flux_direct_incr(l))
+              END DO
+            END DO
+          END IF
         END IF
 
       ELSE IF (isolir == ip_infra_red) THEN
@@ -200,29 +221,50 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
 
 !     Initialize the actual fluxes.
       IF (isolir == ip_solar) THEN
-        DO k=1, n_tile
-          DO ll=1, n_point_tile
-            l=list_tile(ll)
-            flux_up_tile(ll, k)=weight_incr                             &
-              *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l)      &
-              +(rho_alb(ll, ip_surf_alb_dir, k)                         &
-              -rho_alb(ll, ip_surf_alb_diff, k))                        &
-              *flux_direct_incr(l))
-          END DO
-        END DO
 
-        IF (l_blue_flux_surf) THEN
+        IF (l_spherical_solar) THEN
           DO k=1, n_tile
             DO ll=1, n_point_tile
               l=list_tile(ll)
-              flux_up_blue_tile(ll, k)                                  &
-                =weight_blue_incr*(rho_alb(ll, ip_surf_alb_diff, k)     &
-                *flux_down_incr(l)                                      &
+              flux_up_tile(ll, k)=weight_incr                           &
+                *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l)    &
+                + rho_alb(ll, ip_surf_alb_dir, k)*flux_direct_incr(l))
+            END DO
+          END DO
+          IF (l_blue_flux_surf) THEN
+            DO k=1, n_tile
+              DO ll=1, n_point_tile
+                l=list_tile(ll)
+                flux_up_blue_tile(ll, k)=weight_blue_incr               &
+                  *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l)  &
+                  + rho_alb(ll, ip_surf_alb_dir, k)*flux_direct_incr(l))
+              END DO
+            END DO
+          END IF
+        ELSE
+          DO k=1, n_tile
+            DO ll=1, n_point_tile
+              l=list_tile(ll)
+              flux_up_tile(ll, k)=weight_incr                           &
+                *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l)    &
                 +(rho_alb(ll, ip_surf_alb_dir, k)                       &
                 -rho_alb(ll, ip_surf_alb_diff, k))                      &
                 *flux_direct_incr(l))
             END DO
           END DO
+          IF (l_blue_flux_surf) THEN
+            DO k=1, n_tile
+              DO ll=1, n_point_tile
+                l=list_tile(ll)
+                flux_up_blue_tile(ll, k)                                &
+                  =weight_blue_incr*(rho_alb(ll, ip_surf_alb_diff, k)   &
+                  *flux_down_incr(l)                                    &
+                  +(rho_alb(ll, ip_surf_alb_dir, k)                     &
+                  -rho_alb(ll, ip_surf_alb_diff, k))                    &
+                  *flux_direct_incr(l))
+              END DO
+            END DO
+          END IF
         END IF
 
       ELSE IF (isolir == ip_infra_red) THEN
@@ -248,9 +290,6 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
       CALL ereport(RoutineName, ierr, cmessage)
 
     END IF
-
-!   Now reset the initialization flag as the arrays have been set.
-    l_initial=.FALSE.
 
   END IF
 

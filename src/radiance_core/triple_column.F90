@@ -36,6 +36,8 @@ SUBROUTINE triple_column(ierr                                           &
      , flux_inc_down, flux_inc_direct, sec_0                            &
 !                 Conditions at surface
      , diffuse_albedo, direct_albedo, d_planck_flux_surface             &
+!                 Spherical geometry
+     , sph                                                              &
 !                 Optical Properties
      , ss_prop                                                          &
 !                 Cloud geometry
@@ -62,6 +64,7 @@ SUBROUTINE triple_column(ierr                                           &
   USE def_cld,     ONLY: StrCld
   USE def_bound,   ONLY: StrBound
   USE def_ss_prop
+  USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
@@ -133,6 +136,9 @@ SUBROUTINE triple_column(ierr                                           &
 !       Flag to scale solar
     , l_ir_source_quad
 !       Use quadratic source term
+
+  TYPE(StrSphGeo), INTENT(INOUT) :: sph
+!       Spherical geometry fields
 
 ! Optical properties:
   TYPE(STR_ss_prop), INTENT(INOUT) :: ss_prop
@@ -258,7 +264,7 @@ SUBROUTINE triple_column(ierr                                           &
       , ss_prop%tau_clr_noscal, ss_prop%tau_clr                         &
       , ss_prop%phase_fnc, ss_prop%omega                                &
       , ss_prop%tau_noscal, ss_prop%tau                                 &
-      , isolir, sec_0                                                   &
+      , isolir, sec_0, sph                                              &
       , trans, reflect, trans_0_noscal, trans_0, source_coeff           &
       , nd_profile, nd_layer, nd_layer_clr, id_ct                       &
       , nd_max_order, nd_source_coeff                                   &
@@ -541,7 +547,7 @@ SUBROUTINE triple_column(ierr                                           &
   IF (l_clear) THEN
 
 ! DEPENDS ON: column_solver
-    CALL column_solver(ierr, control, bound                             &
+    CALL column_solver(ierr, control, bound, sph%common, sph%clear      &
       , n_profile, n_layer                                              &
       , i_scatter_method, i_solver_clear                                &
       , trans(1, 1, ip_region_clear)                                    &

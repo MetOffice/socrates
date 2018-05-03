@@ -6,17 +6,10 @@
 !
 !  Subroutine to calculate transmission and reflection coefficients.
 !
-! Method:
-!    Straightforward.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
-!
 !- ---------------------------------------------------------------------
 SUBROUTINE trans_source_coeff(control, n_profile                        &
      , i_layer_first, i_layer_last                                      &
-     , isolir, l_ir_source_quad                                         &
-     , tau_noscal, tau, sum, diff, lambda, sec_0                        &
+     , tau_noscal, tau, sum, diff, lambda, sec_0, path_div              &
      , gamma_up, gamma_down                                             &
      , trans, reflect, trans_0_noscal, trans_0, source_coeff            &
      , nd_profile                                                       &
@@ -62,14 +55,6 @@ SUBROUTINE trans_source_coeff(control, n_profile                        &
     , i_layer_last
 !       Last layer to consider
 
-! Algorithmic control
-  LOGICAL, INTENT(IN) ::                                                &
-      l_ir_source_quad
-!       Quadratic source in infra-red
-  INTEGER, INTENT(IN) ::                                                &
-      isolir
-!       Spectral region
-
 ! Optical properties of the layer
   REAL (RealK), INTENT(IN) ::                                           &
       tau(nd_profile, id_op_lt: id_op_lb)                               &
@@ -84,6 +69,8 @@ SUBROUTINE trans_source_coeff(control, n_profile                        &
 !       Lambda
     , sec_0(nd_profile)                                                 &
 !       Secant of solar zenith angle
+    , path_div(nd_profile, id_trs_lt: id_trs_lb)                        &
+!       Path scaling for spherical geometry
     , gamma_up(nd_profile, id_op_lt: id_op_lb)                          &
 !       Basic solar coefficient for upward radiation
     , gamma_down(nd_profile, id_op_lt: id_op_lb)
@@ -171,7 +158,7 @@ SUBROUTINE trans_source_coeff(control, n_profile                        &
 
 
 
-  IF (isolir == ip_solar) THEN
+  IF (control%isolir == ip_solar) THEN
 
 !   Calculate the direct transmission and the source coefficients
 !   for the solar beam: in the solar case these are
@@ -179,31 +166,47 @@ SUBROUTINE trans_source_coeff(control, n_profile                        &
 !   top of the layer to give the source terms for the upward
 !   diffuse flux and the total downward flux.
 
-    DO i=i_layer_first, i_layer_last
-     DO l=1, n_profile
-        temp(l) = -tau(l,i)*sec_0(l)
-     END DO
-     CALL exp_v(n_profile,temp,trans_0(1,i))
-     IF (control%l_noscal_tau) THEN
+    IF (control%l_spherical_solar) THEN
+      DO i=i_layer_first, i_layer_last
         DO l=1, n_profile
-           temp(l) = -tau_noscal(l,i)*sec_0(l)
+          temp(l) = -tau(l,i)*path_div(l,i)
         END DO
-        CALL exp_v(n_profile,temp,trans_0_noscal(1,i))
-     END IF
-     DO l=1, n_profile
-        source_coeff(l, i, ip_scf_solar_up)                             &
-          =(gamma_up(l, i)-reflect(l, i)                                &
-          *(1.0_RealK+gamma_down(l, i)))                                &
-          -gamma_up(l, i)*trans(l, i)*trans_0(l, i)
-        source_coeff(l, i, ip_scf_solar_down)=trans_0(l, i)             &
-          *(1.0_RealK+gamma_down(l, i)                                  &
-          -gamma_up(l, i)*reflect(l, i))                                &
-          -(1.0_RealK+gamma_down(l, i))*trans(l, i)
+        CALL exp_v(n_profile,temp,trans_0(1,i))
+        DO l=1, n_profile
+          source_coeff(l, i, ip_scf_solar_up)                           &
+            = gamma_up(l, i)-reflect(l, i)*gamma_down(l, i)             &
+            - gamma_up(l, i)*trans(l, i)*trans_0(l, i)
+          source_coeff(l, i, ip_scf_solar_down)=trans_0(l, i)           &
+            *(gamma_down(l, i)-gamma_up(l, i)*reflect(l, i))            &
+            - gamma_down(l, i)*trans(l, i)
+        END DO
       END DO
-    END DO
+    ELSE
+      DO i=i_layer_first, i_layer_last
+        DO l=1, n_profile
+          temp(l) = -tau(l,i)*sec_0(l)
+        END DO
+        CALL exp_v(n_profile,temp,trans_0(1,i))
+        IF (control%l_noscal_tau) THEN
+          DO l=1, n_profile
+             temp(l) = -tau_noscal(l,i)*sec_0(l)
+          END DO
+          CALL exp_v(n_profile,temp,trans_0_noscal(1,i))
+        END IF
+        DO l=1, n_profile
+          source_coeff(l, i, ip_scf_solar_up)                           &
+            =(gamma_up(l, i)-reflect(l, i)                              &
+            *(1.0_RealK+gamma_down(l, i)))                              &
+            -gamma_up(l, i)*trans(l, i)*trans_0(l, i)
+          source_coeff(l, i, ip_scf_solar_down)=trans_0(l, i)           &
+            *(1.0_RealK+gamma_down(l, i)                                &
+            -gamma_up(l, i)*reflect(l, i))                              &
+            -(1.0_RealK+gamma_down(l, i))*trans(l, i)
+        END DO
+      END DO
+    END IF
 
-
-  ELSE IF (isolir == ip_infra_red) THEN
+  ELSE IF (control%isolir == ip_infra_red) THEN
 
 !   In the case of infra-red radiation, the first source
 !   coefficient holds the multiplier for the first difference
@@ -224,7 +227,7 @@ SUBROUTINE trans_source_coeff(control, n_profile                        &
     END DO
 
 
-    IF (l_ir_source_quad) THEN
+    IF (control%l_ir_source_quad) THEN
 
 !     Quadratic correction to source function.
 !     This correction is very ill-conditioned for

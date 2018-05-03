@@ -4,21 +4,15 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to calculate fluxes in a homogeneous column directly.
-!
-! Method:
-!   Straightforward.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
+! Subroutine to calculate fluxes in a homogeneous column directly.
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE solver_homogen_direct(n_profile, n_layer                     &
     , trans, reflect                                                    &
     , s_down, s_up                                                      &
-    , isolir, diffuse_albedo, direct_albedo                             &
-    , flux_direct_ground, flux_inc_down                                 &
-    , d_planck_flux_surface                                             &
+    , diffuse_albedo                                                    &
+    , flux_inc_down                                                     &
+    , source_ground                                                     &
     , flux_total                                                        &
     , nd_profile, nd_layer                                              &
     )
@@ -43,10 +37,8 @@ SUBROUTINE solver_homogen_direct(n_profile, n_layer                     &
   INTEGER, INTENT(IN) ::                                                &
       n_profile                                                         &
 !       Number of profiles
-    , n_layer                                                           &
+    , n_layer
 !       Number of layers
-    , isolir
-!       Spectral region
   REAL (RealK), INTENT(IN) ::                                           &
       trans(nd_profile, nd_layer)                                       &
 !       Transmission coefficient
@@ -58,15 +50,10 @@ SUBROUTINE solver_homogen_direct(n_profile, n_layer                     &
 !       Upward diffuse source
     , diffuse_albedo(nd_profile)                                        &
 !       Diffuse surface albedo
-    , direct_albedo(nd_profile)                                         &
-!       Direct surface albedo
-    , d_planck_flux_surface(nd_profile)                                 &
-!       Difference between the Planckian flux at the surface
-!       temperature and that of the overlaying air
     , flux_inc_down(nd_profile)                                         &
 !       Incident total flux
-    , flux_direct_ground(nd_profile)
-!       Direct flux at ground level
+    , source_ground(nd_profile)
+!       Source from ground
 
   REAL (RealK), INTENT(OUT) ::                                          &
       flux_total(nd_profile, 2*nd_layer+2)
@@ -101,21 +88,10 @@ SUBROUTINE solver_homogen_direct(n_profile, n_layer                     &
   IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
 ! Initialization at the bottom for upward elimination:
-  IF (isolir == ip_solar) THEN
-    DO l=1, n_profile
-      alpha(l, n_layer+1)=diffuse_albedo(l)
-      s_up_prime(l, n_layer+1)                                          &
-        =(direct_albedo(l)-diffuse_albedo(l))                           &
-        *flux_direct_ground(l)
-    END DO
-  ELSE IF (isolir == ip_infra_red) THEN
-    DO l=1, n_profile
-      alpha(l, n_layer+1)=diffuse_albedo(l)
-      s_up_prime(l, n_layer+1)                                          &
-        =(1.0e+00_RealK-diffuse_albedo(l))                              &
-        *d_planck_flux_surface(l)
-    END DO
-  END IF
+  DO l=1, n_profile
+    alpha(l, n_layer+1)=diffuse_albedo(l)
+    s_up_prime(l, n_layer+1)=source_ground(l)
+  END DO
 
 ! Eliminating loop:
   DO i=n_layer, 1, -1

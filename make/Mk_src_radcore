@@ -21,6 +21,7 @@ SOURCE_RADCORE=	adjust_ir_radiance.f90 \
 		copy_clr_full.f90 \
 		copy_clr_sol.f90 \
 		def_ss_prop.f90 \
+		def_spherical_geometry.f90 \
 		diff_albedo_basis.f90 \
 		diff_planck_source_poly.f90 \
 		diff_planck_source_tbl.f90 \
@@ -98,6 +99,9 @@ SOURCE_RADCORE=	adjust_ir_radiance.f90 \
 		solver_triple_app_scat.f90 \
 		sph_matrix_solver.f90 \
 		sph_solver.f90 \
+		spherical_path.f90 \
+		spherical_solar_source.f90 \
+		spherical_trans_coeff.f90 \
 		sum_k.f90 \
 		trans_source_coeff.f90 \
 		triple_column.f90 \

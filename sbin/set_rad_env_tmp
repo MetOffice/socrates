@@ -9,6 +9,7 @@ RAD_SCRIPT=${RAD_DIR}/sbin
 LOCK_FILE="radiation_code.lock"
 PATH=$RAD_BIN:$RAD_SCRIPT:$PATH
 MANPATH=$RAD_DIR/man:$MANPATH
+PYTHONPATH=$RAD_DIR/python:$PYTHONPATH
 #
 export RAD_DIR
 export RAD_BIN
@@ -17,5 +18,6 @@ export RAD_SCRIPT
 export LOCK_FILE
 export PATH
 export MANPATH
+export PYTHONPATH
 #
 ulimit -s unlimited

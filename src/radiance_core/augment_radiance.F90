@@ -4,16 +4,13 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to increment a radiances or fluxes.
+! Subroutine to increment a radiances or fluxes.
 !
 ! Method:
-!       The arrays holding the summed fluxes or radiances are
-!       incremented by a weighted sum of the variables suffixed
-!       with _INCR. Arguments specify which arrays are to be
-!       incremented.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
+!   The arrays holding the summed fluxes or radiances are
+!   incremented by a weighted sum of the variables suffixed
+!   with _INCR. Arguments specify which arrays are to be
+!   incremented.
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE augment_radiance(n_profile, n_layer                          &
@@ -22,16 +19,20 @@ SUBROUTINE augment_radiance(n_profile, n_layer                          &
     , isolir, l_clear                                                   &
     , l_initial, weight_incr                                            &
     , l_blue_flux_surf, weight_blue                                     &
+    , l_spherical_solar                                                 &
 !                 Actual radiances
     , flux_direct, flux_down, flux_up                                   &
+    , flux_direct_sph, flux_direct_div                                  &
     , flux_direct_blue_surf                                             &
     , flux_down_blue_surf, flux_up_blue_surf                            &
     , i_direct, radiance, photolysis                                    &
     , flux_direct_clear, flux_down_clear, flux_up_clear                 &
+    , flux_direct_clear_sph, flux_direct_clear_div                      &
 !                 Increments to radiances
     , flux_direct_incr, flux_total_incr                                 &
     , i_direct_incr, radiance_incr, photolysis_incr                     &
     , flux_direct_incr_clear, flux_total_incr_clear                     &
+    , sph                                                               &
 !                 Dimensions
     , nd_flux_profile, nd_radiance_profile, nd_j_profile                &
     , nd_layer, nd_viewing_level, nd_direction                          &
@@ -39,6 +40,7 @@ SUBROUTINE augment_radiance(n_profile, n_layer                          &
 
 
   USE realtype_rd, ONLY: RealK
+  USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
@@ -82,9 +84,11 @@ SUBROUTINE augment_radiance(n_profile, n_layer                          &
   LOGICAL, INTENT(IN) ::                                                &
       l_clear                                                           &
 !       Clear fluxes calculated
-    , l_initial
+    , l_initial                                                         &
 !       Logical to perform initialization instead of incrementing
-
+    , l_spherical_solar
+!       Spherical geometry for the direct beam
+  
   REAL (RealK), INTENT(IN) ::                                           &
       weight_incr
 !       Weight to apply to incrementing fluxes
@@ -99,6 +103,10 @@ SUBROUTINE augment_radiance(n_profile, n_layer                          &
 !       Increment to clear direct flux
     , flux_total_incr_clear(nd_flux_profile, 2*nd_layer+2)
 !       Increment to clear total flux
+
+  TYPE(StrSphGeo), INTENT(IN) :: sph
+!   Spherical geometry fields
+
 !                 Increments to Radiances
   REAL (RealK), INTENT(IN) ::                                           &
       i_direct_incr(nd_radiance_profile, 0: nd_layer)                   &
@@ -119,12 +127,20 @@ SUBROUTINE augment_radiance(n_profile, n_layer                          &
 !       Total downward flux
     , flux_up(nd_flux_profile, 0: nd_layer)                             &
 !       Upward flux
+    , flux_direct_sph(nd_flux_profile, 0: nd_layer+1)                   &
+!       Direct flux for spherical geometry
+    , flux_direct_div(nd_flux_profile, nd_layer)                        &
+!       Direct flux divergence
     , flux_direct_clear(nd_flux_profile, 0: nd_layer)                   &
 !       Clear direct flux
     , flux_down_clear(nd_flux_profile, 0: nd_layer)                     &
 !       Clear total downward flux
-    , flux_up_clear(nd_flux_profile, 0: nd_layer)
+    , flux_up_clear(nd_flux_profile, 0: nd_layer)                       &
 !       Clear upward flux
+    , flux_direct_clear_sph(nd_flux_profile, 0: nd_layer+1)             &
+!       Clear-sky direct flux for spherical geometry
+    , flux_direct_clear_div(nd_flux_profile, nd_layer)
+!       Clear-sky direct flux divergence
 !                 Total Radiances
   REAL (RealK), INTENT(INOUT) ::                                        &
       i_direct(nd_radiance_profile, 0: nd_layer)                        &
@@ -183,12 +199,39 @@ SUBROUTINE augment_radiance(n_profile, n_layer                          &
 
 !     Increment the actual fluxes.
       IF (isolir == ip_solar) THEN
-        DO i=0, n_layer
-          DO l=1, n_profile
-            flux_direct(l, i)=flux_direct(l, i)                         &
-              +weight_incr*flux_direct_incr(l, i)
+        IF (l_spherical_solar) THEN
+          DO i=0, n_layer+1
+            DO l=1, n_profile
+              flux_direct_sph(l, i)=flux_direct_sph(l, i)               &
+                +weight_incr*sph%allsky%flux_direct(l, i)
+            END DO
           END DO
-        END DO
+          DO i=1, n_layer
+            DO l=1, n_profile
+              flux_direct_div(l, i)=flux_direct_div(l, i)               &
+                +weight_incr*sph%allsky%flux_direct_div(l, i)
+            END DO
+          END DO
+          IF (l_blue_flux_surf) THEN
+            DO l=1, n_profile
+              flux_direct_blue_surf(l)=flux_direct_blue_surf(l)         &
+                +weight_blue*sph%allsky%flux_direct(l, n_layer+1)
+            END DO
+          END IF
+        ELSE
+          DO i=0, n_layer
+            DO l=1, n_profile
+              flux_direct(l, i)=flux_direct(l, i)                       &
+                +weight_incr*flux_direct_incr(l, i)
+            END DO
+          END DO
+          IF (l_blue_flux_surf) THEN
+            DO l=1, n_profile
+              flux_direct_blue_surf(l)=flux_direct_blue_surf(l)         &
+                +weight_blue*flux_direct_incr(l, n_layer)
+            END DO
+          END IF
+        END IF
         IF (l_blue_flux_surf) THEN
           DO l=1, n_profile
             flux_up_blue_surf(l)=flux_up_blue_surf(l)                   &
@@ -196,12 +239,6 @@ SUBROUTINE augment_radiance(n_profile, n_layer                          &
             flux_down_blue_surf(l)=flux_down_blue_surf(l)               &
               +weight_blue*flux_total_incr(l, 2*n_layer+2)
           END DO
-          IF (isolir == ip_solar) THEN
-            DO l=1, n_profile
-              flux_direct_blue_surf(l)=flux_direct_blue_surf(l)         &
-                +weight_blue*flux_direct_incr(l, n_layer)
-            END DO
-          END IF
         END IF
       END IF
       DO i=0, n_layer
@@ -215,12 +252,27 @@ SUBROUTINE augment_radiance(n_profile, n_layer                          &
 
       IF (l_clear) THEN
         IF (isolir == ip_solar) THEN
-          DO i=0, n_layer
-            DO l=1, n_profile
-              flux_direct_clear(l, i)=flux_direct_clear(l, i)           &
-                +weight_incr*flux_direct_incr_clear(l, i)
+          IF (l_spherical_solar) THEN
+            DO i=0, n_layer+1
+              DO l=1, n_profile
+                flux_direct_clear_sph(l, i)=flux_direct_clear_sph(l, i) &
+                  +weight_incr*sph%clear%flux_direct(l, i)
+              END DO
             END DO
-          END DO
+            DO i=1, n_layer
+              DO l=1, n_profile
+                flux_direct_clear_div(l, i)=flux_direct_clear_div(l, i) &
+                  +weight_incr*sph%clear%flux_direct_div(l, i)
+              END DO
+            END DO
+          ELSE
+            DO i=0, n_layer
+              DO l=1, n_profile
+                flux_direct_clear(l, i)=flux_direct_clear(l, i)         &
+                  +weight_incr*flux_direct_incr_clear(l, i)
+              END DO
+            END DO
+          END IF
         END IF
         DO i=0, n_layer
           DO l=1, n_profile
@@ -277,11 +329,38 @@ SUBROUTINE augment_radiance(n_profile, n_layer                          &
 
 !     Increment the actual fluxes.
       IF (isolir == ip_solar) THEN
-        DO i=0, n_layer
-          DO l=1, n_profile
-            flux_direct(l, i)=weight_incr*flux_direct_incr(l, i)
+        IF (l_spherical_solar) THEN
+          DO i=0, n_layer+1
+            DO l=1, n_profile
+              flux_direct_sph(l, i)                                     &
+                =weight_incr*sph%allsky%flux_direct(l, i)
+            END DO
           END DO
-        END DO
+          DO i=1, n_layer
+            DO l=1, n_profile
+              flux_direct_div(l, i)                                     &
+                =weight_incr*sph%allsky%flux_direct_div(l, i)
+            END DO
+          END DO
+          IF (l_blue_flux_surf) THEN
+            DO l=1, n_profile
+              flux_direct_blue_surf(l)                                  &
+                =weight_blue*sph%allsky%flux_direct(l, n_layer+1)
+            END DO
+          END IF
+        ELSE
+          DO i=0, n_layer
+            DO l=1, n_profile
+              flux_direct(l, i)=weight_incr*flux_direct_incr(l, i)
+            END DO
+          END DO
+          IF (l_blue_flux_surf) THEN
+            DO l=1, n_profile
+              flux_direct_blue_surf(l)                                  &
+                =weight_blue*flux_direct_incr(l, n_layer)
+            END DO
+          END IF
+        END IF
         IF (l_blue_flux_surf) THEN
           DO l=1, n_profile
             flux_up_blue_surf(l)                                        &
@@ -289,12 +368,6 @@ SUBROUTINE augment_radiance(n_profile, n_layer                          &
             flux_down_blue_surf(l)                                      &
               =weight_blue*flux_total_incr(l, 2*n_layer+2)
           END DO
-          IF (isolir == ip_solar) THEN
-            DO l=1, n_profile
-              flux_direct_blue_surf(l)                                  &
-                =weight_blue*flux_direct_incr(l, n_layer)
-            END DO
-          END IF
         END IF
       END IF
       DO i=0, n_layer
@@ -306,12 +379,27 @@ SUBROUTINE augment_radiance(n_profile, n_layer                          &
 
       IF (l_clear) THEN
         IF (isolir == ip_solar) THEN
-          DO i=0, n_layer
-            DO l=1, n_profile
-              flux_direct_clear(l, i)                                   &
-                =weight_incr*flux_direct_incr_clear(l, i)
+          IF (l_spherical_solar) THEN
+            DO i=0, n_layer+1
+              DO l=1, n_profile
+                flux_direct_clear_sph(l, i)                             &
+                  =weight_incr*sph%clear%flux_direct(l, i)
+              END DO
             END DO
-          END DO
+            DO i=1, n_layer
+              DO l=1, n_profile
+                flux_direct_clear_div(l, i)                             &
+                  =weight_incr*sph%clear%flux_direct_div(l, i)
+              END DO
+            END DO
+          ELSE
+            DO i=0, n_layer
+              DO l=1, n_profile
+                flux_direct_clear(l, i)                                 &
+                  =weight_incr*flux_direct_incr_clear(l, i)
+              END DO
+            END DO
+          END IF
         END IF
         DO i=0, n_layer
           DO l=1, n_profile

@@ -12,9 +12,6 @@
 !   calculate the radiances depending on the treatment of
 !   cloudiness.
 !
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
-!
 !- ---------------------------------------------------------------------
 SUBROUTINE monochromatic_radiance_tseq(ierr                             &
     , control, cld, bound                                               &
@@ -33,6 +30,8 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
 !                 Surface Properties
     , d_planck_flux_surface                                             &
     , rho_alb                                                           &
+!                 Spherical geometry
+    , sph                                                               &
 !                 Optical Properties
     , ss_prop                                                           &
 !                 Cloudy Properties
@@ -61,6 +60,7 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
   USE def_cld,     ONLY: StrCld
   USE def_bound,   ONLY: StrBound
   USE def_ss_prop
+  USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
@@ -165,6 +165,9 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
   REAL (RealK), INTENT(IN) ::                                           &
       rho_alb(nd_profile, 2)
 !       Weights of the basis functions
+
+  TYPE(StrSphGeo), INTENT(INOUT) :: sph
+!       Spherical geometry fields
 
 !                 Optical properties
   TYPE(STR_ss_prop), INTENT(INOUT) :: ss_prop
@@ -309,6 +312,8 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
 !                 Surface conditions
       , rho_alb(1, ip_surf_alb_diff)                                    &
       , rho_alb(1, ip_surf_alb_dir), d_planck_flux_surface              &
+!                 Spherical geometry
+      , sph                                                             &
 !                 Single scattering properties
       , tau_clr_noscal_f, tau_clr_f                                     &
       , omega_clr_f, phase_fnc_clr_f(1, 1, 1)                           &
@@ -333,6 +338,20 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
             flux_direct_clear(l, i)=flux_direct(l, i)
           END DO
         END DO
+        IF (control%l_spherical_solar) THEN
+          DO i=0, n_layer+1
+            DO l=1, n_profile
+              sph%clear%flux_direct(l, i) &
+                = sph%allsky%flux_direct(l, i)
+            END DO
+          END DO
+          DO i=1, n_layer
+            DO l=1, n_profile
+              sph%clear%flux_direct_div(l, i) &
+                = sph%allsky%flux_direct_div(l, i)
+            END DO
+          END DO
+        END IF
       END IF
       DO i=1, 2*n_layer+2
         DO l=1, n_profile
@@ -365,6 +384,8 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
 !                 Conditions at surface
       , rho_alb(1, ip_surf_alb_diff), rho_alb(1, ip_surf_alb_dir)       &
       , d_planck_flux_surface                                           &
+!                 Spherical geometry
+      , sph                                                             &
 !                 Single scattering properties
       , ss_prop                                                         &
 !                 Cloud geometry
@@ -410,6 +431,8 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
 !                 Conditions at surface
       , rho_alb(1, ip_surf_alb_diff), rho_alb(1, ip_surf_alb_dir)       &
       , d_planck_flux_surface                                           &
+!                 Spherical geometry
+      , sph                                                             &
 !                 Single scattering properties
       , ss_prop                                                         &
 !                 Cloud geometry
@@ -457,6 +480,8 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
 !                 Conditions at surface
       , rho_alb(1, ip_surf_alb_diff), rho_alb(1, ip_surf_alb_dir)       &
       , d_planck_flux_surface                                           &
+!                 Spherical geometry
+      , sph                                                             &
 !                 Single scattering properties
       , ss_prop                                                         &
 !                 Cloud geometry
@@ -506,6 +531,8 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
       , flux_inc_down, flux_inc_direct, sec_0                           &
 !                 Conditions at surface
       , d_planck_flux_surface, rho_alb                                  &
+!                 Spherical geometry
+      , sph                                                             &
 !                 Single scattering properties
       , ss_prop                                                         &
 !                 Cloud geometry

@@ -1,7 +1,4 @@
-
-\section{Formulation of the Core Radiation Scheme}
-
-\subsection{Overview}
+\section{Overview}
 
 The purpose of the radiation code is to calculate radiative fluxes, 
 from which heating rates and related 
@@ -35,7 +32,7 @@ selected with due consideration to the spectral data available. Once
 created, a spectral file may be used 
 with any subsequent version of the radiation code.
 
-\subsection{Spectral Integration}
+\section{Spectral Integration}
 
 In this section $F$ will denote any flux, whether direct, diffuse or 
 net. The spectral region under 
@@ -68,7 +65,7 @@ determined by the method
 adopted for treating overlapping gaseous absorption and the data in 
 the spectral file.
 
-\subsection{The Calculation of Monochromatic Fluxes}
+\section{The Calculation of Monochromatic Fluxes}
 
 To calculate monochromatic fluxes the atmosphere is divided into $N$ 
 layers which are treated as homogeneous. The layers are numbered from 1 
@@ -178,7 +175,7 @@ on the timescale of about a month. The quadratic variation was introduced
 to allow these to be damped in climate integrations.}
 
 
-\subsection{The Calculation of Fluxes}
+\section{The Calculation of Fluxes}
 
 $T$, $T_{0}$, $R$ and the  $c_{j}$ are related to the optical 
 properties of the layer. Since each layer may be 
@@ -300,7 +297,7 @@ c_{2} & = & T_{0}(1+\nu_{-} -R \nu_{+})-(1+\nu_{-}) T
 \label{p2_eq24}
 \eeqn
 
-\subsection{Rescaling of the Single Scattering Properties}
+\section{Rescaling of the Single Scattering Properties}
 
 The rather crude representation of the angular variation of the 
 radiance in the two-stream 
@@ -320,7 +317,7 @@ g & \rightarrow & (g-f)/(1-f)
 \label{p2_eq25}
 \eeqn
 
-\subsection{The Calculation of the Single Scattering Properties}
+\section{The Calculation of the Single Scattering Properties}
 
 The single scattering properties most easily related to the 
 physical sources are the mass extinction and 
@@ -347,10 +344,10 @@ determined from the formulae:
 \eeqn
 where $\Delta m$ is the column mass in the layer.
 
-\subsection{The Representation of Single 
+\section{The Representation of Single 
 Scattering Properties for Individual Processes}
 
-\subsubsection{Gaseous Absorption}
+\subsection{Gaseous Absorption}
 
 If there are $M$ active absorbing gases, $j=1,\dots, M$   in a band, each 
 will enter a single quasi-monochromatic calculation with mass extinction
@@ -393,7 +390,7 @@ term since this more accurate.
 All these choices are determined 
 from the data in the spectral file.
 
-\subsubsection{Self-broadening of gases}
+\subsection{Self-broadening of gases}
 
 If the mixing ratio of a gaseous absorber is close to unity,
 pressure broadening due to collisions between molecules of the same
@@ -436,7 +433,7 @@ m_\text{air, wet}
 \zeta_\text{H$_2$O}} .
 \end{equation}
 
-\subsubsection{Continuum Absorption}
+\subsection{Continuum Absorption}
 
 Theoretical models of gaseous absorption agree well with observations
 at frequencies close to the centres of lines, but there remain some
@@ -490,7 +487,7 @@ water vapour continua than random overlap. The overlap treatment for a
 particular continuum is specified in the spectral file, and defaults to
 that selected for gases.
 
-\subsubsection{Absorption and Scattering by Aerosols}
+\subsection{Absorption and Scattering by Aerosols}
 
 The radiation code contains provision for treating aerosols. This 
 section is concerned only with
@@ -521,7 +518,7 @@ humidity on the optical properties
 hygroscopic aerosols are included by the use of a look-up table in
 the humidity. This look-up table is read from the spectral file.
 
-\subsubsection{Rayleigh Scattering}
+\subsection{Rayleigh Scattering}
 
 Rayleigh scattering is represented by adding to the scattering and 
 total extinctions a constant value 
@@ -529,7 +526,7 @@ for each spectral band, again determined externally and read from the
 spectral file. The 
 asymmetry for Rayleigh scattering is 0.
 
-\subsubsection{Absorption and Scattering by Water Droplets}
+\subsection{Absorption and Scattering by Water Droplets}
 
 The single scattering properties in a cloud clearly depend on the
 mass mixing ratio of water $L$ and of ice $I$, but they also depend
@@ -584,7 +581,7 @@ g       & = & {p_{12} + p_{13} r_e + p_{14} r_e^2} \over
 Section~\ref{sec:spec} should be consulted for information on the fits
 available in the spectral files.
 
-\subsubsection{Absorption and Scattering by Ice Crystals}
+\subsection{Absorption and Scattering by Ice Crystals}
 
 Conceptually, the treatment of scattering by ice crystals is similar
 to that used for water vapour, but there are complexities because of
@@ -678,7 +675,7 @@ the form of parametrization is determined by the spectral file. Further
 discussion of types in particular files is given in section~\ref{sec:spec}. 
 
 
-\subsection{The Treatment of Overlapping Gaseous Absorption}
+\section{The Treatment of Overlapping Gaseous Absorption}
 
 If several gases absorb in a spectral band which does not cover too 
 large a range of frequencies, 
@@ -762,7 +759,7 @@ at the top of the layer with the effect of minor gases being
 represented by the direct transmission 
 calculated using the equivalent extinction.\\
 
-\subsection{The Treatment of Clouds}
+\section{The Treatment of Clouds}
 
 Two schemes are available for the treatment of cloud. In the original scheme,
 a fairly general prescription is adopted where fluxes are solved for a single
@@ -793,7 +790,7 @@ sub-columns. The Monte Carlo Independent Column Approximation (McICA)
 spectral integration point. Both these options are described in more detail
 below.
 
-\subsubsection{Single Column Approach}
+\subsection{Single Column Approach}
 \noindent
 The geometry of the clouds affects the radiative fluxes. In this code 
 there is no allowance for 
@@ -902,7 +899,7 @@ included by multiplying the water content by a constant value, known as a
 scaling factor, which may be set separately for each cloud type.
 
 
-\subsubsection{Monte Carlo Independent Column Approximation}
+\subsection{Monte Carlo Independent Column Approximation}
 
 \noindent
 The main purpose of McICA is to allow the radiative effects of sub-grid scale 
@@ -938,13 +935,13 @@ describes the effect of the associated noise and methods for reducing this
 noise that have been applied. McICA is currently only available when the cloud 
 representation is segregated by phase, but not by type (i.e. no convection).
 
-\subsection{Algorithmic Details}
+\section{Algorithmic Details}
 
 The foregoing sections describe the scientific basis of the scheme,
 but do not touch on questions of computational efficiency. Here we
 are concerned with the principal issues of efficiency.
 
-\subsubsection{Overview of the algorithm}
+\subsection{Overview of the algorithm}
 
 \noindent
 On entry into the radiation code, a number of spectrally independent
@@ -963,7 +960,7 @@ gaseous contributions are assembled and the code branches again, depending
 on the treatment of cloud overlaps. At this level, the linear 
 two-stream equations are assembled and solved.
 
-\subsubsection{The Solution of the two-stream equations}
+\subsection{The Solution of the two-stream equations}
 
 The two-stream equations generate a set of linear simultaneous 
 equations which may be solved 
@@ -1062,7 +1059,7 @@ away from 1 to avoid singularity on rescaling and that elimination proceeds
 from the ground upwards, starting with an albedo that is less than 1, 
 pivoting should not be necessary.}
 
-\subsubsection{Approximate Scattering in the Longwave Region}
+\subsection{Approximate Scattering in the Longwave Region}
 
 This scheme may be applied in both spectral regions, but in the 
 longwave region scattering is not 
@@ -1095,7 +1092,7 @@ preferable to approximate
 scattering in the longwave in order to reduce the execution time of the 
 code.
 
-\subsubsection{Other Fast Algorithms}
+\subsection{Other Fast Algorithms}
 
 LW scattering may be ignored entirely, which enables faster 
 calculation of the single scattering properties and the use of a faster 
@@ -1112,7 +1109,7 @@ is important, resulting in a significant decrease in computation time
 for only a small increase in bias.
 
 
-\subsubsection{The Magnification Factor}
+\subsection{The Magnification Factor}
 
 The radiation arriving at a point on the Earth's surface from the Sun has
 travelled along a straight path through the atmosphere. Allowing for the
@@ -1122,12 +1119,192 @@ the total column absorption, the local zenith angle should be used, or
 alternatively, the zenith angle at the surface point should be scaled by
 a {\em magnification factor} to represent this effect. However, in a GCM
 one requires not only the surface flux, but also a profile of radiative
-heating rates, and this extends vertically from the surface
-point. Yet, as one moves up vertically, the local zenith angle does not change.
-Without proper treatment of the spherical geometry, a consistent treatment
+heating rates, and this extends vertically from the surface point. Yet, as one
+moves up vertically, the local zenith angle does not change. Without proper
+treatment of the spherical geometry (see next section), a consistent treatment
 of the effects of curvature is not possible. Whilst some radiation codes do
 include a magnification factor, the view taken here is that errors in local
 heating rates high in the atmosphere are more undesirable than errors in 
 surface fluxes, so the magnification factor is omitted.
 
 
+\section{Treatment of Spherical Geometry}
+
+There is now an option to treat the direct flux using spherical geometry.
+This uses the so called 'pseudo-spherical approximation' whereby scattering
+and absorption from the direct beam are treated using the slant path through
+the spherical atmosphere to each point, while the resulting diffuse fluxes
+are still treated under the plane-parallel approximation.
+
+\noindent
+Under the plane-parallel approximation a single calculation may be done
+tracing the transmission of the direct beam through each layer of the
+atmosphere, where the direct flux arriving at the top of each layer is 
+equal to the direct flux leaving the bottom of the layer above.
+
+\noindent
+Here, instead, the plane-parallel atmosphere is replaced by a set of spherical
+shells. Where the local zenith angle is greater than zero, the direct flux
+arriving at each layer will take a different path through these shells. A
+separate calculation for the direct beam is then required for each layer.
+
+\begin{figure}[t]
+\centering
+\includegraphics[scale=0.5]{sph_geom.eps}
+\caption{Spherical shell geometry. Layer centres are denoted by dotted lines
+and layer edges by solid lines. Parameters are shown for the slant path
+to a particular layer for a model column located in the position of the dashed
+line. $\zeta$ denotes the local solar zenith angle (which may be greater than
+90 degrees), $b$ the impact parameter, and $ds$ the path length element for
+the layer bounded by radii $r_1$ and $r_2$.}
+\label{fig:sph_geom}
+\end{figure}
+
+\noindent
+Figure~\ref{fig:sph_geom} displays the geometry considered. The impact
+parameter for a given layer $b_l$ is calculated for the path arriving at the
+centre of the layer (at radius $r_l$) as follows:
+\begin{equation}
+b_l = r_l \sqrt{1 - \cos^2{\zeta}}
+\end{equation}
+\noindent
+A layer is considered to be lit if the impact parameter is above the horizon
+in the direction of the solar azimuth (currently implemented as just the planet
+radius).
+
+\noindent
+For the beam arriving at this layer, the element of the slant path within
+each layer $i$ is then:
+\begin{eqnarray}
+ds_i = & \left( \sqrt{r_{i-1}^2 - b^2} - \sqrt{r_{i}^2 - b^2} \right) & [r_i > b] \nonumber \\
+ds_i = & 2\sqrt{r_{i-1}^2 - b^2} & [r_{i-1} > b, ~r_i < b] \\
+ds_i = & 0 & [r_{i-1} < b] \nonumber
+\end{eqnarray}
+\noindent
+Note that the beam may pass through a layer twice if the solar zenith angle is
+greater than 90 degrees.
+
+\noindent
+Once the beam arrives at the layer where the source function is to be
+calculated we need to consider the path length through the column element
+for extinction of the direct beam. This path length should represent the
+range in paths that
+a beam would pass through before arriving at each part of the vertical column
+element. For zenith angles less than 90 degrees this should range from zero at
+the top of the column element to the slant path to the bottom of the layer for
+the bottom of the column element. Given that we only have a single incoming
+beam calculated as the path to the middle of the layer, we approximate this
+range by scaling the slant path to the middle of the layer by the vertical
+depth down to the middle of the layer. A similar scaling is done for beams
+arriving from below using the slant path from the bottom of the layer to the
+mid-point. A pragmatic treatment is then required for beams that arrive from
+above, pass down to an impact parameter within the layer and then back up to
+the mid-point. One limit for this case is where the impact parameter coincides
+with the bottom of the layer. For impact parameters fractionally smaller than
+this the beam will already have passed through the current layer on the
+way down, then passed through a tiny part of the layer below before arriving
+at the bottom of the current layer. For impact parameters fractionally higher
+than the bottom of the layer we maintain continuity by considering the start
+of the column element to be located at this point. The path down from the top
+of the layer is included with the path taken before arriving at the column
+element. As the impact parameter increases, the path through the column element
+can then be interpolated to its known value at the limit where the zenith
+angle is 90 degrees and the impact parameter coincides with the mid-point of
+the layer.
+
+\noindent
+The slant path elements described here are calculated in the routine
+{\tt spherical\_path.F90} before the loop over bands. The path within each
+layer is scaled by the vertical depth of the layer ($dr_i$) so that it may be
+later used to scale the optical depths.
+
+\noindent
+Within the loop over bands and k-terms, the total optical depth along the
+slant path for a given frequency $\nu$ is then calculated within the
+routine {\tt spherical\_trans\_coeff.F90} as follows:
+\begin{equation}
+\tau(\nu) = \sum_{i=1}^{n} \frac{ds_i \kappa_i(\nu) dm_i}{dr_i}
+\end{equation}
+\noindent
+where the sum is over the number of model layers ($n$), $\kappa_i$
+is the mass extinction coefficient ($m^2kg^{-1}$) for layer $i$ and $dm_i$
+is the mass per square metre of the layer.
+
+\subsection{Determination of the diffuse source function}
+
+With the transmission of the direct beam to each layer so defined above it is
+then necessary to determine the absorbed flux for radiative heating of the
+model layer and also the diffuse source terms in the vertical up and down
+directions.
+
+\noindent
+Now that the direct flux is treated separately we must recast the calculation
+of the diffuse fluxes in terms of just the up, $U$, and down, $D$ diffuse
+flux rather than the total downward flux, $V$. This can be done by combining
+equations \ref{p2_eq3}, \ref{p2_eq6} and \ref{p2_eq24}:
+\beqn
+V_{i} & = & T_{i} V_{i-1} + R_{i} U_{i} + S^{-}_{i} \nonumber \\
+D_i + Z_i & = & T_i D_{i-1} + T_i Z_{i-1} + R_i U_i + c_{2i}Z_{i-1} \nonumber \\
+D_i & = & T_i D_{i-1} + R_i U_i + Z_{i-1} [ T_{0i} (\nu_{-i} - R_i \nu_{+i})
+  - T_i \nu_{-i} ] \\
+    & = & T_i D_{i-1} + R_i U_i + S^{'-}_{i} \nonumber
+\eeqn
+\beqn
+U_{i-1} & = & T_{i} U_{i} + R_i V_{i-1} + S^{+}_{i} \nonumber \\
+ & = & T_i U_i + R_i D_{i-1} + R_i Z_{i-1} + c_{1i} Z_{i-1} \nonumber \\
+ & = & T_i U_i + R_i D_{i-1} + Z_{i-1} [ \nu_{+i} (1 - T_i T_{0i})
+  - R_i \nu_{-i} ] \\
+ & = & T_i U_i + R_i D_{i-1} + S^{'+}_{i} \nonumber
+\eeqn
+where
+\beq
+S_{i}^{'+}=c^{'}_{1i}Z_{i-1} \ \  \textrm{and} \ \ S^{'-}_{i}=c^{'}_{2i}Z_{i-1}
+\eeq
+and
+\beqn
+c^{'}_1 & = & \nu_+ (1 - T T_0) - R \nu_- \nonumber \\
+c^{'}_2 & = & T_0 (\nu_- - R \nu_+) - T \nu_-
+\eeqn
+This new formulation of the source coefficients is used in place of equation
+\ref{p2_eq24} in the routine {\tt trans\_source\_coeff.F90}. 
+
+\noindent
+We take the column element for the layer to be at an effective solar
+zenith angle, $\zeta'$, where the scaling factor for the path length is
+equal to $\sec \zeta'$. We can then solve for the direct flux extinction
+and the up and down source terms in the normal way.
+The divergence of the direct flux over the layer is saved directly at this
+point to be used later for the heating rate calculation.
+
+\noindent
+The source terms, however, have been calculated using $\zeta'$ and need
+to be converted to sources in the vertical. We assume the scattered flux in
+the forward and backwards directions along the slant path are isotropic across
+the respective hemispheres. The source terms in the up and down directions can
+then be calculated as follows:
+\beqn
+S_{up} & = & \frac{1}{2} [(1 + \cos \zeta \sec \zeta') S^{'+} + (1 - \cos \zeta \sec \zeta') S^{'-}]
+  \nonumber \\
+S_{down} & = & \frac{1}{2} [(1 + \cos \zeta \sec \zeta') S^{'-} + (1 - \cos \zeta \sec \zeta') S^{'+}]
+\eeqn
+\noindent
+This is done in the routine {\tt spherical\_solar\_source.F90}
+
+\noindent
+The plane-parallel calculation for the diffuse fluxes can then proceed as
+before with a slight alteration of the boundary conditions to account for the
+fact we are only including the diffuse component in the downward flux:
+\beqn
+U_0 & = & 0 \nonumber \\
+U_{N} & = & \alpha_{s} Z_{N} + \alpha_{d} D_{N}
+\eeqn 
+
+\subsection{Determination of heating rates}
+
+Finally, it should be noted that to diagnose the flux absorbed in each layer
+we must now take account of both the direct and diffuse flux divergence across
+the layer. The diffuse flux divergence is simply the difference of the net
+diffuse fluxes at the top and bottom of the layer as before. The direct flux
+divergence has been calculated separately and is held in the additional output
+variable {\tt flux\_direct\_div}. Only the sum of these two quantities has any
+physical meaning and should be used in the calculation of heating rates.

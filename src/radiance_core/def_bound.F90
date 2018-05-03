@@ -10,9 +10,6 @@
 !   This module contains the declaration of the structure
 !   used to store boundary conditions for the radiation code.
 !
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
-!
 !------------------------------------------------------------------------------
 MODULE def_bound
 
@@ -30,6 +27,10 @@ TYPE StrBound
 !   Azimuthal solar angles
   REAL (RealK), ALLOCATABLE :: solar_irrad(:)
 !   Solar irradiance at the top of the atmosphere
+  REAL (RealK), ALLOCATABLE :: lit(:,:)
+!   Lit fraction of timestep for each layer (using spherical geometry)
+  REAL (RealK), ALLOCATABLE :: cos_zen(:,:)
+!   Cosines of solar zenith angles for each layer (using spherical geometry)
 
 ! Surface properties
   INTEGER :: n_brdf_basis_fnc
@@ -83,6 +84,14 @@ IF (.NOT. ALLOCATED(bound%azim_0))                                             &
 IF (.NOT. ALLOCATED(bound%solar_irrad))                                        &
   ALLOCATE(bound%solar_irrad     ( dimen%nd_profile                          ))
 
+IF (.NOT. ALLOCATED(bound%lit))                                                &
+  ALLOCATE(bound%lit             ( dimen%nd_profile,                           &
+                                   0:dimen%nd_layer+1                        ))
+
+IF (.NOT. ALLOCATED(bound%cos_zen))                                            &
+  ALLOCATE(bound%cos_zen         ( dimen%nd_profile,                           &
+                                   0:dimen%nd_layer+1                        ))
+
 IF (.NOT. ALLOCATED(bound%rho_alb))                                            &
   ALLOCATE(bound%rho_alb         ( dimen%nd_profile,                           &
                                    dimen%nd_brdf_basis_fnc,                    &
@@ -133,6 +142,8 @@ IF (ALLOCATED(bound%orog_corr))    DEALLOCATE(bound%orog_corr)
 IF (ALLOCATED(bound%t_ground))     DEALLOCATE(bound%t_ground)
 IF (ALLOCATED(bound%f_brdf))       DEALLOCATE(bound%f_brdf)
 IF (ALLOCATED(bound%rho_alb))      DEALLOCATE(bound%rho_alb)
+IF (ALLOCATED(bound%cos_zen))      DEALLOCATE(bound%cos_zen)
+IF (ALLOCATED(bound%lit))          DEALLOCATE(bound%lit)
 IF (ALLOCATED(bound%solar_irrad))  DEALLOCATE(bound%solar_irrad)
 IF (ALLOCATED(bound%azim_0))       DEALLOCATE(bound%azim_0)
 IF (ALLOCATED(bound%zen_0))        DEALLOCATE(bound%zen_0)

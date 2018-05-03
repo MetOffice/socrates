@@ -4,14 +4,11 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to calculate cloudy two-stream coefficients.
+! Subroutine to calculate cloudy two-stream coefficients.
 !
 ! Method:
 !   The coeffients for each type of cloud are determined and
 !   averaged.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE two_coeff_cloud(ierr, control                                &
@@ -19,7 +16,7 @@ SUBROUTINE two_coeff_cloud(ierr, control                                &
      , i_2stream, l_ir_source_quad, n_source_coeff                      &
      , n_cloud_type, frac_cloud                                         &
      , phase_fnc_cloud, omega_cloud, tau_cloud_noscal, tau_cloud        &
-     , isolir, sec_0                                                    &
+     , isolir, sec_0, sph                                               &
      , trans_cloud, reflect_cloud, trans_0_cloud_noscal, trans_0_cloud  &
      , source_coeff_cloud                                               &
      , nd_profile, nd_layer, id_ct, nd_max_order                        &
@@ -28,6 +25,7 @@ SUBROUTINE two_coeff_cloud(ierr, control                                &
 
 
   USE realtype_rd, ONLY: RealK
+  USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
@@ -97,6 +95,9 @@ SUBROUTINE two_coeff_cloud(ierr, control                                &
       sec_0(nd_profile)
 !       Secant of zenith angle
 
+  TYPE(StrSphGeo), INTENT(INOUT) :: sph
+!       Spherical geometry fields
+
 
 ! Coefficients in the two-stream equations:
   REAL (RealK), INTENT(OUT) ::                                          &
@@ -153,8 +154,10 @@ SUBROUTINE two_coeff_cloud(ierr, control                                &
 !       Gathered alebdo of single scattering
     , asymmetry_gathered(nd_profile, 1)                                 &
 !       Gathered asymmetry
-    , sec_0_gathered(nd_profile)
-!       Gathered asymmetry
+    , sec_0_gathered(nd_profile)                                        &
+!       Gathered secant of the solar zenith angle
+    , path_div_gathered(nd_profile, 1)
+!       Gathered path scaling for calculating direct flux divergence
 
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
@@ -240,9 +243,15 @@ SUBROUTINE two_coeff_cloud(ierr, control                                &
           END DO
         END IF
         IF (isolir == ip_solar) THEN
-          DO l=1, n_list
-            sec_0_gathered(l)=sec_0(l_list(l))
-          END DO
+          IF (control%l_spherical_solar) THEN
+            DO l=1, n_list
+              path_div_gathered(l,1)=sph%common%path_div(l_list(l),i)
+            END DO
+          ELSE
+            DO l=1, n_list
+              sec_0_gathered(l)=sec_0(l_list(l))
+            END DO
+          END IF
         END IF
 
 
@@ -252,7 +261,7 @@ SUBROUTINE two_coeff_cloud(ierr, control                                &
           , i_2stream, l_ir_source_quad                                 &
           , asymmetry_gathered, omega_gathered                          &
           , tau_gathered_noscal, tau_gathered                           &
-          , isolir, sec_0_gathered                                      &
+          , isolir, sec_0_gathered, path_div_gathered                   &
           , trans_temp, reflect_temp, trans_0_temp_noscal, trans_0_temp &
           , source_coeff_temp                                           &
           , nd_profile, i, i, i, i, nd_source_coeff                     &

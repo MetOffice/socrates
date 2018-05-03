@@ -4,10 +4,7 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to calculate fluxes in a column ignoring scattering.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
+! Subroutine to calculate fluxes in a column ignoring scattering.
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE solver_no_scat(n_profile, n_layer                            &

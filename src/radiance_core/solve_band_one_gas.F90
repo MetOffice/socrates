@@ -4,14 +4,11 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to calculate the fluxes within the band with one gas.
+! Subroutine to calculate the fluxes within the band with one gas.
 !
 ! Method:
 !   Monochromatic calculations are performed for each ESFT term
 !   and the results are summed.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE solve_band_one_gas(ierr                                      &
@@ -36,7 +33,7 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 !                 Spectral Region
     , isolir                                                            &
 !                 Solar Properties
-    , zen_0, solar_irrad                                                &
+    , zen_0, solar_irrad, sph                                           &
 !                 Infra-red Properties
     , planck_flux_top, planck_flux_bottom                               &
     , diff_planck_band                                                  &
@@ -45,7 +42,7 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
     , ls_brdf_trunc, n_brdf_basis_fnc, rho_alb                          &
     , f_brdf, brdf_sol, brdf_hemi                                       &
     , planck_flux_ground                                                &
-!                   Tiling of the surface
+!                 Tiling of the surface
     , l_tile, n_point_tile, n_tile, list_tile, rho_alb_tile             &
     , planck_flux_tile                                                  &
 !                 Optical Properties
@@ -58,25 +55,27 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
     , w_free, cloud_overlap                                             &
     , n_column_slv, list_column_slv                                     &
     , i_clm_lyr_chn, i_clm_cld_typ, area_column                         &
-!                   Levels for calculating radiances
+!                 Levels for calculating radiances
     , n_viewing_level, i_rad_layer, frac_rad_layer                      &
-!                   Viewing Geometry
+!                 Viewing Geometry
     , n_direction, direction                                            &
-!                   Weighting factor for the band
+!                 Weighting factor for the band
     , weight_band, l_initial                                            &
 !                 Calculated Fluxes
     , flux_direct, flux_down, flux_up                                   &
-!                   Calculated radiances
+    , flux_direct_sph, flux_direct_div                                  &
+!                 Calculated radiances
     , i_direct, radiance                                                &
-!                   Calculated rate of photolysis
+!                 Calculated rate of photolysis
     , photolysis                                                        &
 !                 Flags for Clear-sky Fluxes
     , l_clear, i_solver_clear                                           &
 !                 Clear-sky Fluxes
     , flux_direct_clear, flux_down_clear, flux_up_clear                 &
-!                   Tiled Surface Fluxes
+    , flux_direct_clear_sph, flux_direct_clear_div                      &
+!                 Tiled Surface Fluxes
     , flux_up_tile, flux_up_blue_tile                                   &
-!                   Special Surface Fluxes
+!                 Special Surface Fluxes
     , l_blue_flux_surf, weight_blue                                     &
     , flux_direct_blue_surf                                             &
     , flux_down_blue_surf, flux_up_blue_surf                            &
@@ -98,6 +97,7 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
   USE def_cld,     ONLY: StrCld
   USE def_bound,   ONLY: StrBound
   USE def_ss_prop
+  USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
@@ -258,6 +258,9 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
     , solar_irrad(nd_profile)
 !       Incident solar irradiance in band
 
+  TYPE(StrSphGeo), INTENT(INOUT) :: sph
+!   Spherical geometry fields
+
 !                 Infra-red properties
   LOGICAL, INTENT(IN) ::                                                &
       l_ir_source_quad
@@ -379,8 +382,12 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 !       Direct flux
     , flux_down(nd_flux_profile, 0: nd_layer)                           &
 !       Total downward flux
-    , flux_up(nd_flux_profile, 0: nd_layer)
+    , flux_up(nd_flux_profile, 0: nd_layer)                             &
 !       Upward flux
+    , flux_direct_sph(nd_flux_profile, 0: nd_layer+1)                   &
+!       Direct flux in band for spherical geometry
+    , flux_direct_div(nd_flux_profile, nd_layer)
+!       Direct flux divergence in band
 
 !                   Calculated radiances
   REAL (RealK), INTENT(INOUT) ::                                        &
@@ -411,6 +418,10 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 !       Clear-sky total downward flux
     , flux_up_clear(nd_profile, 0: nd_layer)                            &
 !       Clear-sky upward flux
+    , flux_direct_clear_sph(nd_flux_profile, 0: nd_layer+1)             &
+!       Clear-sky direct flux in band for spherical geometry
+    , flux_direct_clear_div(nd_flux_profile, nd_layer)                  &
+!       Clear-sky direct flux divergence in band
     , flux_up_tile(nd_point_tile, nd_tile)                              &
 !       Upward fluxes at tiled surface points
     , flux_up_blue_tile(nd_point_tile, nd_tile)
@@ -460,13 +471,15 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 
 ! Monochromatic incrementing radiances:
   REAL (RealK) ::                                                       &
-      flux_direct_part(nd_profile, 0: nd_layer)                         &
+      flux_direct_part(nd_flux_profile, 0: nd_layer)                    &
 !       Partial direct flux
-    , flux_total_part(nd_profile, 2*nd_layer+2)                         &
+    , flux_direct_ground_part(nd_flux_profile)                          &
+!       Partial direct flux at the surface
+    , flux_total_part(nd_flux_profile, 2*nd_layer+2)                    &
 !       Partial total flux
-    , flux_direct_clear_part(nd_profile, 0: nd_layer)                   &
+    , flux_direct_clear_part(nd_flux_profile, 0: nd_layer)              &
 !       Partial clear-sky direct flux
-    , flux_total_clear_part(nd_profile, 2*nd_layer+2)
+    , flux_total_clear_part(nd_flux_profile, 2*nd_layer+2)
 !       Partial clear-sky total flux
   REAL (RealK) ::                                                       &
       i_direct_part(nd_radiance_profile, 0: nd_layer)                   &
@@ -509,11 +522,19 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 
       IF (isolir == ip_solar) THEN
 !       Solar region.
-        DO l=1, n_profile
-          d_planck_flux_surface(l)=0.0e+00_RealK
-          flux_inc_down(l)=solar_irrad(l)/zen_0(l)
-          flux_inc_direct(l)=solar_irrad(l)/zen_0(l)
-        END DO
+        IF (control%l_spherical_solar) THEN
+          DO l=1, n_profile
+            d_planck_flux_surface(l) = 0.0e+00_RealK
+            flux_inc_down(l)         = 0.0e+00_RealK
+            flux_inc_direct(l)       = 0.0e+00_RealK
+          END DO
+        ELSE
+          DO l=1, n_profile
+            d_planck_flux_surface(l)=0.0e+00_RealK
+            flux_inc_down(l)=solar_irrad(l)/zen_0(l)
+            flux_inc_direct(l)=solar_irrad(l)/zen_0(l)
+          END DO
+        END IF
       ELSE IF (isolir == ip_infra_red) THEN
 !       Infra-red region.
         DO l=1, n_profile
@@ -561,7 +582,7 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
       , n_order_phase, ms_min, ms_max, i_truncation, ls_local_trunc     &
       , accuracy_adaptive, euler_factor                                 &
       , i_sph_algorithm, i_sph_mode                                     &
-!                   Precalculated angular arrays
+!                 Precalculated angular arrays
       , ia_sph_mm, cg_coeff, uplm_zero, uplm_sol                        &
 !                 Treatment of scattering
       , i_scatter_method                                                &
@@ -583,6 +604,8 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
       , d_planck_flux_surface                                           &
       , ls_brdf_trunc, n_brdf_basis_fnc, rho_alb                        &
       , f_brdf, brdf_sol, brdf_hemi                                     &
+!                 Spherical geometry
+      , sph                                                             &
 !                 Optical properties
       , ss_prop                                                         &
 !                 Cloudy properties
@@ -631,16 +654,20 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
       , n_viewing_level, n_direction                                    &
       , isolir, l_clear, l_initial, weight_incr                         &
       , l_blue_flux_surf, weight_blue_incr                              &
+      , control%l_spherical_solar                                       &
 !                   Actual radiances
       , flux_direct, flux_down, flux_up                                 &
+      , flux_direct_sph, flux_direct_div                                &
       , flux_direct_blue_surf                                           &
       , flux_down_blue_surf, flux_up_blue_surf                          &
       , i_direct, radiance, photolysis                                  &
       , flux_direct_clear, flux_down_clear, flux_up_clear               &
+      , flux_direct_clear_sph, flux_direct_clear_div                    &
 !                   Increments to radiances
       , flux_direct_part, flux_total_part                               &
       , i_direct_part, radiance_part, photolysis_part                   &
       , flux_direct_clear_part, flux_total_clear_part                   &
+      , sph                                                             &
 !                   Dimensions
       , nd_flux_profile, nd_radiance_profile, nd_j_profile              &
       , nd_layer, nd_viewing_level, nd_direction                        &
@@ -648,17 +675,31 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 
 !   Add in the increments from surface tiles
     IF (l_tile) THEN
+      IF ( (i_angular_integration == ip_two_stream).OR.                 &
+           (i_angular_integration == ip_ir_gauss) ) THEN
+        IF (control%l_spherical_solar) THEN
+          DO l=1, n_profile
+            flux_direct_ground_part(l)                                  &
+              = sph%allsky%flux_direct(l, n_layer+1)
+          END DO
+        ELSE
+          DO l=1, n_profile
+            flux_direct_ground_part(l) = flux_direct_part(l, n_layer)
+          END DO          
+        END IF
+      END IF
 ! DEPENDS ON: augment_tiled_radiance
       CALL augment_tiled_radiance(ierr                                  &
         , n_point_tile, n_tile, list_tile                               &
         , i_angular_integration, isolir, l_initial                      &
         , weight_incr, l_blue_flux_surf, weight_blue_incr               &
+        , control%l_spherical_solar                                     &
 !                   Surface characteristics
         , rho_alb_tile                                                  &
 !                   Actual radiances
         , flux_up_tile, flux_up_blue_tile                               &
 !                   Increments to radiances
-        , flux_direct_part(1, n_layer)                                  &
+        , flux_direct_ground_part                                       &
         , flux_total_part(1, 2*n_layer+2)                               &
         , planck_flux_tile, planck_flux_bottom                          &
 !                   Dimensions

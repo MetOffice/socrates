@@ -4,7 +4,7 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to calculate fluxes in a homogeneous column.
+! Subroutine to calculate fluxes in a homogeneous column.
 !
 ! Method:
 !   The optical properties of the column are passed to a solver
@@ -13,21 +13,18 @@
 !   clear-sky fluxes or overcast cloudy fluxes (such as sub-columns
 !   with MCICA).
 !
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
-!
 !- ---------------------------------------------------------------------
-SUBROUTINE column_solver(ierr, control, bound                           &
+SUBROUTINE column_solver(ierr, control, bound, sph_common, sph_comp     &
     , n_profile, n_layer                                                &
     , i_scatter_method, i_solver_clear                                  &
-    , trans_free, reflect_free, trans_0_noscal, trans_0_free            &
-    , source_coeff_free                                                 &
+    , trans, reflect, trans_0_noscal, trans_0                           &
+    , source_coeff                                                      &
     , isolir, flux_inc_direct, flux_inc_down                            &
-    , s_down_free, s_up_free                                            &
+    , s_down, s_up                                                      &
     , albedo_surface_diff, albedo_surface_dir                           &
-    , source_ground                                                     &
+    , d_planck_flux_surface                                             &
     , l_scale_solar, adjust_solar_ke                                    &
-    , flux_direct_clear, flux_total_clear                               &
+    , flux_direct, flux_total                                           &
     , nd_profile, nd_layer, nd_source_coeff                             &
     )
 
@@ -35,11 +32,14 @@ SUBROUTINE column_solver(ierr, control, bound                           &
   USE realtype_rd, ONLY: RealK
   USE def_control, ONLY: StrCtrl
   USE def_bound,   ONLY: StrBound
+  USE def_spherical_geometry, ONLY: StrSphCommon, StrSphComp
   USE rad_pcf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
   USE ereport_mod, ONLY: ereport
   USE errormessagelength_mod, ONLY: errormessagelength
+
+  USE spherical_solar_source_mod, ONLY: spherical_solar_source
 
   IMPLICIT NONE
 
@@ -49,6 +49,12 @@ SUBROUTINE column_solver(ierr, control, bound                           &
 
 ! Boundary conditions:
   TYPE(StrBound),     INTENT(IN)    :: bound
+
+! Spherical geometry fields common to all-sky / clear-sky
+  TYPE(StrSphCommon), INTENT(IN)    :: sph_common
+
+! Spherical geometry fields for component (either all-sky or clear-sky)
+  TYPE(StrSphComp),   INTENT(INOUT) :: sph_comp
 
 ! Sizes of dummy arrays.
   INTEGER, INTENT(IN) ::                                                &
@@ -78,15 +84,15 @@ SUBROUTINE column_solver(ierr, control, bound                           &
       l_scale_solar
 !       Scaling applied to solar beam
   REAL (RealK), INTENT(IN) ::                                           &
-      trans_free(nd_profile, nd_layer)                                  &
+      trans(nd_profile, nd_layer)                                       &
 !       Transmission coefficients
-    , reflect_free(nd_profile, nd_layer)                                &
+    , reflect(nd_profile, nd_layer)                                     &
 !       Reflection coefficients
-    , trans_0_free(nd_profile, nd_layer)                                &
+    , trans_0(nd_profile, nd_layer)                                     &
 !       Direct transmission coefficients
     , trans_0_noscal(nd_profile, nd_layer)                              &
 !       Direct transmission coefficients without scaling
-    , source_coeff_free(nd_profile, nd_layer, nd_source_coeff)          &
+    , source_coeff(nd_profile, nd_layer, nd_source_coeff)               &
 !       Coefficients in source terms
     , albedo_surface_diff(nd_profile)                                   &
 !       Diffuse albedo
@@ -96,30 +102,35 @@ SUBROUTINE column_solver(ierr, control, bound                           &
 !       Incident total flux
     , flux_inc_direct(nd_profile)                                       &
 !       Incident direct flux
-    , source_ground(nd_profile)                                         &
-!       Ground source function
+    , d_planck_flux_surface(nd_profile)                                 &
+!       Difference between the Planckian flux at the surface
+!       temperature and that of the overlaying air
     , adjust_solar_ke(nd_profile, nd_layer)
 !       Scaling of solar beam
 
   REAL (RealK), INTENT(INOUT) ::                                        &
-      s_down_free(nd_profile, nd_layer)                                 &
+      s_down(nd_profile, nd_layer)                                      &
 !       Downward source
-    , s_up_free(nd_profile, nd_layer)
+    , s_up(nd_profile, nd_layer)
 !       Upward source
 
   REAL (RealK), INTENT(OUT) ::                                          &
-      flux_direct_clear(nd_profile, 0: nd_layer)                        &
-!       Clear direct flux
-    , flux_total_clear(nd_profile, 2*nd_layer+2)
-!       Clear total fluxes
+      flux_direct(nd_profile, 0: nd_layer)                              &
+!       Direct flux
+    , flux_total(nd_profile, 2*nd_layer+2)
+!       Total fluxes (diffuse only when using spherical geometry)
 
 
-! Dummy variabales.
-  INTEGER                                                               &
-      n_equation
+! Local variabales.
+  INTEGER ::                                                            &
+      l                                                                 &
+!       Loop variable
+    , n_equation
 !       Number of equations
   REAL (RealK) ::                                                       &
-      a5(nd_profile, 5, 2*nd_layer+2)                                   &
+      source_ground(nd_profile)                                         &
+!       Source from ground
+    , a5(nd_profile, 5, 2*nd_layer+2)                                   &
 !       Pentadiagonal matrix
     , b(nd_profile, 2*nd_layer+2)                                       &
 !       Rhs of matrix equation
@@ -137,15 +148,34 @@ SUBROUTINE column_solver(ierr, control, bound                           &
 
 ! The source functions only need to be recalculated in the visible.
   IF (isolir == ip_solar) THEN
-! DEPENDS ON: solar_source
-    CALL solar_source(control, bound, n_profile, n_layer                &
-      , flux_inc_direct                                                 &
-      , trans_0_noscal, trans_0_free, source_coeff_free                 &
-      , l_scale_solar, adjust_solar_ke                                  &
-      , flux_direct_clear                                               &
-      , s_down_free, s_up_free                                          &
-      , nd_profile, nd_layer, nd_source_coeff                           &
-      )
+    IF (control%l_spherical_solar) THEN
+      CALL spherical_solar_source(control, bound, sph_common, sph_comp, &
+        n_profile, n_layer,                                             &
+        trans_0, source_coeff,                                          &
+        l_scale_solar, adjust_solar_ke,                                 &
+        s_down, s_up,                                                   &
+        nd_profile, nd_layer, nd_source_coeff)
+      DO l=1, n_profile
+        source_ground(l)=albedo_surface_dir(l)                          &
+          *sph_comp%flux_direct(l, n_layer+1)
+      END DO
+    ELSE
+      ! DEPENDS ON: solar_source
+      CALL solar_source(control, bound, n_profile, n_layer,             &
+        flux_inc_direct, trans_0_noscal, trans_0, source_coeff,         &
+        l_scale_solar, adjust_solar_ke,                                 &
+        flux_direct, s_down, s_up,                                      &
+        nd_profile, nd_layer, nd_source_coeff)
+      DO l=1, n_profile
+        source_ground(l)=(albedo_surface_dir(l)-albedo_surface_diff(l)) &
+          *flux_direct(l, n_layer)
+      END DO
+    END IF
+  ELSE
+    DO l=1, n_profile
+      source_ground(l) = (1.0_RealK-albedo_surface_diff(l))             &
+        *d_planck_flux_surface(l)
+    END DO    
   END IF
 
 
@@ -156,9 +186,9 @@ SUBROUTINE column_solver(ierr, control, bound                           &
 !   Solve for the fluxes ignoring scattering
 ! DEPENDS ON: solver_no_scat
     CALL solver_no_scat(n_profile, n_layer                              &
-      , trans_free, s_down_free, s_up_free                              &
-      , albedo_surface_diff, flux_inc_down, source_ground               &
-      , flux_total_clear                                                &
+      , trans, s_down, s_up                                             &
+      , albedo_surface_diff, flux_inc_down, d_planck_flux_surface       &
+      , flux_total                                                      &
       , nd_profile, nd_layer)
 
   ELSE IF (i_solver_clear == ip_solver_pentadiagonal) THEN
@@ -166,10 +196,10 @@ SUBROUTINE column_solver(ierr, control, bound                           &
 !   Calculate the elements of the matrix equations.
 ! DEPENDS ON: set_matrix_pentadiagonal
     CALL set_matrix_pentadiagonal(n_profile, n_layer                    &
-      , trans_free, reflect_free                                        &
-      , s_down_free, s_up_free                                          &
-      , albedo_surface_diff, albedo_surface_dir                         &
-      , flux_direct_clear(1, n_layer), flux_inc_down                    &
+      , trans, reflect                                                  &
+      , s_down, s_up                                                    &
+      , albedo_surface_diff                                             &
+      , flux_inc_down                                                   &
       , source_ground                                                   &
       , a5, b                                                           &
       , nd_profile, nd_layer                                            &
@@ -180,7 +210,7 @@ SUBROUTINE column_solver(ierr, control, bound                           &
     CALL band_solver(n_profile, n_equation                              &
       , 2, 2                                                            &
       , a5, b                                                           &
-      , flux_total_clear                                                &
+      , flux_total                                                      &
       , work_1                                                          &
       , nd_profile, 5, 2*nd_layer+2                                     &
       )
@@ -190,12 +220,12 @@ SUBROUTINE column_solver(ierr, control, bound                           &
 !   Solve for the fluxes in the column directly.
 ! DEPENDS ON: solver_homogen_direct
     CALL solver_homogen_direct(n_profile, n_layer                       &
-      , trans_free, reflect_free                                        &
-      , s_down_free, s_up_free                                          &
-      , isolir, albedo_surface_diff, albedo_surface_dir                 &
-      , flux_direct_clear(1, n_layer), flux_inc_down                    &
+      , trans, reflect                                                  &
+      , s_down, s_up                                                    &
+      , albedo_surface_diff                                             &
+      , flux_inc_down                                                   &
       , source_ground                                                   &
-      , flux_total_clear                                                &
+      , flux_total                                                      &
       , nd_profile, nd_layer                                            &
       )
 

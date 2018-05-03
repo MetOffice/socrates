@@ -221,6 +221,8 @@ TYPE StrCtrl
 !   Flag for rescaling
   LOGICAL :: l_noscal_tau                                         = .FALSE.
 !   Flag to remove the scaling of optical depth for direct flux calculations
+  LOGICAL :: l_spherical_solar                                    = .FALSE.
+!   Flag to use spherical geometry for the direct beam path
   LOGICAL :: l_henyey_greenstein_pf                               = .FALSE.
 !   Flag to use Henyey-Greenstein phase functions
   LOGICAL :: l_lanczos                                            = .FALSE.
@@ -264,6 +266,8 @@ TYPE StrCtrl
 !   Weighting function for bands
   REAL (RealK), ALLOCATABLE :: weight_diag(:)
 !   Weighting function for bands for diagnostic fluxes
+  LOGICAL, ALLOCATABLE :: l_clear_band(:)
+!   Calculate clear-sky fluxes for band
 
 
 ! Switches for diagnostic output
@@ -283,26 +287,22 @@ TYPE StrCtrl
 !   Calculate absorptivity of conv.clouds (only infra-red)
   LOGICAL :: l_cnv_cloud_extinction                               = .FALSE.
 !   Calculate extinction of conv.clouds (only solar)
-  LOGICAL :: l_flux_direct_diag                                   = .FALSE.
-!   Calculate diagnostic direct flux weighted by band (weight_diag)
-  LOGICAL :: l_flux_down_diag                                     = .FALSE.
-!   Calculate diagnostic total downward flux weighted by band
-  LOGICAL :: l_flux_up_diag                                       = .FALSE.
-!   Calculate diagnostic upward flux weighted by band
-  LOGICAL :: l_flux_down_diag_surf                                = .FALSE.
-!   Calculate diagnostic total downward flux at the surface
-!   weighted by band
-  LOGICAL :: l_flux_down_clear_diag_surf                          = .FALSE.
-!   Calculate diagnostic clear-sky downward flux at the surface
-!   weighted by band
   LOGICAL :: l_flux_direct_band                                   = .FALSE.
 !   Calculate direct flux per band
+  LOGICAL :: l_flux_direct_div_band                               = .FALSE.
+!   Calculate direct flux divergence per band
+  LOGICAL :: l_flux_direct_sph_band                               = .FALSE.
+!   Calculate direct flux for spherical path per band
   LOGICAL :: l_flux_down_band                                     = .FALSE.
 !   Calculate total downward flux per band
   LOGICAL :: l_flux_up_band                                       = .FALSE.
 !   Calculate upward flux per band
   LOGICAL :: l_flux_direct_clear_band                             = .FALSE.
 !   Calculate clear-sky direct flux per band
+  LOGICAL :: l_flux_direct_clear_div_band                         = .FALSE.
+!   Calculate clear-sky direct flux divergence per band
+  LOGICAL :: l_flux_direct_clear_sph_band                         = .FALSE.
+!   Calculate clear-sky direct flux for spherical path per band
   LOGICAL :: l_flux_down_clear_band                               = .FALSE.
 !   Calculate clear-sky downward flux per band
   LOGICAL :: l_flux_up_clear_band                                 = .FALSE.
@@ -313,6 +313,8 @@ TYPE StrCtrl
 !   Calculate total aerosol absorption per band
   LOGICAL :: l_aerosol_asymmetry_band                             = .FALSE.
 !   Calculate total aerosol asymmetry (weighted by scattering) per band
+  LOGICAL :: l_spherical_path_diag                                = .FALSE.
+!   Output the direct beam path through spherical layers
 
 
 ! Satellite Data:
@@ -372,6 +374,11 @@ IF (.NOT. ALLOCATED(control%weight_band))                 &
 IF (.NOT. ALLOCATED(control%weight_diag))                 &
   ALLOCATE(control%weight_diag           ( sp%dim%nd_band ))
 
+IF (.NOT. ALLOCATED(control%l_clear_band)) THEN
+  ALLOCATE(control%l_clear_band          ( sp%dim%nd_band ))
+  control%l_clear_band(1:sp%dim%nd_band) = .FALSE.
+END IF
+
 END SUBROUTINE allocate_control
 !------------------------------------------------------------------------------
 SUBROUTINE deallocate_control(control)
@@ -380,13 +387,14 @@ IMPLICIT NONE
 
 TYPE (StrCtrl), INTENT(INOUT) :: control
 
-IF (ALLOCATED(control%weight_diag)) DEALLOCATE(control%weight_diag)
-IF (ALLOCATED(control%weight_band)) DEALLOCATE(control%weight_band)
-IF (ALLOCATED(control%map_channel)) DEALLOCATE(control%map_channel)
+IF (ALLOCATED(control%l_clear_band)) DEALLOCATE(control%l_clear_band)
+IF (ALLOCATED(control%weight_diag))  DEALLOCATE(control%weight_diag)
+IF (ALLOCATED(control%weight_band))  DEALLOCATE(control%weight_band)
+IF (ALLOCATED(control%map_channel))  DEALLOCATE(control%map_channel)
 IF (ALLOCATED(control%i_gas_overlap_band))    &
-                                    DEALLOCATE(control%i_gas_overlap_band)
+                                     DEALLOCATE(control%i_gas_overlap_band)
 IF (ALLOCATED(control%i_scatter_method_band)) &
-                                    DEALLOCATE(control%i_scatter_method_band)
+                                     DEALLOCATE(control%i_scatter_method_band)
 
 END SUBROUTINE deallocate_control
 !------------------------------------------------------------------------------

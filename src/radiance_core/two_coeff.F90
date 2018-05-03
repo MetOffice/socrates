@@ -4,7 +4,7 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to calculate coefficients in the two-stream equations.
+! Subroutine to calculate coefficients in the two-stream equations.
 !
 ! Method:
 !   The basic two-stream coefficients in the differential equations
@@ -12,15 +12,12 @@
 !   transmission and reflection coefficients. Coefficients for
 !   determining the solar or infra-red source terms are calculated.
 !
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
-!
 !- ---------------------------------------------------------------------
 SUBROUTINE two_coeff(ierr, control                                      &
      , n_profile, i_layer_first, i_layer_last                           &
      , i_2stream, l_ir_source_quad                                      &
      , asymmetry, omega, tau_noscal, tau                                &
-     , isolir, sec_0                                                    &
+     , isolir, sec_0, path_div                                          &
      , trans, reflect, trans_0_noscal, trans_0                          &
      , source_coeff                                                     &
      , nd_profile                                                       &
@@ -89,9 +86,10 @@ SUBROUTINE two_coeff(ierr, control                                      &
 
 ! Solar beam
   REAL (RealK), INTENT(IN) ::                                           &
-      sec_0(nd_profile)
+      sec_0(nd_profile)                                                 &
 !       Secant of zenith angle
-
+    , path_div(nd_profile, id_trs_lt: id_trs_lb)
+!       Path scaling for spherical geometry
 
 ! Coefficients in the two-stream equations:
   REAL (RealK), INTENT(OUT) ::                                          &
@@ -166,13 +164,12 @@ SUBROUTINE two_coeff(ierr, control                                      &
 !   LAMBDA may be perturbed by this routine to avoid
 !   ill-conditioning for the singular zenith angle.
 ! DEPENDS ON: solar_coefficient_basic
-    CALL solar_coefficient_basic(ierr                                   &
+    CALL solar_coefficient_basic(control                                &
       , n_profile, i_layer_first, i_layer_last                          &
-      , omega, asymmetry, sec_0                                         &
-      , i_2stream                                                       &
+      , omega, asymmetry, sec_0, path_div                               &
       , sum, diff, lambda                                               &
       , gamma_up, gamma_down                                            &
-      , nd_profile, id_op_lt, id_op_lb                                  &
+      , nd_profile, id_op_lt, id_op_lb, id_trs_lt, id_trs_lb            &
       )
   END IF
 
@@ -181,8 +178,7 @@ SUBROUTINE two_coeff(ierr, control                                      &
 ! DEPENDS ON: trans_source_coeff
   CALL trans_source_coeff(control                                       &
     , n_profile, i_layer_first, i_layer_last                            &
-    , isolir, l_ir_source_quad                                          &
-    , tau_noscal, tau, sum, diff, lambda, sec_0                         &
+    , tau_noscal, tau, sum, diff, lambda, sec_0, path_div               &
     , gamma_up, gamma_down                                              &
     , trans, reflect, trans_0_noscal, trans_0, source_coeff             &
     , nd_profile                                                        &

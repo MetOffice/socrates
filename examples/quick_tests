@@ -32,6 +32,9 @@ echo "Test Cl_run_cdf for CIRC case 6"
 echo "(HadGEM, GA7, SES and 300/260 band spectral files):"
 cd netcdf/CIRC_case6
 ./run_me || err=1
+echo ---
+echo "Testing pseudo-spherical geometry code:"
+./run_me_sph || err=1
 cd ../../
 
 echo ---

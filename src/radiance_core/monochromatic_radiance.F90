@@ -4,16 +4,13 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to solve for the monochromatic radiances.
+! Subroutine to solve for the monochromatic radiances.
 !
 ! Method:
 !   The final single scattering properties are calculated
 !   and rescaled. An appropriate subroutine is called to
 !   calculate the radiances depending on the treatment of
 !   cloudiness.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE monochromatic_radiance(ierr                                  &
@@ -47,6 +44,8 @@ SUBROUTINE monochromatic_radiance(ierr                                  &
     , d_planck_flux_surface                                             &
     , ls_brdf_trunc, n_brdf_basis_fnc, rho_alb                          &
     , f_brdf, brdf_sol, brdf_hemi                                       &
+!                 Spherical geometry
+    , sph                                                               &
 !                 Optical Properties
     , ss_prop                                                           &
 !                 Cloudy Properties
@@ -86,9 +85,12 @@ SUBROUTINE monochromatic_radiance(ierr                                  &
   USE def_cld,     ONLY: StrCld
   USE def_bound,   ONLY: StrBound
   USE def_ss_prop
+  USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
+  
+  USE spherical_trans_coeff_mod, ONLY: spherical_trans_coeff
 
   IMPLICIT NONE
 
@@ -270,6 +272,9 @@ SUBROUTINE monochromatic_radiance(ierr                                  &
 !       The BRDF evaluated for scattering from isotropic
 !       radiation into the viewing direction
 
+  TYPE(StrSphGeo), INTENT(INOUT) :: sph
+!       Spherical geometry fields
+  
 !                 Optical properties
   TYPE(STR_ss_prop), INTENT(INOUT) :: ss_prop
 !       Single scattering properties of the atmosphere
@@ -461,6 +466,12 @@ SUBROUTINE monochromatic_radiance(ierr                                  &
   END IF
 
 
+  IF (control%l_spherical_solar) THEN
+    CALL spherical_trans_coeff(n_profile, n_layer, n_cloud_top,         &
+      ss_prop, sph, nd_profile, nd_layer, id_ct)
+  END IF
+
+
 ! Now divide the algorithmic path depending on the option
 ! for angular integration.
 
@@ -485,6 +496,8 @@ SUBROUTINE monochromatic_radiance(ierr                                  &
 !                   Surface Properties
       , d_planck_flux_surface                                           &
       , rho_alb                                                         &
+!                   Spherical geometry
+      , sph                                                             &
 !                   Optical Properties
       , ss_prop                                                         &
 !                   Cloudy Properties

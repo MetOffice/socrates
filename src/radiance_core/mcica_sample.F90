@@ -12,9 +12,6 @@
 !   and a single clear-sky calculation is performed. The results are
 !   meaned making use of the fraction of cloudy sub-columns.
 !
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
-!
 !- ---------------------------------------------------------------------
 SUBROUTINE mcica_sample(ierr                                            &
     , control, dimen, cld, bound                                        &
@@ -47,6 +44,8 @@ SUBROUTINE mcica_sample(ierr                                            &
     , d_planck_flux_surface                                             &
     , ls_brdf_trunc, n_brdf_basis_fnc, rho_alb                          &
     , f_brdf, brdf_sol, brdf_hemi                                       &
+!                 Spherical geometry
+    , sph                                                               &
 !                 Optical Properties
     , ss_prop                                                           &
 !                 Cloudy Properties
@@ -91,6 +90,7 @@ SUBROUTINE mcica_sample(ierr                                            &
   USE def_cld,     ONLY: StrCld
   USE def_bound,   ONLY: StrBound
   USE def_ss_prop
+  USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf, ONLY: ip_solar, ip_cloud_homogen, ip_cloud_ice_water,    &
     ip_no_scatter_abs,  ip_no_scatter_ext
   USE yomhook, ONLY: lhook, dr_hook
@@ -279,6 +279,9 @@ SUBROUTINE mcica_sample(ierr                                            &
 !       The BRDF evaluated for scattering from isotropic
 !       radiation into the viewing direction
 
+  TYPE(StrSphGeo), INTENT(INOUT) :: sph
+!       Spherical geometry fields
+
 !                 Optical properties
   TYPE(STR_ss_prop), INTENT(INOUT) :: ss_prop
 !       Single scattering properties of the atmosphere
@@ -410,6 +413,10 @@ SUBROUTINE mcica_sample(ierr                                            &
 !       Partial direct flux
     , flux_total_subcol(nd_flux_profile, 2*nd_layer+2)                  &
 !       Partial total flux
+    , flux_direct_sph(nd_flux_profile, 0: nd_layer+1)                   &
+!       Direct flux through spherical geometry
+    , flux_direct_div(nd_flux_profile, nd_layer)                        &
+!       Direct flux divergence across layer
     , radiance_subcol(nd_radiance_profile, nd_viewing_level             &
         , nd_direction)                                                 &
 !       Partial radiances
@@ -714,7 +721,7 @@ SUBROUTINE mcica_sample(ierr                                            &
       , ls_local_trunc                                                  &
       , accuracy_adaptive, euler_factor                                 &
       , i_sph_algorithm, i_sph_mode                                     &
-!               precalculated angular arrays
+!             precalculated angular arrays
       , ia_sph_mm, cg_coeff, uplm_zero, uplm_sol                        &
 !             treatment of scattering
       , i_scatter_method                                                &
@@ -735,6 +742,8 @@ SUBROUTINE mcica_sample(ierr                                            &
       , d_planck_flux_surface                                           &
       , ls_brdf_trunc, n_brdf_basis_fnc, rho_alb                        &
       , f_brdf, brdf_sol, brdf_hemi                                     &
+!             Spherical geometry
+      , sph                                                             &
 !             optical properties
       , ss_prop                                                         &
 !             cloudy properties
@@ -775,6 +784,18 @@ SUBROUTINE mcica_sample(ierr                                            &
             flux_direct(j,k)=flux_direct_subcol(j,k)
           END DO
         END DO
+        IF (control%l_spherical_solar) THEN
+          DO k=0,n_layer+1
+            DO j=1,n_profile
+              flux_direct_sph(j,k)=sph%allsky%flux_direct(j,k)
+            END DO
+          END DO
+          DO k=1,n_layer
+            DO j=1,n_profile
+              flux_direct_div(j,k)=sph%allsky%flux_direct_div(j,k)
+            END DO
+          END DO
+        END IF
       END IF
 
       DO k=1,2*n_layer+2
@@ -789,6 +810,20 @@ SUBROUTINE mcica_sample(ierr                                            &
             flux_direct(j,k)=flux_direct(j,k)+flux_direct_subcol(j,k)
           END DO
         END DO
+        IF (control%l_spherical_solar) THEN
+          DO k=0,n_layer+1
+            DO j=1,n_profile
+              flux_direct_sph(j,k)=flux_direct_sph(j,k) &
+                + sph%allsky%flux_direct(j,k)
+            END DO
+          END DO
+          DO k=1,n_layer
+            DO j=1,n_profile
+              flux_direct_div(j,k)=flux_direct_div(j,k) &
+                + sph%allsky%flux_direct_div(j,k)
+            END DO
+          END DO
+        END IF
       END IF
 
       DO k=1,2*n_layer+2
@@ -805,16 +840,32 @@ SUBROUTINE mcica_sample(ierr                                            &
     DO k=0,n_layer
       DO j=1,n_profile
         flux_direct(j,k)=flux_direct(j,k)*subcol_k_inv
-        flux_direct(j,k)=cld%frac_cloudy(j)*flux_direct(j,k)                &
+        flux_direct(j,k)=cld%frac_cloudy(j)*flux_direct(j,k) &
           + ((1.0_RealK-cld%frac_cloudy(j))*flux_direct_clear(j,k))
       END DO
     END DO
+    IF (control%l_spherical_solar) THEN
+      DO k=0,n_layer+1
+        DO j=1,n_profile
+          sph%allsky%flux_direct(j,k) &
+            = cld%frac_cloudy(j)*flux_direct_sph(j,k)*subcol_k_inv &
+            + ((1.0_RealK-cld%frac_cloudy(j))*sph%clear%flux_direct(j,k))
+        END DO
+      END DO
+      DO k=1,n_layer
+        DO j=1,n_profile
+          sph%allsky%flux_direct_div(j,k) &
+            = cld%frac_cloudy(j)*flux_direct_div(j,k)*subcol_k_inv &
+            + ((1.0_RealK-cld%frac_cloudy(j))*sph%clear%flux_direct_div(j,k))
+        END DO
+      END DO
+    END IF
   END IF
 
   DO k=1,2*n_layer+2
     DO j=1,n_profile
       flux_total(j,k)=flux_total(j,k)*subcol_k_inv
-      flux_total(j,k)=(cld%frac_cloudy(j)*flux_total(j,k))                  &
+      flux_total(j,k)=(cld%frac_cloudy(j)*flux_total(j,k)) &
         + ((1.0_RealK-cld%frac_cloudy(j))*flux_total_clear(j,k))
     END DO
   END DO

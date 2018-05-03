@@ -76,6 +76,7 @@ do case $1 in
           then accuracy_adptive=$2 ; shift ; fi ;;
       -S) isolir=$IP_SOLAR ; shift ;;
       -s) spectral_file=$2 ; shift 2 ;;
+      -sg) c_sg=s ; shift ;;
       -T) sph_algorithm=$IP_SPH_REDUCED_ITER ; shift ;;
       -t) angular_integration=$IP_TWO_STREAM ; two_stream=$2 ; shift 2 ;;
       -v) solver=$2 ; shift 2 ;;
@@ -90,7 +91,7 @@ done
 #
 # ASSEMBLE PROCESS FLAG
 #
-process_flag=$c_gas$c_continuum$c_cont_gen$c_rayleigh$c_drop$c_ice$c_aerosol
+process_flag=$c_gas$c_continuum$c_cont_gen$c_rayleigh$c_drop$c_ice$c_aerosol$c_sg
 #
 # CHECK FLAGS FOR CONVECTIVE CLOUDS HERE
 #

@@ -10,9 +10,6 @@
 !   This module contains the declaration of the structure
 !   used to store output fields for the radiation code.
 !
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
-!
 !------------------------------------------------------------------------------
 MODULE def_out
 
@@ -36,6 +33,14 @@ TYPE StrOut
 !   Clear-sky downward flux
   REAL (RealK), ALLOCATABLE :: flux_up_clear(:, :, :)
 !   Clear-sky upward flux
+  REAL (RealK), ALLOCATABLE :: flux_direct_div(:, :, :)
+!   Direct flux divergence
+  REAL (RealK), ALLOCATABLE :: flux_direct_sph(:, :, :)
+!   Direct flux for spherical geometry
+  REAL (RealK), ALLOCATABLE :: flux_direct_clear_div(:, :, :)
+!   Clear-sky direct flux divergence
+  REAL (RealK), ALLOCATABLE :: flux_direct_clear_sph(:, :, :)
+!   Clear-sky direct flux for spherical geometry
   REAL (RealK), ALLOCATABLE :: radiance(:, :, :, :)
 !   Radiances
   REAL (RealK), ALLOCATABLE :: photolysis(:, :, :)
@@ -54,24 +59,22 @@ TYPE StrOut
 !   Total downward blue flux at the surface
   REAL (RealK), ALLOCATABLE :: flux_up_blue_surf(:)
 !   Upward blue flux at the surface
-  REAL (RealK), ALLOCATABLE :: flux_direct_diag(:, :, :)
-!   Diagnostic direct flux weighted by band
-  REAL (RealK), ALLOCATABLE :: flux_down_diag(:, :, :)
-!   Diagnostic total downward flux weighted by band
-  REAL (RealK), ALLOCATABLE :: flux_up_diag(:, :, :)
-!   Diagnostic upward flux weighted by band
-  REAL (RealK), ALLOCATABLE :: flux_down_diag_surf(:)
-!   Diagnostic total downward flux at the surface weighted by band
-  REAL (RealK), ALLOCATABLE :: flux_down_clear_diag_surf(:)
-!   Diagnostic clear-sky downward flux at the surface weighted by band
   REAL (RealK), ALLOCATABLE :: flux_direct_band(:, :, :)
 !   Direct flux per band
+  REAL (RealK), ALLOCATABLE :: flux_direct_div_band(:, :, :)
+!   Direct flux divergence per band
+  REAL (RealK), ALLOCATABLE :: flux_direct_sph_band(:, :, :)
+!   Direct flux for spherical geometry per band
   REAL (RealK), ALLOCATABLE :: flux_down_band(:, :, :)
-!   Total downward flux per band
+!   Total (or diffuse for spherical geometry) downward flux per band
   REAL (RealK), ALLOCATABLE :: flux_up_band(:, :, :)
 !   Upward flux per band
   REAL (RealK), ALLOCATABLE :: flux_direct_clear_band(:, :, :)
 !   Clear-sky direct flux per band
+  REAL (RealK), ALLOCATABLE :: flux_direct_clear_div_band(:, :, :)
+!   Clear-sky direct flux divergence per band
+  REAL (RealK), ALLOCATABLE :: flux_direct_clear_sph_band(:, :, :)
+!   Clear-sky direct flux for spherical geometry per band
   REAL (RealK), ALLOCATABLE :: flux_down_clear_band(:, :, :)
 !   Clear-sky downward flux per band
   REAL (RealK), ALLOCATABLE :: flux_up_clear_band(:, :, :)
@@ -118,6 +121,10 @@ TYPE StrOut
 !   Total aerosol scattering per band
   REAL (RealK), ALLOCATABLE :: aerosol_asymmetry_band(:, :, :)
 !   Total aerosol asymmetry (weighted by scattering) per band
+
+! Spherical geometry diagnostics
+  REAL (RealK), ALLOCATABLE :: spherical_path(:, :, :)
+!   Path length for direct beam through spherical layers
 
 END TYPE StrOut
 
@@ -167,6 +174,26 @@ IF (.NOT. ALLOCATED(radout%flux_up_clear))                                     &
                                                  0: dimen%nd_layer,            &
                                                  dimen%nd_channel            ))
 
+IF (.NOT. ALLOCATED(radout%flux_direct_div))                                   &
+  ALLOCATE(radout%flux_direct_div              ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 dimen%nd_channel            ))
+
+IF (.NOT. ALLOCATED(radout%flux_direct_sph))                                   &
+  ALLOCATE(radout%flux_direct_sph              ( dimen%nd_flux_profile,        &
+                                                 0: dimen%nd_layer+1,          &
+                                                 dimen%nd_channel            ))
+
+IF (.NOT. ALLOCATED(radout%flux_direct_clear_div))                             &
+  ALLOCATE(radout%flux_direct_clear_div        ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 dimen%nd_channel            ))
+
+IF (.NOT. ALLOCATED(radout%flux_direct_clear_sph))                             &
+  ALLOCATE(radout%flux_direct_clear_sph        ( dimen%nd_flux_profile,        &
+                                                 0: dimen%nd_layer+1,          &
+                                                 dimen%nd_channel            ))
+
 IF (.NOT. ALLOCATED(radout%radiance))                                          &
   ALLOCATE(radout%radiance                     ( dimen%nd_radiance_profile,    &
                                                  dimen%nd_viewing_level,       &
@@ -201,41 +228,25 @@ IF (.NOT. ALLOCATED(radout%flux_down_blue_surf))                               &
 IF (.NOT. ALLOCATED(radout%flux_up_blue_surf))                                 &
   ALLOCATE(radout%flux_up_blue_surf            ( dimen%nd_flux_profile       ))
 
-IF (control%l_flux_direct_diag) THEN
-  IF (.NOT. ALLOCATED(radout%flux_direct_diag))                                &
-    ALLOCATE(radout%flux_direct_diag           ( dimen%nd_flux_profile,        &
-                                                 0: dimen%nd_layer,            &
-                                                 dimen%nd_channel            ))
-END IF
-
-IF (control%l_flux_down_diag) THEN
-  IF (.NOT. ALLOCATED(radout%flux_down_diag))                                  &
-    ALLOCATE(radout%flux_down_diag             ( dimen%nd_flux_profile,        &
-                                                 0: dimen%nd_layer,            &
-                                                 dimen%nd_channel            ))
-END IF
-
-IF (control%l_flux_up_diag) THEN
-  IF (.NOT. ALLOCATED(radout%flux_up_diag))                                    &
-    ALLOCATE(radout%flux_up_diag               ( dimen%nd_flux_profile,        &
-                                                 0: dimen%nd_layer,            &
-                                                 dimen%nd_channel            ))
-END IF
-
-IF (control%l_flux_down_diag_surf) THEN
-  IF (.NOT. ALLOCATED(radout%flux_down_diag_surf))                             &
-    ALLOCATE(radout%flux_down_diag_surf        ( dimen%nd_flux_profile       ))
-END IF
-
-IF (control%l_flux_down_clear_diag_surf) THEN
-  IF (.NOT. ALLOCATED(radout%flux_down_clear_diag_surf))                       &
-    ALLOCATE(radout%flux_down_clear_diag_surf  ( dimen%nd_flux_profile       ))
-END IF
 
 IF (control%l_flux_direct_band) THEN
   IF (.NOT. ALLOCATED(radout%flux_direct_band))                                &
     ALLOCATE(radout%flux_direct_band           ( dimen%nd_flux_profile,        &
                                                  0: dimen%nd_layer,            &
+                                                 sp%dim%nd_band              ))
+END IF
+
+IF (control%l_flux_direct_div_band) THEN
+  IF (.NOT. ALLOCATED(radout%flux_direct_div_band))                            &
+    ALLOCATE(radout%flux_direct_div_band       ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 sp%dim%nd_band              ))
+END IF
+
+IF (control%l_flux_direct_sph_band) THEN
+  IF (.NOT. ALLOCATED(radout%flux_direct_sph_band))                            &
+    ALLOCATE(radout%flux_direct_sph_band       ( dimen%nd_flux_profile,        &
+                                                 0: dimen%nd_layer+1,          &
                                                  sp%dim%nd_band              ))
 END IF
 
@@ -257,6 +268,20 @@ IF (control%l_flux_direct_clear_band) THEN
   IF (.NOT. ALLOCATED(radout%flux_direct_clear_band))                          &
     ALLOCATE(radout%flux_direct_clear_band     ( dimen%nd_2sg_profile,         &
                                                  0: dimen%nd_layer,            &
+                                                 sp%dim%nd_band              ))
+END IF
+
+IF (control%l_flux_direct_clear_div_band) THEN
+  IF (.NOT. ALLOCATED(radout%flux_direct_clear_div_band))                      &
+    ALLOCATE(radout%flux_direct_clear_div_band ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 sp%dim%nd_band              ))
+END IF
+
+IF (control%l_flux_direct_clear_sph_band) THEN
+  IF (.NOT. ALLOCATED(radout%flux_direct_clear_sph_band))                      &
+    ALLOCATE(radout%flux_direct_clear_sph_band ( dimen%nd_flux_profile,        &
+                                                 0: dimen%nd_layer+1,          &
                                                  sp%dim%nd_band              ))
 END IF
 
@@ -352,6 +377,13 @@ IF (control%l_aerosol_asymmetry_band) THEN
                                                  sp%dim%nd_band              ))
 END IF
 
+IF (control%l_spherical_path_diag) THEN
+  IF (.NOT. ALLOCATED(radout%spherical_path))                                  &
+    ALLOCATE(radout%spherical_path             ( dimen%nd_profile,             &
+                                                 dimen%nd_layer,               &
+                                                 0:dimen%nd_layer+1          ))
+END IF
+
 END SUBROUTINE allocate_out
 !------------------------------------------------------------------------------
 SUBROUTINE deallocate_out(radout)
@@ -360,6 +392,8 @@ IMPLICIT NONE
 
 TYPE (StrOut), INTENT(INOUT) :: radout
 
+IF (ALLOCATED(radout%spherical_path)) &
+    DEALLOCATE(radout%spherical_path)
 IF (ALLOCATED(radout%aerosol_asymmetry_band)) &
     DEALLOCATE(radout%aerosol_asymmetry_band)
 IF (ALLOCATED(radout%aerosol_scattering_band)) &
@@ -396,24 +430,22 @@ IF (ALLOCATED(radout%flux_up_clear_band)) &
     DEALLOCATE(radout%flux_up_clear_band)
 IF (ALLOCATED(radout%flux_down_clear_band)) &
     DEALLOCATE(radout%flux_down_clear_band)
+IF (ALLOCATED(radout%flux_direct_clear_sph_band)) &
+    DEALLOCATE(radout%flux_direct_clear_sph_band)
+IF (ALLOCATED(radout%flux_direct_clear_div_band)) &
+    DEALLOCATE(radout%flux_direct_clear_div_band)
 IF (ALLOCATED(radout%flux_direct_clear_band)) &
     DEALLOCATE(radout%flux_direct_clear_band)
 IF (ALLOCATED(radout%flux_up_band)) &
     DEALLOCATE(radout%flux_up_band)
 IF (ALLOCATED(radout%flux_down_band)) &
     DEALLOCATE(radout%flux_down_band)
+IF (ALLOCATED(radout%flux_direct_sph_band)) &
+    DEALLOCATE(radout%flux_direct_sph_band)
+IF (ALLOCATED(radout%flux_direct_div_band)) &
+    DEALLOCATE(radout%flux_direct_div_band)
 IF (ALLOCATED(radout%flux_direct_band)) &
     DEALLOCATE(radout%flux_direct_band)
-IF (ALLOCATED(radout%flux_down_clear_diag_surf)) &
-    DEALLOCATE(radout%flux_down_clear_diag_surf)
-IF (ALLOCATED(radout%flux_down_diag_surf)) &
-    DEALLOCATE(radout%flux_down_diag_surf)
-IF (ALLOCATED(radout%flux_up_diag)) &
-    DEALLOCATE(radout%flux_up_diag)
-IF (ALLOCATED(radout%flux_down_diag)) &
-    DEALLOCATE(radout%flux_down_diag)
-IF (ALLOCATED(radout%flux_direct_diag)) &
-    DEALLOCATE(radout%flux_direct_diag)
 IF (ALLOCATED(radout%flux_up_blue_surf)) &
     DEALLOCATE(radout%flux_up_blue_surf)
 IF (ALLOCATED(radout%flux_down_blue_surf)) &
@@ -430,6 +462,14 @@ IF (ALLOCATED(radout%photolysis)) &
     DEALLOCATE(radout%photolysis)
 IF (ALLOCATED(radout%radiance)) &
     DEALLOCATE(radout%radiance)
+IF (ALLOCATED(radout%flux_direct_clear_sph)) &
+    DEALLOCATE(radout%flux_direct_clear_sph)
+IF (ALLOCATED(radout%flux_direct_clear_div)) &
+    DEALLOCATE(radout%flux_direct_clear_div)
+IF (ALLOCATED(radout%flux_direct_sph)) &
+    DEALLOCATE(radout%flux_direct_sph)
+IF (ALLOCATED(radout%flux_direct_div)) &
+    DEALLOCATE(radout%flux_direct_div)
 IF (ALLOCATED(radout%flux_up_clear)) &
     DEALLOCATE(radout%flux_up_clear)
 IF (ALLOCATED(radout%flux_down_clear)) &

@@ -31,6 +31,8 @@ SUBROUTINE calc_flux_ipa(ierr                                           &
     , flux_inc_down, flux_inc_direct, sec_0                             &
 !                 Conditions at Surface
     , d_planck_flux_surface, rho_alb                                    &
+!                 Spherical geometry
+    , sph                                                               &
 !                 Optical Properties
     , ss_prop                                                           &
 !                 Cloud Geometry
@@ -53,6 +55,7 @@ SUBROUTINE calc_flux_ipa(ierr                                           &
   USE def_control, ONLY: StrCtrl
   USE def_bound,   ONLY: StrBound
   USE def_ss_prop
+  USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
@@ -121,6 +124,9 @@ SUBROUTINE calc_flux_ipa(ierr                                           &
   REAL (RealK), INTENT(IN) ::                                           &
       adjust_solar_ke(nd_profile, nd_layer)
 !       Adjustment of solar beam with equivalent extinction
+
+  TYPE(StrSphGeo), INTENT(INOUT) :: sph
+!       Spherical geometry fields
 
 ! Optical properties
   TYPE(STR_ss_prop), INTENT(INOUT) :: ss_prop
@@ -459,6 +465,8 @@ SUBROUTINE calc_flux_ipa(ierr                                           &
 !                   Surface conditions
       , rho_alb_long(1, ip_surf_alb_diff)                               &
       , rho_alb_long(1, ip_surf_alb_dir), d_planck_flux_surface_long    &
+!                   Spherical geometry
+      , sph                                                             &
 !                   Single scattering properties
       , tau_long_noscal, tau_long, omega_long, asymmetry_long(1, 1)     &
 !                   Fluxes calculated
@@ -535,6 +543,8 @@ SUBROUTINE calc_flux_ipa(ierr                                           &
 !                   Surface conditions
       , rho_alb(1, ip_surf_alb_diff)                                    &
       , rho_alb(1, ip_surf_alb_dir), d_planck_flux_surface              &
+!                   Spherical geometry
+      , sph                                                             &
 !                   Single scattering properties
       , tau_clr_noscal_f, tau_clr_f, omega_clr_f                        &
       , phase_fnc_clr_f(1, 1, 1)                                        &

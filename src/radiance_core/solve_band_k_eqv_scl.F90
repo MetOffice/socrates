@@ -4,15 +4,12 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to calculate fluxes using equivalent extinction.
+! Subroutine to calculate fluxes using equivalent extinction.
 !
 ! Method:
 !   For each minor absorber an equivalent extinction is calculated
 !   from a clear-sky calculation. These equivalent extinctions
 !   are then used in a full calculation involving the major absorber.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
@@ -36,7 +33,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 !                   Spectral region
     , isolir                                                            &
 !                   Solar properties
-    , zen_0, solar_irrad                                                &
+    , zen_0, solar_irrad, sph                                           &
 !                   Infra-red properties
     , planck_flux_band                                                  &
     , diff_planck_band                                                  &
@@ -70,6 +67,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
     , weight_band, l_initial                                            &
 !                   Fluxes calculated
     , flux_direct, flux_down, flux_up                                   &
+    , flux_direct_sph, flux_direct_div                                  &
 !                   Radiances
     , i_direct, radiance                                                &
 !                   Rate of photolysis
@@ -78,6 +76,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
     , l_clear, i_solver_clear                                           &
 !                   Clear-sky fluxes calculated
     , flux_direct_clear, flux_down_clear, flux_up_clear                 &
+    , flux_direct_clear_sph, flux_direct_clear_div                      &
 !                   Tiled surface fluxes
     , flux_up_tile, flux_up_blue_tile                                   &
 !                   Special surface fluxes
@@ -102,6 +101,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
   USE def_cld,     ONLY: StrCld
   USE def_bound,   ONLY: StrBound
   USE def_ss_prop
+  USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf
   USE rad_ccf, ONLY: diffusivity_factor_minor
   USE vectlib_mod, ONLY: exp_v
@@ -277,6 +277,9 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
     , solar_irrad(nd_profile)
 !       Incident solar irradiance in band
 
+  TYPE(StrSphGeo), INTENT(INOUT) :: sph
+!   Spherical geometry fields
+
 !                   Infra-red properties
   LOGICAL, INTENT(IN) ::                                                &
       l_ir_source_quad
@@ -400,8 +403,12 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 !       Direct flux in band
     , flux_down(nd_flux_profile, 0: nd_layer)                           &
 !       Total downward flux
-    , flux_up(nd_flux_profile, 0: nd_layer)
+    , flux_up(nd_flux_profile, 0: nd_layer)                             &
 !       Upward flux
+    , flux_direct_sph(nd_flux_profile, 0: nd_layer+1)                   &
+!       Direct flux in band for spherical geometry
+    , flux_direct_div(nd_flux_profile, nd_layer)
+!       Direct flux divergence in band
 
 !                   Calculated radiances
   REAL (RealK), INTENT(INOUT) ::                                        &
@@ -430,6 +437,10 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 !       Clear-sky total downward flux
     , flux_up_clear(nd_flux_profile, 0: nd_layer)                       &
 !       Clear-sky total downward flux
+    , flux_direct_clear_sph(nd_flux_profile, 0: nd_layer+1)             &
+!       Clear-sky direct flux in band for spherical geometry
+    , flux_direct_clear_div(nd_flux_profile, nd_layer)                  &
+!       Clear-sky direct flux divergence in band
     , flux_up_tile(nd_point_tile, nd_tile)                              &
 !       Upward fluxes at tiled surface points
     , flux_up_blue_tile(nd_point_tile, nd_tile)
@@ -471,14 +482,8 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 
 ! Local variables.
   INTEGER                                                               &
-      i                                                                 &
-!       Loop variable
-    , j                                                                 &
-!       Loop variable
-    , k                                                                 &
-!       Loop variable
-    , l
-!       Loop variable
+      i, ii, j, k, l
+!       Loop variables
   INTEGER                                                               &
       i_abs                                                             &
 !       Index of main absorber
@@ -512,6 +517,8 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
   REAL (RealK) ::                                                       &
       flux_direct_part(nd_flux_profile, 0: nd_layer)                    &
 !       Partial direct flux
+    , flux_direct_ground_part(nd_flux_profile)                          &
+!       Partial direct flux at the surface
     , flux_total_part(nd_flux_profile, 2*nd_layer+2)                    &
 !       Partial total flux
     , flux_direct_clear_part(nd_flux_profile, 0: nd_layer)              &
@@ -543,20 +550,33 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 !       Sum of k*fluxes for weighting
     , flux_term(nd_profile, 2*nd_layer+2)                               &
 !       Flux with one term
-    , flux_gas(nd_profile, 0: nd_layer)
+    , flux_direct_term(nd_profile, 0:nd_layer+1)                        &
+!       Direct flux with one term
+    , flux_gas(nd_profile, 0: nd_layer+1)                               &
 !       Flux with one absorber
+    , sph_flux_gas(nd_profile, 0: nd_layer+1)
+!       Flux with one absorber at the top of each layer for spherical geometry
   REAL (RealK) ::                                                       &
       layer_inc_flux                                                    &
 !       Layer incident fluxes (downward flux at top of layer
 !       plus upward flux at bottom of layer)
     , layer_inc_k_flux                                                  &
 !       Layer incident k-weighted fluxes
-    , k_min(nd_profile, nd_layer)
+    , k_min(nd_profile, nd_layer)                                       &
 !       Weak absorption for minor absorber
+    , sum_weight
+!       Sum of the ESFT weights for a gas  
 
-  REAL (RealK) :: temp(nd_profile),temp_exp(nd_profile)
+  REAL (RealK), ALLOCATABLE :: sph_mass_path(:,:,:)
+!       Path through spherical geometry * layer mass
+
+  REAL (RealK) :: temp(n_profile),temp_exp(n_profile)
   REAL (RealK) :: temp_max = LOG(1.0_RealK/EPSILON(temp_max))
+  REAL (RealK) :: temp_max_sph = LOG(HUGE(temp_max_sph))/2.0_RealK
+  REAL (RealK) :: eps = EPSILON(eps)
 
+  INTEGER :: path_base
+  
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
@@ -583,37 +603,91 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
         k_eqv(l, i)=0.0e+00_RealK
       END DO
     END DO
+    IF (control%l_spherical_solar) THEN
+      DO i=0, n_layer+1
+        DO l=1, n_profile
+          sph%common%adjust_solar_ke(l, i)=1.0e+00_RealK
+        END DO
+      END DO
+      ALLOCATE(sph_mass_path(n_profile, n_layer, 0:n_layer+1))
+      DO ii=0, n_layer+1
+        DO i=1, n_layer
+          DO l=1, n_profile
+            sph_mass_path(l,i,ii) = d_mass(l, i)*sph%common%path(l,i,ii)
+          END DO
+        END DO
+      END DO
+    END IF
 
     DO j=2, n_abs
 
 !     Initialize the normalized flux for the absorber.
-      DO l=1, n_profile
-        flux_gas(l, 0)=1.0e+00_RealK
-        sum_flux(l, n_layer, j)=0.0e+00_RealK
-      END DO
-      DO i=1, n_layer
-        DO l=1, n_profile
-          flux_gas(l, i)=0.0e+00_RealK
-          sum_k_flux(l, i, j)=0.0e+00_RealK
+      IF (control%l_spherical_solar) THEN
+        DO ii=0, n_layer+1
+          DO l=1, n_profile
+            sph_flux_gas(l, ii)=0.0e+00_RealK
+          END DO
         END DO
-      END DO
+        DO i=1, n_layer
+          DO l=1, n_profile
+            flux_gas(l, i)=0.0e+00_RealK
+            sum_flux(l, i, j)=0.0e+00_RealK
+            sum_k_flux(l, i, j)=0.0e+00_RealK
+          END DO
+        END DO
+      ELSE
+        DO l=1, n_profile
+          flux_gas(l, 0)=1.0e+00_RealK
+          sum_flux(l, n_layer, j)=0.0e+00_RealK
+        END DO
+        DO i=1, n_layer
+          DO l=1, n_profile
+            flux_gas(l, i)=0.0e+00_RealK
+            sum_k_flux(l, i, j)=0.0e+00_RealK
+          END DO
+        END DO
+      END IF
 
       k_min=HUGE(k_min)
       i_abs_band=index_abs(j)
+      sum_weight=0.0_RealK
       DO iex=1, n_abs_esft(i_abs_band)
 
 !       Store the ESFT weight for future use.
         esft_weight=w_abs_esft(iex, i_abs_band)
+        sum_weight=sum_weight+esft_weight
 
-!       For use in the infra-red case flux_term is defined to start
-!       at 1, so for this array only the flux at level i appears
-!       as the i+1st element.
-        DO l=1, n_profile
-          flux_term(l, 1)=esft_weight
-        END DO
-!       Because the contents of zen_0 depend on the mode of
-!       angular integration we need two different loops.
-        IF (i_angular_integration == ip_two_stream) THEN
+!       The treatment of the direct beam and the contents of zen_0 depend
+!       on the mode of angular integration so we need three different loops.
+        IF (control%l_spherical_solar) THEN
+          ! Calculate flux arriving at each layer through spherical path
+          DO ii=0,n_layer+1
+            DO l=1,n_profile
+              path_base = sph%common%path_base(l, ii)
+              temp(l) = SUM( - k_abs_layer(l, 1:path_base, iex, i_abs_band) &
+                * sph_mass_path(l, 1:path_base, ii) )
+            END DO
+            CALL exp_v(n_profile,temp,temp_exp)
+            DO l=1,n_profile
+              flux_direct_term(l, ii)=esft_weight*temp_exp(l)
+              sph_flux_gas(l,ii)=sph_flux_gas(l,ii)+flux_direct_term(l, ii)
+            END DO
+          END DO
+          ! Calculate transmission through each layer
+          DO i=1, n_layer
+            DO l=1, n_profile
+              temp(l)=-k_abs_layer(l, i, iex, i_abs_band)*d_mass(l, i) &
+                *sph%common%path_div(l,i)
+            END DO
+            CALL exp_v(n_profile,temp,temp_exp)
+            DO l=1,n_profile
+              flux_gas(l, i)=flux_gas(l, i)+flux_direct_term(l, i)*temp_exp(l)
+            END DO
+          END DO          
+        ELSE IF (i_angular_integration == ip_two_stream) THEN
+          DO l=1, n_profile
+            flux_direct_term(l, 0)=esft_weight
+          END DO
           DO i=1, n_layer
             DO l=1, n_profile
               temp(l)=-k_abs_layer(l, i, iex, i_abs_band)               &
@@ -621,60 +695,109 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
             END DO
             CALL exp_v(n_profile,temp,temp_exp)
             DO l=1,n_profile
-              flux_term(l, i+1)=flux_term(l, i)*temp_exp(l)
-              flux_gas(l, i)=flux_gas(l, i)+flux_term(l, i+1)
+              flux_direct_term(l, i)=flux_direct_term(l, i-1)*temp_exp(l)
+              flux_gas(l, i)=flux_gas(l, i)+flux_direct_term(l, i)
             END DO
           END DO
         ELSE IF (i_angular_integration == ip_spherical_harmonic) THEN
+          DO l=1, n_profile
+            flux_direct_term(l, 0)=esft_weight
+          END DO
           DO i=1, n_layer
             DO l=1, n_profile
-              flux_term(l, i+1)=flux_term(l, i)                         &
+              flux_direct_term(l, i)=flux_direct_term(l, i-1)           &
                 *EXP(-k_abs_layer(l, i, iex, i_abs_band)                &
                 *d_mass(l, i)/zen_0(l))
-              flux_gas(l, i)=flux_gas(l, i)+flux_term(l, i+1)
+              flux_gas(l, i)=flux_gas(l, i)+flux_direct_term(l, i)
             END DO
           END DO
         END IF
 
 !       Calculate the increment in the absorptive extinction
+        IF (control%l_spherical_solar) THEN
+          DO i=1, n_layer
+            DO l=1, n_profile
+              DO ii=n_layer+1,i,-1
+                ! Use the flux at the lowest lit layer as the weight
+                IF (bound%lit(l,ii) > 0.0_RealK) EXIT
+              END DO
+              sum_k_flux(l, i, j)=sum_k_flux(l, i, j)                 &
+                +k_abs_layer(l, i, iex, i_abs_band)                   &
+                *flux_direct_term(l, ii)
+              sum_flux(l, i, j)=sum_flux(l, i, j)                     &
+                +flux_direct_term(l, ii)
+              k_min(l, i)=MIN(k_min(l, i),                              &
+                k_abs_layer(l, i, iex, i_abs_band))
+            END DO
+          END DO          
+        ELSE
+          DO i=1, n_layer
+            DO l=1, n_profile
+              sum_k_flux(l, i, j)                                       &
+                =sum_k_flux(l, i, j)                                    &
+                +k_abs_layer(l, i, iex, i_abs_band)                     &
+                *flux_direct_term(l, n_layer)
+              k_min(l, i)=MIN(k_min(l, i),                              &
+                k_abs_layer(l, i, iex, i_abs_band))
+            END DO
+          END DO
+          DO l=1, n_profile
+            sum_flux(l, n_layer, j)                                     &
+              =sum_flux(l, n_layer, j)+flux_direct_term(l, n_layer)
+          END DO
+        END IF
+
+      END DO
+
+      IF (control%l_spherical_solar) THEN
         DO i=1, n_layer
           DO l=1, n_profile
-            sum_k_flux(l, i, j)                                         &
-              =sum_k_flux(l, i, j)                                      &
-              +k_abs_layer(l, i, iex, i_abs_band)                       &
-              *flux_term(l, n_layer+1)
-            k_min(l, i)=MIN(k_min(l, i),                                &
-              k_abs_layer(l, i, iex, i_abs_band))
+            IF (sum_flux(l, i, j) > eps) THEN
+              k_eqv(l, i)=k_eqv(l, i)                                   &
+                +sum_k_flux(l, i, j)/sum_flux(l, i, j)
+            ELSE
+              k_eqv(l, i)=k_eqv(l, i)+k_min(l, i)
+            END IF
+            IF (sph_flux_gas(l, i) > 0.0e+00_RealK) THEN
+!             If the flux arriving at a layer has been reduced to 0
+!             the adjusting factor is not of importance and need not
+!             be adjusted. This will prevent possible failures.
+              adjust_solar_ke(l, i)                                     &
+                =adjust_solar_ke(l, i)*flux_gas(l, i)                   &
+                /sph_flux_gas(l, i)
+            END IF
           END DO
         END DO
-        DO l=1, n_profile
-          sum_flux(l, n_layer, j)                                       &
-            =sum_flux(l, n_layer, j)+flux_term(l, n_layer+1)
+        DO ii=0,n_layer+1
+          DO l=1, n_profile
+            sph%common%adjust_solar_ke(l, ii)                           &
+              =sph%common%adjust_solar_ke(l, ii)*sph_flux_gas(l, ii)    &
+              /sum_weight
+          END DO
         END DO
-
-      END DO
-
-!     Set the equivalent extinction for the diffuse beam,
-!     weighting with the direct surface flux.
-      DO i=1, n_layer
-        DO l=1, n_profile
-          IF (sum_flux(l, n_layer, j) > 0.0e+00_RealK) THEN
-            k_eqv(l, i)=k_eqv(l, i)                                     &
-              +sum_k_flux(l, i, j)/sum_flux(l, n_layer, j)
-          ELSE
-            k_eqv(l, i)=k_eqv(l, i)+k_min(l, i)
-          END IF
-          IF (flux_gas(l, i-1) > 0.0e+00_RealK) THEN
-!           If the flux has been reduced to 0 at the upper
-!           level the adjusting factor is not of importance
-!           and need not be adjusted. this will prevent
-!           possible failures.
-            adjust_solar_ke(l, i)                                       &
-              =adjust_solar_ke(l, i)*flux_gas(l, i)                     &
-              /flux_gas(l, i-1)
-          END IF
+      ELSE
+!       Set the equivalent extinction for the diffuse beam,
+!       weighting with the direct surface flux.
+        DO i=1, n_layer
+          DO l=1, n_profile
+            IF (sum_flux(l, n_layer, j) > 0.0e+00_RealK) THEN
+              k_eqv(l, i)=k_eqv(l, i)                                   &
+                +sum_k_flux(l, i, j)/sum_flux(l, n_layer, j)
+            ELSE
+              k_eqv(l, i)=k_eqv(l, i)+k_min(l, i)
+            END IF
+            IF (flux_gas(l, i-1) > 0.0e+00_RealK) THEN
+!             If the flux has been reduced to 0 at the upper
+!             level the adjusting factor is not of importance
+!             and need not be adjusted. This will prevent
+!             possible failures.
+              adjust_solar_ke(l, i)                                     &
+                =adjust_solar_ke(l, i)*flux_gas(l, i)                   &
+                /flux_gas(l, i-1)
+            END IF
+          END DO
         END DO
-      END DO
+      END IF
 
     END DO
 
@@ -682,7 +805,34 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 !   increase the transmission of the solar beam to compensate.
 !   This may overflow for very large zenith angles (where the
 !   transmission is effectively zero) so we restrict to a max value.
-    IF (i_angular_integration == ip_two_stream) THEN
+    IF (control%l_spherical_solar) THEN
+      ! Correction for the spherical path to each layer
+      DO ii=0,n_layer+1
+        DO l=1,n_profile
+          path_base = sph%common%path_base(l, ii)
+          temp(l) = SUM( k_eqv(l, 1:path_base) &
+            * sph_mass_path(l, 1:path_base, ii) )
+          temp(l)=MIN(temp(l),temp_max_sph)
+        END DO
+        CALL exp_v(n_profile,temp,temp_exp)
+        DO l=1,n_profile
+          sph%common%adjust_solar_ke(l,ii) &
+            = sph%common%adjust_solar_ke(l,ii)*temp_exp(l)
+        END DO
+      END DO
+      DEALLOCATE(sph_mass_path)
+      ! Correction for the path through each layer
+      DO i=1, n_layer
+        DO l=1, n_profile
+          temp(l) = MIN(k_eqv(l,i)*d_mass(l,i)*sph%common%path_div(l,i), &
+            temp_max_sph)
+        END DO
+        CALL exp_v(n_profile,temp,temp_exp)
+        DO l=1,n_profile
+          adjust_solar_ke(l,i) = adjust_solar_ke(l,i)*temp_exp(l)
+        END DO
+      END DO
+    ELSE IF (i_angular_integration == ip_two_stream) THEN
       DO i=1, n_layer
         DO l=1, n_profile
            temp(l) = MIN(k_eqv(l,i)*d_mass(l,i)*zen_0(l),temp_max)
@@ -761,9 +911,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
           END DO
         END DO
 
-!       Calculate the fluxes with just this gas. flux_term is
-!       passed to both the direct and total fluxes as we do
-!       not calculate any direct flux here.
+!       Calculate the fluxes with just this gas.
 ! DEPENDS ON: monochromatic_gas_flux
         CALL monochromatic_gas_flux(n_profile, n_layer                  &
           , tau_gas                                                     &
@@ -771,7 +919,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
           , diff_planck_band, d_planck_flux_surface                     &
           , diffuse_albedo, diffuse_albedo                              &
           , diffusivity_factor_minor                                    &
-          , flux_term, flux_term                                        &
+          , flux_direct_term, flux_term                                 &
           , nd_profile, nd_layer                                        &
           )
 
@@ -855,11 +1003,19 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 
       IF (isolir == ip_solar) THEN
 !       Solar region.
-        DO l=1, n_profile
-          d_planck_flux_surface(l)=0.0e+00_RealK
-          flux_inc_down(l)=solar_irrad(l)/zen_0(l)
-          flux_inc_direct(l)=solar_irrad(l)/zen_0(l)
-        END DO
+        IF (control%l_spherical_solar) THEN
+          DO l=1, n_profile
+            d_planck_flux_surface(l) = 0.0e+00_RealK
+            flux_inc_down(l)         = 0.0e+00_RealK
+            flux_inc_direct(l)       = 0.0e+00_RealK
+          END DO
+        ELSE
+          DO l=1, n_profile
+            d_planck_flux_surface(l)=0.0e+00_RealK
+            flux_inc_down(l)=solar_irrad(l)/zen_0(l)
+            flux_inc_direct(l)=solar_irrad(l)/zen_0(l)
+          END DO
+        END IF
       ELSE IF (isolir == ip_infra_red) THEN
 !       Infra-red region.
         DO l=1, n_profile
@@ -937,6 +1093,8 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
         , d_planck_flux_surface                                         &
         , ls_brdf_trunc, n_brdf_basis_fnc, rho_alb                      &
         , f_brdf, brdf_sol, brdf_hemi                                   &
+!                   Spherical geometry
+        , sph                                                           &
 !                   Optical properties
         , ss_prop                                                       &
 !                   Cloudy properties
@@ -1010,6 +1168,8 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
         , d_planck_flux_surface                                         &
         , ls_brdf_trunc, n_brdf_basis_fnc, rho_alb                      &
         , f_brdf, brdf_sol, brdf_hemi                                   &
+!                   Spherical geometry
+        , sph                                                           &
 !                   Optical properties
         , ss_prop                                                       &
 !                   Cloudy properties
@@ -1056,16 +1216,20 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
       , n_viewing_level, n_direction                                    &
       , isolir, l_clear, l_initial, weight_incr                         &
       , l_blue_flux_surf, weight_blue_incr                              &
+      , control%l_spherical_solar                                       &
 !                   Actual radiances
       , flux_direct, flux_down, flux_up                                 &
+      , flux_direct_sph, flux_direct_div                                &
       , flux_direct_blue_surf                                           &
       , flux_down_blue_surf, flux_up_blue_surf                          &
       , i_direct, radiance, photolysis                                  &
       , flux_direct_clear, flux_down_clear, flux_up_clear               &
+      , flux_direct_clear_sph, flux_direct_clear_div                    &
 !                   Increments to radiances
       , flux_direct_part, flux_total_part                               &
       , i_direct_part, radiance_part, photolysis_part                   &
       , flux_direct_clear_part, flux_total_clear_part                   &
+      , sph                                                             &
 !                   Dimensions
       , nd_flux_profile, nd_radiance_profile, nd_j_profile              &
       , nd_layer, nd_viewing_level, nd_direction                        &
@@ -1073,17 +1237,31 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 
 !   Add in the increments from surface tiles
     IF (l_tile) THEN
+      IF ( (i_angular_integration == ip_two_stream).OR.                 &
+           (i_angular_integration == ip_ir_gauss) ) THEN
+        IF (control%l_spherical_solar) THEN
+          DO l=1, n_profile
+            flux_direct_ground_part(l)                                  &
+              = sph%allsky%flux_direct(l, n_layer+1)
+          END DO
+        ELSE
+          DO l=1, n_profile
+            flux_direct_ground_part(l) = flux_direct_part(l, n_layer)
+          END DO          
+        END IF
+      END IF
 ! DEPENDS ON: augment_tiled_radiance
       CALL augment_tiled_radiance(ierr                                  &
         , n_point_tile, n_tile, list_tile                               &
         , i_angular_integration, isolir, l_initial                      &
         , weight_incr, l_blue_flux_surf, weight_blue_incr               &
+        , control%l_spherical_solar                                     &
 !                   Surface characteristics
         , rho_alb_tile                                                  &
 !                   Actual radiances
         , flux_up_tile, flux_up_blue_tile                               &
 !                   Increments to radiances
-        , flux_direct_part(1, n_layer)                                  &
+        , flux_direct_ground_part                                       &
         , flux_total_part(1, 2*n_layer+2)                               &
         , planck_flux_tile, planck_flux_band(1, n_layer)                &
 !                   Dimensions
