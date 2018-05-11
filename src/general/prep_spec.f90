@@ -141,8 +141,9 @@ PROGRAM prep_spec
 
   DO
 !   Now decide which blocks are to be written.
-    WRITE(*, '(/a/,13(6x, a/),/)')                                      &
+    WRITE(*, '(/a/,14(6x, a/),/)')                                      &
       'Select from the following types of data:',                       &
+      '0.   Block 0: Change number of bands.',                          &
       '2.   Block 2: Solar spectrum in each band.',                     &
       '3.   Block 3: Rayleigh scattering in each band.',                &
       '5.   Block 5: k-terms and p, T scaling data.',                   &
@@ -178,6 +179,8 @@ PROGRAM prep_spec
 !     Write out the spectral file.
       CALL out_spectrum(file_spectral, Spectrum, ierr)
       EXIT
+    CASE(0)
+      CALL change_block_0(Spectrum)
     CASE(2)
       CALL make_block_2(Spectrum, SolarSpec, ierr)
     CASE(3)

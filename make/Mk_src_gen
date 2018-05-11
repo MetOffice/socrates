@@ -2,6 +2,7 @@ SOURCE90_GEN =	d_planck_90.f90 \
 		fit_parabola_90.f90 \
 		get_free_unit.f90 \
 		line_search_90.f90 \
+		change_block_0.f90 \
 		make_block_0.f90 \
 		make_block_1.f90 \
 		make_block_2.f90 \

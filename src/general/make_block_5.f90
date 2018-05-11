@@ -58,6 +58,15 @@ SUBROUTINE make_block_5(Spectrum, ierr)
   INTEGER, POINTER :: nd_scale_variable
 !   Size allocated for scaling variables
 
+  INTEGER :: nd_k_term_alloc
+!   Previously allocated size for k-terms
+  INTEGER, ALLOCATABLE :: arr_tmp_int_3d(:, :, :)
+  REAL (RealK), ALLOCATABLE :: arr_tmp_real_3d(:, :, :)
+  REAL (RealK), ALLOCATABLE :: arr_tmp_real_4d(:, :, :, :)
+  REAL (RealK), ALLOCATABLE :: arr_tmp_real_5d(:, :, :, :, :)
+  REAL (RealK), ALLOCATABLE :: arr_tmp_real_6d(:, :, :, :, :, :)
+!   Temporary arrays used when resizing existing arrays
+
 ! Alias pointers to dimensions to the actual structure.
   nd_band            => Spectrum%Dim%nd_band
   nd_k_term          => Spectrum%Dim%nd_k_term
@@ -209,6 +218,64 @@ SUBROUTINE make_block_5(Spectrum, ierr)
       Spectrum%Gas%i_band_k(i_band, i_index),                           &
       Spectrum%Gas%i_scale_k(i_band, i_index),                          &
       Spectrum%Gas%i_scale_fnc(i_band, i_index)
+
+!   Resize arrays if the number of k-terms is greater than that allocated
+    nd_k_term_alloc = nd_k_term
+    IF (Spectrum%Gas%i_band_k(i_band, i_index) > nd_k_term_alloc) THEN
+      nd_k_term = Spectrum%Gas%i_band_k(i_band, i_index)
+
+      ALLOCATE(arr_tmp_int_3d(nd_k_term_alloc, nd_band, nd_species))
+      arr_tmp_int_3d = Spectrum%Gas%i_scat
+      DEALLOCATE(Spectrum%Gas%i_scat)
+      ALLOCATE(Spectrum%Gas%i_scat(nd_k_term, nd_band, nd_species))
+      Spectrum%Gas%i_scat(1:nd_k_term_alloc,:,:) = arr_tmp_int_3d
+      DEALLOCATE(arr_tmp_int_3d)
+
+      ALLOCATE(arr_tmp_real_3d(nd_k_term_alloc, nd_band, nd_species))   
+      arr_tmp_real_3d = Spectrum%Gas%k
+      DEALLOCATE(Spectrum%Gas%k)
+      ALLOCATE(Spectrum%Gas%k(nd_k_term, nd_band, nd_species))
+      Spectrum%Gas%k(1:nd_k_term_alloc,:,:) = arr_tmp_real_3d
+      arr_tmp_real_3d = Spectrum%Gas%w
+      DEALLOCATE(Spectrum%Gas%w)
+      ALLOCATE(Spectrum%Gas%w(nd_k_term, nd_band, nd_species))
+      Spectrum%Gas%w(1:nd_k_term_alloc,:,:) = arr_tmp_real_3d
+      DEALLOCATE(arr_tmp_real_3d)
+
+      ALLOCATE(arr_tmp_real_4d(nd_scale_variable, nd_k_term_alloc, &
+        nd_band, nd_species))
+      arr_tmp_real_4d = Spectrum%Gas%scale
+      DEALLOCATE(Spectrum%Gas%scale)
+      ALLOCATE(Spectrum%Gas%scale(nd_scale_variable, nd_k_term, &
+        nd_band, nd_species))
+      Spectrum%Gas%scale(:,1:nd_k_term_alloc,:,:) = arr_tmp_real_4d
+      DEALLOCATE(arr_tmp_real_4d)
+
+      IF (ALLOCATED(Spectrum%Gas%k_lookup)) THEN
+        ALLOCATE(arr_tmp_real_5d(Spectrum%Dim%nd_tmp, &
+          Spectrum%Dim%nd_pre, nd_k_term_alloc, nd_species, nd_band))
+        arr_tmp_real_5d = Spectrum%Gas%k_lookup
+        DEALLOCATE(Spectrum%Gas%k_lookup)
+        ALLOCATE(Spectrum%Gas%k_lookup( Spectrum%Dim%nd_tmp, &
+          Spectrum%Dim%nd_pre, nd_k_term, nd_species, nd_band))
+        Spectrum%Gas%k_lookup(:,:,1:nd_k_term_alloc,:,:) = arr_tmp_real_5d
+        DEALLOCATE(arr_tmp_real_5d)
+      END IF
+
+      IF (ALLOCATED(Spectrum%Gas%k_lookup_sb)) THEN
+        ALLOCATE(arr_tmp_real_6d(Spectrum%Dim%nd_tmp, &
+          Spectrum%Dim%nd_pre, Spectrum%Dim%nd_gas_frac, &
+          nd_k_term_alloc, nd_species, nd_band))
+        arr_tmp_real_6d = Spectrum%Gas%k_lookup_sb
+        DEALLOCATE(Spectrum%Gas%k_lookup_sb)
+        ALLOCATE(Spectrum%Gas%k_lookup_sb(Spectrum%Dim%nd_tmp, &
+          Spectrum%Dim%nd_pre, Spectrum%Dim%nd_gas_frac, &
+          nd_k_term, nd_species, nd_band))
+        Spectrum%Gas%k_lookup_sb(:,:,:,1:nd_k_term_alloc,:,:) = arr_tmp_real_6d
+        DEALLOCATE(arr_tmp_real_6d)
+      END IF
+    END IF
+
     DO k=1, Spectrum%Gas%i_band_k(i_band, i_index)
       READ(iu_esft, '(2(3x, 1pe16.9), (t39, 2(3x, 1pe16.9)))')          &
         Spectrum%Gas%k(k, i_band, i_index),                             &
