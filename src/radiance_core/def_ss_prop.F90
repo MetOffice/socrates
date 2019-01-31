@@ -4,7 +4,7 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Module to define the elements of single scattering properties
+! Module to define the elements of single scattering properties
 !
 ! Description:
 !   This module defines the components of the structure of single
@@ -23,9 +23,6 @@
 !   (profiles, top-most cloudy layer: bottom layer, 1:cloud types)
 !   would be possible. Which is more convenient depends on the
 !   algorithms for cloud overlap.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
 !
 !- ---------------------------------------------------------------------
 MODULE def_ss_prop
@@ -107,4 +104,140 @@ MODULE def_ss_prop
   END TYPE STR_ss_prop
 
 
+CONTAINS
+
+  SUBROUTINE allocate_ss_prop(ss_prop, dimen)
+
+    USE def_dimen
+
+    IMPLICIT NONE
+
+    TYPE (str_ss_prop), INTENT(INOUT) :: ss_prop
+    TYPE (StrDim),      INTENT(IN)    :: dimen
+    
+    ALLOCATE(ss_prop%k_grey_tot_clr                                            &
+      (dimen%nd_profile, dimen%nd_layer_clr))
+    ALLOCATE(ss_prop%k_ext_scat_clr                                            &
+      (dimen%nd_profile, dimen%nd_layer_clr))
+    ALLOCATE(ss_prop%phase_fnc_clr                                             &
+      (dimen%nd_profile, dimen%nd_layer_clr, dimen%nd_max_order))
+    ALLOCATE(ss_prop%forward_scatter_clr                                       &
+      (dimen%nd_profile, dimen%nd_layer_clr))
+    ALLOCATE(ss_prop%forward_scatter_clr_csr                                   &
+      (dimen%nd_profile, dimen%nd_layer_clr))
+    ALLOCATE(ss_prop%phase_fnc_solar_clr                                       &
+      (dimen%nd_radiance_profile, dimen%nd_layer_clr, dimen%nd_direction))
+    ALLOCATE(ss_prop%forward_solar_clr                                         &
+      (dimen%nd_radiance_profile, dimen%nd_layer_clr))
+
+    ALLOCATE(ss_prop%tau_clr                                                   &
+      (dimen%nd_profile, dimen%nd_layer_clr))
+    ALLOCATE(ss_prop%tau_clr_dir                                               &
+      (dimen%nd_profile, dimen%nd_layer_clr))
+    ALLOCATE(ss_prop%omega_clr                                                 &
+      (dimen%nd_profile, dimen%nd_layer_clr))
+
+    ALLOCATE(ss_prop%k_grey_tot                                                &
+      (dimen%nd_profile, dimen%id_cloud_top: dimen%nd_layer,                   &
+       0: dimen%nd_cloud_type))
+    ALLOCATE(ss_prop%k_ext_scat                                                &
+      (dimen%nd_profile, dimen%id_cloud_top: dimen%nd_layer,                   &
+       0: dimen%nd_cloud_type))
+    ALLOCATE(ss_prop%phase_fnc                                                 &
+      (dimen%nd_profile, dimen%id_cloud_top: dimen%nd_layer,                   &
+       dimen%nd_max_order,                                                     &
+       0: dimen%nd_cloud_type))
+    ALLOCATE(ss_prop%forward_scatter                                           &
+      (dimen%nd_profile, dimen%id_cloud_top: dimen%nd_layer,                   &
+       0: dimen%nd_cloud_type))
+    ALLOCATE(ss_prop%forward_scatter_csr                                       &
+      (dimen%nd_profile, dimen%id_cloud_top: dimen%nd_layer,                   &
+       0: dimen%nd_cloud_type))
+    ALLOCATE(ss_prop%phase_fnc_solar                                           &
+      (dimen%nd_radiance_profile, dimen%id_cloud_top: dimen%nd_layer,          &
+       dimen%nd_direction,                                                     &
+       0: dimen%nd_cloud_type))
+    ALLOCATE(ss_prop%forward_solar                                             &
+      (dimen%nd_radiance_profile, dimen%id_cloud_top: dimen%nd_layer,          &
+       0: dimen%nd_cloud_type))
+
+    ALLOCATE(ss_prop%tau                                                       &
+      (dimen%nd_profile, dimen%id_cloud_top: dimen%nd_layer,                   &
+       0: dimen%nd_cloud_type))
+    ALLOCATE(ss_prop%tau_dir                                                   &
+      (dimen%nd_profile, dimen%id_cloud_top: dimen%nd_layer,                   &
+       0: dimen%nd_cloud_type))
+    ALLOCATE(ss_prop%omega                                                     &
+      (dimen%nd_profile, dimen%id_cloud_top: dimen%nd_layer,                   &
+       0: dimen%nd_cloud_type))
+
+    ALLOCATE(ss_prop%k_ext_tot_cloud_comp                                      &
+      (dimen%nd_profile, dimen%id_cloud_top: dimen%nd_layer,                   &
+       0: dimen%nd_cloud_component))
+    ALLOCATE(ss_prop%k_ext_scat_cloud_comp                                     &
+      (dimen%nd_profile, dimen%id_cloud_top: dimen%nd_layer,                   &
+       0: dimen%nd_cloud_component))
+    ALLOCATE(ss_prop%phase_fnc_cloud_comp                                      &
+      (dimen%nd_profile, dimen%id_cloud_top: dimen%nd_layer,                   &
+       dimen%nd_max_order,                                                     &
+       0: dimen%nd_cloud_component))
+    ALLOCATE(ss_prop%forward_scatter_cloud_comp                                &
+      (dimen%nd_profile, dimen%id_cloud_top: dimen%nd_layer,                   &
+       0: dimen%nd_cloud_component))
+    ALLOCATE(ss_prop%phase_fnc_solar_cloud_comp                                &
+      (dimen%nd_radiance_profile, dimen%id_cloud_top: dimen%nd_layer,          &
+       dimen%nd_direction,                                                     &
+       0: dimen%nd_cloud_component))
+    ALLOCATE(ss_prop%forward_solar_cloud_comp                                  &
+      (dimen%nd_radiance_profile, dimen%id_cloud_top: dimen%nd_layer,          &
+       0: dimen%nd_cloud_component))
+
+    ALLOCATE(ss_prop%phase_fnc_no_cloud                                        &
+      (dimen%nd_profile, dimen%id_cloud_top: dimen%nd_layer,                   &
+       dimen%nd_max_order))
+    ALLOCATE(ss_prop%forward_scatter_no_cloud                                  &
+      (dimen%nd_profile, dimen%id_cloud_top: dimen%nd_layer))
+
+  END SUBROUTINE allocate_ss_prop
+
+  SUBROUTINE deallocate_ss_prop(ss_prop)
+
+    IMPLICIT NONE
+
+    TYPE (str_ss_prop), INTENT(INOUT) :: ss_prop
+
+    DEALLOCATE(ss_prop%forward_scatter_no_cloud)
+    DEALLOCATE(ss_prop%phase_fnc_no_cloud)
+
+    DEALLOCATE(ss_prop%forward_solar_cloud_comp)
+    DEALLOCATE(ss_prop%phase_fnc_solar_cloud_comp)
+    DEALLOCATE(ss_prop%forward_scatter_cloud_comp)
+    DEALLOCATE(ss_prop%phase_fnc_cloud_comp)
+    DEALLOCATE(ss_prop%k_ext_scat_cloud_comp)
+    DEALLOCATE(ss_prop%k_ext_tot_cloud_comp)
+
+    DEALLOCATE(ss_prop%omega)
+    DEALLOCATE(ss_prop%tau)
+    DEALLOCATE(ss_prop%tau_dir)
+    DEALLOCATE(ss_prop%forward_solar)
+    DEALLOCATE(ss_prop%phase_fnc_solar)
+    DEALLOCATE(ss_prop%forward_scatter)
+    DEALLOCATE(ss_prop%forward_scatter_csr)
+    DEALLOCATE(ss_prop%phase_fnc)
+    DEALLOCATE(ss_prop%k_ext_scat)
+    DEALLOCATE(ss_prop%k_grey_tot)
+
+    DEALLOCATE(ss_prop%omega_clr)
+    DEALLOCATE(ss_prop%tau_clr)
+    DEALLOCATE(ss_prop%tau_clr_dir)   
+
+    DEALLOCATE(ss_prop%forward_solar_clr)
+    DEALLOCATE(ss_prop%phase_fnc_solar_clr)
+    DEALLOCATE(ss_prop%forward_scatter_clr)
+    DEALLOCATE(ss_prop%forward_scatter_clr_csr)
+    DEALLOCATE(ss_prop%phase_fnc_clr)
+    DEALLOCATE(ss_prop%k_ext_scat_clr)
+    DEALLOCATE(ss_prop%k_grey_tot_clr)
+
+  END SUBROUTINE deallocate_ss_prop
 END MODULE def_ss_prop

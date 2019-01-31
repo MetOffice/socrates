@@ -13,15 +13,11 @@
 !   can be called to initialize fluxes.
 !
 !- ---------------------------------------------------------------------
-SUBROUTINE augment_tiled_radiance(ierr                                  &
+SUBROUTINE augment_tiled_radiance(control, radout, i_band               &
     , n_point_tile, n_tile, list_tile                                   &
-    , i_angular_integration, isolir, l_initial                          &
-    , weight_incr, l_blue_flux_surf, weight_blue_incr                   &
-    , l_spherical_solar                                                 &
+    , l_initial, weight_incr, weight_blue_incr                          &
 !                 Surface characteristics
     , rho_alb                                                           &
-!                 Actual radiances
-    , flux_up_tile, flux_up_blue_tile                                   &
 !                 Increments to radiances
     , flux_direct_incr, flux_down_incr                                  &
     , planck_flux_tile, planck_flux_air                                 &
@@ -32,6 +28,8 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
 
 
   USE realtype_rd, ONLY: RealK
+  USE def_control, ONLY: StrCtrl
+  USE def_out,     ONLY: StrOut
   USE rad_pcf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
@@ -40,6 +38,12 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
 
   IMPLICIT NONE
 
+
+! Control options:
+  TYPE(StrCtrl), INTENT(IN)    :: control
+
+! Output fields:
+  TYPE(StrOut),  INTENT(INOUT) :: radout
 
 ! Sizes of dummy arrays.
   INTEGER, INTENT(IN) ::                                                &
@@ -53,9 +57,9 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
 !       Size allocated for BRDF basis functions
 
 ! Dummy arguments.
-  INTEGER, INTENT(INOUT) ::                                             &
-      ierr
-!       Error flag
+  INTEGER, INTENT(IN) ::                                                &
+      i_band
+!       Band being considered
 
   INTEGER, INTENT(IN) ::                                                &
       n_point_tile                                                      &
@@ -64,18 +68,9 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
 !       Number of tiles used
     , list_tile(nd_point_tile)
 !       List of tiled points
-  INTEGER, INTENT(IN) ::                                                &
-      isolir                                                            &
-!       Spectral region
-    , i_angular_integration
-!       Treatment of angular integration
   LOGICAL, INTENT(IN) ::                                                &
-      l_initial                                                         &
+      l_initial
 !       Flag to call the routine to initialize the outputs
-    , l_blue_flux_surf                                                  &
-!       Flag to increment blue surface fluxes
-    , l_spherical_solar
-!       Spherical geometry for the direct beam
   REAL (RealK), INTENT(IN) ::                                           &
       weight_incr                                                       &
 !       Weight to apply to increments
@@ -101,15 +96,6 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
     , planck_flux_air(nd_flux_profile)
 !       Hemispheric Planckian flux at the temperature of the air
 
-!                 Total Fluxes
-  REAL (RealK), INTENT(INOUT) ::                                        &
-      flux_up_tile(nd_point_tile, nd_tile)                              &
-!       Local upward flux on each tile (not weighted by the
-!       fractional coverage of the tile)
-    , flux_up_blue_tile(nd_point_tile, nd_tile)
-!       Local upward blue flux on each tile (not weighted by the
-!       fractional coverage of the tile)
-
 
 ! Local arguments.
   INTEGER                                                               &
@@ -123,7 +109,8 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
-  CHARACTER (LEN=errormessagelength)           :: cmessage
+  INTEGER :: ierr
+  CHARACTER (LEN=errormessagelength) :: cmessage
   CHARACTER (LEN=*), PARAMETER  :: RoutineName = 'AUGMENT_TILED_RADIANCE'
 
 
@@ -134,29 +121,31 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
 !   Most commonly, this routine will be called to increment
 !   rather than to initialize fluxes.
 
-    IF ( (i_angular_integration == ip_two_stream).OR.                   &
-         (i_angular_integration == ip_ir_gauss) ) THEN
+    IF ( (control%i_angular_integration == ip_two_stream).OR. &
+         (control%i_angular_integration == ip_ir_gauss) ) THEN
 
 !     Increment the actual fluxes.
-      IF (isolir == ip_solar) THEN
+      IF (control%isolir == ip_solar) THEN
 
-        IF (l_spherical_solar) THEN
+        IF (control%l_spherical_solar) THEN
           DO k=1, n_tile
             DO ll=1, n_point_tile
               l=list_tile(ll)
-              flux_up_tile(ll, k)=flux_up_tile(ll, k)                   &
-                +weight_incr                                            &
-                *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l)    &
+              radout%flux_up_tile(ll, k, control%map_channel(i_band)) &
+                = radout%flux_up_tile(ll, k, control%map_channel(i_band)) &
+                + weight_incr &
+                *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l) &
                 + rho_alb(ll, ip_surf_alb_dir, k)*flux_direct_incr(l))
             END DO
           END DO  
-          IF (l_blue_flux_surf) THEN
+          IF (control%l_blue_flux_surf) THEN
             DO k=1, n_tile
               DO ll=1, n_point_tile
                 l=list_tile(ll)
-                flux_up_blue_tile(ll, k)=flux_up_blue_tile(ll, k)       &
-                  +weight_blue_incr                                     &
-                  *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l)  &
+                radout%flux_up_blue_tile(ll, k, control%map_channel(i_band)) &
+                  = radout%flux_up_blue_tile(ll,k,control%map_channel(i_band)) &
+                  + weight_blue_incr &
+                  *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l) &
                   + rho_alb(ll, ip_surf_alb_dir, k)*flux_direct_incr(l))
               END DO
             END DO
@@ -165,36 +154,38 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
           DO k=1, n_tile
             DO ll=1, n_point_tile
               l=list_tile(ll)
-              flux_up_tile(ll, k)=flux_up_tile(ll, k)                   &
-                +weight_incr                                            &
-                *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l)    &
-                +(rho_alb(ll, ip_surf_alb_dir, k)                       &
-                -rho_alb(ll, ip_surf_alb_diff, k))                      &
-                *flux_direct_incr(l))
+              radout%flux_up_tile(ll, k, control%map_channel(i_band)) &
+                = radout%flux_up_tile(ll, k, control%map_channel(i_band)) &
+                + weight_incr &
+                *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l) &
+                +(rho_alb(ll, ip_surf_alb_dir, k) &
+                - rho_alb(ll, ip_surf_alb_diff, k)) &
+                * flux_direct_incr(l))
             END DO
           END DO
-          IF (l_blue_flux_surf) THEN
+          IF (control%l_blue_flux_surf) THEN
             DO k=1, n_tile
               DO ll=1, n_point_tile
                 l=list_tile(ll)
-                flux_up_blue_tile(ll, k)=flux_up_blue_tile(ll, k)       &
-                  +weight_blue_incr                                     &
-                  *(rho_alb(ll, ip_surf_alb_diff, k)                    &
-                  *flux_down_incr(l)                                    &
-                  +(rho_alb(ll, ip_surf_alb_dir, k)                     &
-                  -rho_alb(ll, ip_surf_alb_diff, k))                    &
-                  *flux_direct_incr(l))
+                radout%flux_up_blue_tile(ll, k, control%map_channel(i_band)) &
+                  = radout%flux_up_blue_tile(ll,k,control%map_channel(i_band)) &
+                  + weight_blue_incr &
+                  *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l) &
+                  +(rho_alb(ll, ip_surf_alb_dir, k) &
+                  - rho_alb(ll, ip_surf_alb_diff, k)) &
+                  * flux_direct_incr(l))
               END DO
             END DO
           END IF
         END IF
 
-      ELSE IF (isolir == ip_infra_red) THEN
+      ELSE IF (control%isolir == ip_infra_red) THEN
 
         DO k=1, n_tile
           DO ll=1, n_point_tile
             l=list_tile(ll)
-            flux_up_tile(ll, k)=flux_up_tile(ll, k)                     &
+            radout%flux_up_tile(ll, k, control%map_channel(i_band))     &
+              =radout%flux_up_tile(ll, k, control%map_channel(i_band))  &
               +weight_incr*(planck_flux_tile(ll, k)                     &
               +rho_alb(ll, ip_surf_alb_diff, k)                         &
               *(flux_down_incr(l)                                       &
@@ -203,7 +194,7 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
         END DO
       END IF
 
-    ELSE IF (i_angular_integration == ip_spherical_harmonic) THEN
+    ELSE IF (control%i_angular_integration == ip_spherical_harmonic) THEN
 
       cmessage = '*** Error: Tiled surfaces have not yet been ' //      &
         'implemented with the spherical harmonic solver.'
@@ -216,27 +207,29 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
 
 !   Initialization of the radiance field takes place here.
 
-    IF ( (i_angular_integration == ip_two_stream).OR.                   &
-         (i_angular_integration == ip_ir_gauss) ) THEN
+    IF ( (control%i_angular_integration == ip_two_stream).OR. &
+         (control%i_angular_integration == ip_ir_gauss) ) THEN
 
 !     Initialize the actual fluxes.
-      IF (isolir == ip_solar) THEN
+      IF (control%isolir == ip_solar) THEN
 
-        IF (l_spherical_solar) THEN
+        IF (control%l_spherical_solar) THEN
           DO k=1, n_tile
             DO ll=1, n_point_tile
               l=list_tile(ll)
-              flux_up_tile(ll, k)=weight_incr                           &
-                *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l)    &
+              radout%flux_up_tile(ll, k, control%map_channel(i_band)) &
+                = weight_incr &
+                *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l) &
                 + rho_alb(ll, ip_surf_alb_dir, k)*flux_direct_incr(l))
             END DO
           END DO
-          IF (l_blue_flux_surf) THEN
+          IF (control%l_blue_flux_surf) THEN
             DO k=1, n_tile
               DO ll=1, n_point_tile
                 l=list_tile(ll)
-                flux_up_blue_tile(ll, k)=weight_blue_incr               &
-                  *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l)  &
+                radout%flux_up_blue_tile(ll, k, control%map_channel(i_band)) &
+                  = weight_blue_incr &
+                  *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l) &
                   + rho_alb(ll, ip_surf_alb_dir, k)*flux_direct_incr(l))
               END DO
             END DO
@@ -245,34 +238,35 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
           DO k=1, n_tile
             DO ll=1, n_point_tile
               l=list_tile(ll)
-              flux_up_tile(ll, k)=weight_incr                           &
-                *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l)    &
-                +(rho_alb(ll, ip_surf_alb_dir, k)                       &
-                -rho_alb(ll, ip_surf_alb_diff, k))                      &
-                *flux_direct_incr(l))
+              radout%flux_up_tile(ll, k, control%map_channel(i_band)) &
+                = weight_incr &
+                *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l) &
+                +(rho_alb(ll, ip_surf_alb_dir, k) &
+                - rho_alb(ll, ip_surf_alb_diff, k)) &
+                * flux_direct_incr(l))
             END DO
           END DO
-          IF (l_blue_flux_surf) THEN
+          IF (control%l_blue_flux_surf) THEN
             DO k=1, n_tile
               DO ll=1, n_point_tile
                 l=list_tile(ll)
-                flux_up_blue_tile(ll, k)                                &
-                  =weight_blue_incr*(rho_alb(ll, ip_surf_alb_diff, k)   &
-                  *flux_down_incr(l)                                    &
-                  +(rho_alb(ll, ip_surf_alb_dir, k)                     &
-                  -rho_alb(ll, ip_surf_alb_diff, k))                    &
-                  *flux_direct_incr(l))
+                radout%flux_up_blue_tile(ll, k, control%map_channel(i_band)) &
+                  = weight_blue_incr &
+                  *(rho_alb(ll, ip_surf_alb_diff, k)*flux_down_incr(l) &
+                  +(rho_alb(ll, ip_surf_alb_dir, k) &
+                  - rho_alb(ll, ip_surf_alb_diff, k)) &
+                  * flux_direct_incr(l))
               END DO
             END DO
           END IF
         END IF
 
-      ELSE IF (isolir == ip_infra_red) THEN
+      ELSE IF (control%isolir == ip_infra_red) THEN
 
         DO k=1, n_tile
           DO ll=1, n_point_tile
             l=list_tile(ll)
-            flux_up_tile(ll, k)                                         &
+            radout%flux_up_tile(ll, k, control%map_channel(i_band))     &
               =weight_incr*(planck_flux_tile(ll, k)                     &
               +rho_alb(ll, ip_surf_alb_diff, k)                         &
               *(flux_down_incr(l)                                       &
@@ -282,7 +276,7 @@ SUBROUTINE augment_tiled_radiance(ierr                                  &
 
       END IF
 
-    ELSE IF (i_angular_integration == ip_spherical_harmonic) THEN
+    ELSE IF (control%i_angular_integration == ip_spherical_harmonic) THEN
 
       cmessage = '*** Error: Tiled surfaces have not yet been ' //      &
         'implemented with the spherical harmonic solver.'

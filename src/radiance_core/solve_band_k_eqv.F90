@@ -13,7 +13,7 @@
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE solve_band_k_eqv(ierr                                        &
-    , control, dimen, cld, bound                                        &
+    , control, dimen, cld, bound, radout                                &
 !                   Atmospheric properties
     , n_profile, n_layer, i_top, p, t, d_mass                           &
 !                   Angular integration
@@ -70,24 +70,12 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
     , n_direction, direction                                            &
 !                   Weighting factor for the band
     , weight_band, l_initial                                            &
-!                   Fluxes calculated
-    , flux_direct, flux_down, flux_up                                   &
-    , flux_direct_sph, flux_direct_div                                  &
 !                   Radiances
-    , i_direct, radiance                                                &
-!                   Rate of photolysis
-    , photolysis                                                        &
+    , i_direct                                                          &
 !                   Flags for clear-sky fluxes
     , l_clear, i_solver_clear                                           &
-!                   Clear-sky fluxes calculated
-    , flux_direct_clear, flux_down_clear, flux_up_clear                 &
-    , flux_direct_clear_sph, flux_direct_clear_div                      &
-!                   Tiled surface fluxes
-    , flux_up_tile, flux_up_blue_tile                                   &
 !                   Special surface fluxes
     , l_blue_flux_surf, weight_blue                                     &
-    , flux_direct_blue_surf                                             &
-    , flux_down_blue_surf, flux_up_blue_surf                            &
 !                   Dimensions of arrays
     , nd_profile, nd_layer, nd_layer_clr, id_ct, nd_column              &
     , nd_flux_profile, nd_radiance_profile, nd_j_profile                &
@@ -106,6 +94,7 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
   USE def_dimen,   ONLY: StrDim
   USE def_cld,     ONLY: StrCld
   USE def_bound,   ONLY: StrBound
+  USE def_out,     ONLY: StrOut
   USE def_ss_prop
   USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf
@@ -128,6 +117,9 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
 
 ! Boundary conditions:
   TYPE(StrBound),     INTENT(IN)    :: bound
+
+! Output fields:
+  TYPE(StrOut),       INTENT(INOUT) :: radout
 
 ! Sizes of dummy arrays.
   INTEGER, INTENT(IN) ::                                                &
@@ -436,29 +428,10 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
       direction(nd_radiance_profile, nd_direction, 2)
 !       Viewing directions
 
-!                   Calculated fluxes
-  REAL (RealK), INTENT(INOUT) ::                                        &
-      flux_direct(nd_flux_profile, 0: nd_layer)                         &
-!       Direct flux in band
-    , flux_down(nd_flux_profile, 0: nd_layer)                           &
-!       Total downward flux
-    , flux_up(nd_flux_profile, 0: nd_layer)                             &
-!       Upward flux
-    , flux_direct_sph(nd_flux_profile, 0: nd_layer+1)                   &
-!       Direct flux in band for spherical geometry
-    , flux_direct_div(nd_flux_profile, nd_layer)
-!       Direct flux divergence in band
-
 !                   Calculated radiances
   REAL (RealK), INTENT(INOUT) ::                                        &
-      i_direct(nd_radiance_profile, 0: nd_layer)                        &
+      i_direct(nd_radiance_profile, 0: nd_layer)
 !       Direct solar irradiance on levels
-    , radiance(nd_radiance_profile, nd_viewing_level, nd_direction)
-!       Radiances in the current band
-
-  REAL (RealK), INTENT(INOUT) ::                                        &
-      photolysis(nd_j_profile, nd_viewing_level)
-!       Rate of photolysis in the current band
 
 !                   Flags for clear-sky fluxes
   LOGICAL, INTENT(IN) ::                                                &
@@ -468,23 +441,6 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
       i_solver_clear
 !       Clear solver used
 
-!                   Clear-sky fluxes
-  REAL (RealK), INTENT(OUT) ::                                          &
-      flux_direct_clear(nd_flux_profile, 0: nd_layer)                   &
-!       Clear-sky direct flux
-    , flux_down_clear(nd_flux_profile, 0: nd_layer)                     &
-!       Clear-sky total downward flux
-    , flux_up_clear(nd_flux_profile, 0: nd_layer)                       &
-!       Clear-sky total downward flux
-    , flux_direct_clear_sph(nd_flux_profile, 0: nd_layer+1)             &
-!       Clear-sky direct flux in band for spherical geometry
-    , flux_direct_clear_div(nd_flux_profile, nd_layer)                  &
-!       Clear-sky direct flux divergence in band
-    , flux_up_tile(nd_point_tile, nd_tile)                              &
-!       Upward fluxes at tiled surface points
-    , flux_up_blue_tile(nd_point_tile, nd_tile)
-!       Upward blue fluxes at tiled surface points
-
 !                   Special diagnostics:
   LOGICAL, INTENT(IN) ::                                                &
       l_blue_flux_surf
@@ -492,13 +448,6 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
   REAL (RealK), INTENT(IN) ::                                           &
       weight_blue
 !       Weights for blue fluxes in this band
-  REAL (RealK), INTENT(INOUT) ::                                        &
-      flux_direct_blue_surf(nd_flux_profile)                            &
-!       Direct downward blue flux at the surface
-    , flux_down_blue_surf(nd_flux_profile)                              &
-!       Total downward blue flux at the surface
-    , flux_up_blue_surf(nd_flux_profile)
-!       Upward blue flux at the surface
 
 !                   Variables required for McICA
   INTEGER, INTENT(IN) ::                                                &
@@ -619,6 +568,9 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
   REAL (RealK) :: temp(nd_profile),temp_exp(nd_profile)
   REAL (RealK) :: temp_max = LOG(1.0_RealK/EPSILON(temp_max))
 
+  LOGICAL :: l_initial_band
+!       Flag to initialise band-by-band diagnostics
+  
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
@@ -629,6 +581,7 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
   IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
   i_gas=index_absorb(1, i_band)
+  l_initial_band = .TRUE.
 
   IF (isolir == ip_solar) THEN
 
@@ -1249,20 +1202,12 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
       weight_blue_incr=weight_blue*esft_weight
 
 ! DEPENDS ON: augment_radiance
-    CALL augment_radiance(n_profile, n_layer                            &
-      , i_angular_integration, i_sph_mode                               &
-      , n_viewing_level, n_direction                                    &
-      , isolir, l_clear, l_initial, weight_incr                         &
-      , l_blue_flux_surf, weight_blue_incr                              &
-      , control%l_spherical_solar                                       &
+    CALL augment_radiance(control, radout, i_band                       &
+      , n_profile, n_layer, n_viewing_level, n_direction                &
+      , l_clear, l_initial, l_initial_band                              &
+      , weight_incr, weight_blue_incr                                   &
 !                   Actual radiances
-      , flux_direct, flux_down, flux_up                                 &
-      , flux_direct_sph, flux_direct_div                                &
-      , flux_direct_blue_surf                                           &
-      , flux_down_blue_surf, flux_up_blue_surf                          &
-      , i_direct, radiance, photolysis                                  &
-      , flux_direct_clear, flux_down_clear, flux_up_clear               &
-      , flux_direct_clear_sph, flux_direct_clear_div                    &
+      , i_direct                                                        &
 !                   Increments to radiances
       , flux_direct_part, flux_total_part                               &
       , i_direct_part, radiance_part, photolysis_part                   &
@@ -1289,15 +1234,11 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
         END IF
       END IF
 ! DEPENDS ON: augment_tiled_radiance
-      CALL augment_tiled_radiance(ierr                                  &
+      CALL augment_tiled_radiance(control, radout, i_band               &
         , n_point_tile, n_tile, list_tile                               &
-        , i_angular_integration, isolir, l_initial                      &
-        , weight_incr, l_blue_flux_surf, weight_blue_incr               &
-        , control%l_spherical_solar                                     &
+        , l_initial, weight_incr, weight_blue_incr                      &
 !                   Surface characteristics
         , rho_alb_tile                                                  &
-!                   Actual radiances
-        , flux_up_tile, flux_up_blue_tile                               &
 !                   Increments to radiances
         , flux_direct_ground_part                                       &
         , flux_total_part(1, 2*n_layer+2)                               &
@@ -1311,6 +1252,7 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
 !   After the first call to these routines quantities should be
 !   incremented rather than initialized, until the flag is reset.
     l_initial=.FALSE.
+    l_initial_band = .FALSE.
 
   END DO
 
