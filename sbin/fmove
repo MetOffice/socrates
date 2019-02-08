@@ -3,7 +3,7 @@
 # Script to change the base name of all output files from a run of the
 # radiation code.
 #
-for suffix in uflx dflx sflx nflx vflx hrts radn
+for suffix in uflx dflx sflx nflx vflx hrts radn cfi cff
 do
    if [ -f $1.$suffix ] 
       then mv $1.$suffix $2.$suffix

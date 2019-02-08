@@ -14,7 +14,7 @@
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE mcica_sample(ierr                                            &
-    , control, dimen, cld, bound                                        &
+    , control, dimen, atm, cld, bound                                   &
 !                 Atmospheric Propertries
     , n_profile, n_layer, d_mass                                        &
 !                 Angular Integration
@@ -36,7 +36,7 @@ SUBROUTINE mcica_sample(ierr                                            &
 !                 Spectral Region
     , isolir                                                            &
 !                 Infra-red Properties
-    , diff_planck, l_ir_source_quad, diff_planck_2                      &
+    , planck                                                            &
 !                 Conditions at TOA
     , zen_0, flux_inc_direct, flux_inc_down                             &
     , i_direct                                                          &
@@ -74,6 +74,8 @@ SUBROUTINE mcica_sample(ierr                                            &
     , l_clear, i_solver_clear                                           &
 !                 Clear-sky Fluxes Calculated
     , flux_direct_clear, flux_total_clear                               &
+!                 Contribution function
+    , contrib_funci_part, contrib_funcf_part                            &
 !                 Dimensions of Arrays
     , nd_profile, nd_layer, nd_layer_clr, id_ct, nd_column              &
     , nd_flux_profile, nd_radiance_profile, nd_j_profile                &
@@ -87,8 +89,10 @@ SUBROUTINE mcica_sample(ierr                                            &
   USE realtype_rd, ONLY: RealK
   USE def_control, ONLY: StrCtrl
   USE def_dimen,   ONLY: StrDim
+  USE def_atm,     ONLY: StrAtm
   USE def_cld,     ONLY: StrCld
   USE def_bound,   ONLY: StrBound
+  USE def_planck,  ONLY: StrPlanck
   USE def_ss_prop
   USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf, ONLY: ip_solar, ip_cloud_homogen, ip_cloud_ice_water,    &
@@ -104,6 +108,9 @@ SUBROUTINE mcica_sample(ierr                                            &
 
 ! Dimensions:
   TYPE(StrDim),       INTENT(IN)    :: dimen
+
+! Atmospheric properties:
+  TYPE(StrAtm),       INTENT(IN)    :: atm
 
 ! Cloud properties:
   TYPE(StrCld),       INTENT(IN)    :: cld
@@ -233,16 +240,6 @@ SUBROUTINE mcica_sample(ierr                                            &
       isolir
 !       Visible or IR
 
-!                 Infra-red properties
-  LOGICAL, INTENT(IN) ::                                                &
-      l_ir_source_quad
-!       Flag for quadratic IR-source
-  REAL (RealK), INTENT(IN) ::                                           &
-      diff_planck(nd_profile, nd_layer)                                 &
-!       DIfferences in the Planckian function across layers
-    , diff_planck_2(nd_profile, nd_layer)
-!       Twice the second differences of Planckian source function
-
 !                 Conditions at TOA
   REAL (RealK), INTENT(IN) ::                                           &
       zen_0(nd_profile)                                                 &
@@ -278,6 +275,9 @@ SUBROUTINE mcica_sample(ierr                                            &
     , brdf_hemi(nd_profile, nd_brdf_basis_fnc, nd_direction)
 !       The BRDF evaluated for scattering from isotropic
 !       radiation into the viewing direction
+
+  TYPE(StrPlanck), INTENT(INOUT) :: planck
+!       Planckian emission fields
 
   TYPE(StrSphGeo), INTENT(INOUT) :: sph
 !       Spherical geometry fields
@@ -397,7 +397,12 @@ SUBROUTINE mcica_sample(ierr                                            &
       l_cloud_cmp(nd_cloud_component)
 !       flags to activate cloudy components
 
-
+  REAL (RealK), INTENT(INOUT) ::                                        &
+    contrib_funci_part(nd_flux_profile, nd_layer)
+!       Contribution function (intensity) increment
+  REAL (RealK), INTENT(INOUT) ::                                        &
+    contrib_funcf_part(nd_flux_profile, nd_layer)
+!       Contribution function (flux) increment
 
 ! Local variables.
   INTEGER :: i, j, l, ll, ls, k, m
@@ -723,7 +728,7 @@ SUBROUTINE mcica_sample(ierr                                            &
 
 ! DEPENDS ON: monochromatic_radiance
     CALL monochromatic_radiance(ierr                                    &
-      , control, cld, bound                                             &
+      , control, atm, cld, bound                                        &
 !             atmospheric properties
       , n_profile, n_layer, d_mass                                      &
 !             angular integration
@@ -746,7 +751,7 @@ SUBROUTINE mcica_sample(ierr                                            &
 !             spectral region
       , isolir                                                          &
 !             infra-red properties
-      , diff_planck, l_ir_source_quad, diff_planck_2                    &
+      , planck                                                          &
 !             conditions at toa
       , zen_0, flux_inc_direct, flux_inc_down                           &
       , i_direct_subcol                                                 &
@@ -780,7 +785,9 @@ SUBROUTINE mcica_sample(ierr                                            &
       , l_clear_calc, i_solver_clear                                    &
 !             clear-sky fluxes calculated
       , flux_direct_clear, flux_total_clear                             &
-!             planckian function
+!             contribution function
+      , contrib_funci_part, contrib_funcf_part                          &
+!             dimensions of arrays
       , nd_profile, nd_layer, nd_layer_clr, id_ct, nd_column            &
       , nd_flux_profile, nd_radiance_profile, nd_j_profile              &
       , nd_cloud_type, nd_region, nd_overlap_coeff                      &

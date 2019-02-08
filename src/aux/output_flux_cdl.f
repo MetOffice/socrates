@@ -21,7 +21,7 @@
      &  , n_layer, name_vert_coord, len_vert_coord, p, p_level
      &  , n_channel
      &  , flux_down, flux_down_diffuse, flux_up, flux_net, flux_direct
-     &  , heating_rate
+     &  , heating_rate, contrib_funci, contrib_funcf
      &  , nd_profile, nd_latitude, nd_longitude, nd_layer, nd_channel
      &  , nd_cdl_dimen, nd_cdl_dimen_size, nd_cdl_data, nd_cdl_var
      &  )
@@ -115,6 +115,10 @@
 !           Direct fluxes
      &  , heating_rate(nd_profile, nd_layer, nd_channel)
 !           Heating rates in layers
+     &  , contrib_funci(nd_profile, nd_layer, nd_channel)
+!           Contribution function (intensity)
+     &  , contrib_funcf(nd_profile, nd_layer, nd_channel)
+!           Contribution function (flux)
 !
 !
 !     Local Variables
@@ -491,6 +495,69 @@
      &  , n_data, data_int, data_fl
      &  )
         IF (ierr /= i_normal) RETURN
+
+      IF (control%l_contrib_func) THEN
+!     Contribution function (intensity):
+        file_name(1: length_name+1+len_file_suffix)
+     &    =base_name(1: length_name)//'.'//phys_suffix(IP_contrib_funci)
+
+        var_name(n_var)='cfi'
+        var_type(n_var)='float'
+        var_unit(n_var)=''
+        var_long(n_var)='contribution function (intensity)'
+        n_data(n_var)=n_profile*(n_layer)*n_channel
+        DO k=1, n_channel
+          DO i=1, n_layer
+            DO l=1, n_profile
+              point=l+(i-1+(k-1)*(n_layer))*n_profile
+              data_fl(point, n_var)=contrib_funci(l, i, k)
+            ENDDO
+          ENDDO
+        ENDDO
+        CALL write_cdl(ierr
+     &    , file_name(1: length_name+1+len_file_suffix)
+     &    , nd_cdl_dimen, nd_cdl_dimen_size, nd_cdl_data, nd_cdl_var
+     &    , n_dimension, dimension_name, dimension_type
+     &    , dimension_unit
+     &    , dimension_long, dimension_size
+     &    , dimension_array_int, dimension_array_fl
+     &    , n_var, var_name, var_type, var_unit, var_long
+     &    , n_dimension_var, list_dimension_var
+     &    , n_data, data_int, data_fl
+     &    )
+          IF (ierr /= i_normal) RETURN
+
+!     Contribution function (flux):
+        file_name(1: length_name+1+len_file_suffix)
+     &    =base_name(1: length_name)//'.'//phys_suffix(IP_contrib_funcf)
+
+        var_name(n_var)='cff'
+        var_type(n_var)='float'
+        var_unit(n_var)=''
+        var_long(n_var)='contribution function (flux)'
+        n_data(n_var)=n_profile*(n_layer)*n_channel
+        DO k=1, n_channel
+          DO i=1, n_layer
+            DO l=1, n_profile
+              point=l+(i-1+(k-1)*(n_layer))*n_profile
+              data_fl(point, n_var)=contrib_funcf(l, i, k)
+            ENDDO
+          ENDDO
+        ENDDO
+        CALL write_cdl(ierr
+     &    , file_name(1: length_name+1+len_file_suffix)
+     &    , nd_cdl_dimen, nd_cdl_dimen_size, nd_cdl_data, nd_cdl_var
+     &    , n_dimension, dimension_name, dimension_type
+     &    , dimension_unit
+     &    , dimension_long, dimension_size
+     &    , dimension_array_int, dimension_array_fl
+     &    , n_var, var_name, var_type, var_unit, var_long
+     &    , n_dimension_var, list_dimension_var
+     &    , n_data, data_int, data_fl
+     &    )
+        IF (ierr /= i_normal) RETURN
+      END IF
+
 !
 !
 !

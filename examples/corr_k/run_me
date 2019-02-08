@@ -9,9 +9,9 @@ rm -f h2o* cfc113_* sp_lw_300_skel sp_lw_300_dev* 2>/dev/null
 (diff -q sp_lw_300_ifort sp_lw_300_dev && \
  diff -q sp_lw_300_ifort_k sp_lw_300_dev_k && \
  echo 'Matched ifort output') || \
-(diff -q sp_lw_300_postzen sp_lw_300_dev && \
- diff -q sp_lw_300_ifort_k sp_lw_300_dev_k && \
- echo 'Matched post-zen (ifort) output') || \
+(diff -q sp_lw_300_nyuki sp_lw_300_dev && \
+ diff -q sp_lw_300_gfortran_k sp_lw_300_dev_k && \
+ echo 'Matched nyuki (gfortan) output') || \
 (diff -q sp_lw_300_gfortran sp_lw_300_dev && \
  diff -q sp_lw_300_gfortran_k sp_lw_300_dev_k && \
  echo 'Matched gfortran output') || ierr=1

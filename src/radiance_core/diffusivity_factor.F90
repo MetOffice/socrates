@@ -18,4 +18,7 @@ MODULE diffusivity_factor
 ! Diffusivity factor for use with equivalent extinction
   REAL (RealK), PARAMETER :: diffusivity_factor_minor = 1.66e+00_RealK
 
+! Diffusivity factor for use with the contribution function
+  REAL (RealK), PARAMETER :: diffusivity_factor_cf = 2.0_RealK
+
 END MODULE diffusivity_factor

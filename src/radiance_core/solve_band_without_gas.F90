@@ -12,7 +12,7 @@
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE solve_band_without_gas(ierr                                  &
-    , control, cld, bound, radout, i_band                               &
+    , control, atm, cld, bound, radout, i_band                          &
 !                 Atmospheric column
     , n_profile, n_layer, d_mass                                        &
 !                 Angular integration
@@ -32,15 +32,12 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
 !                 Solar properties
     , zen_0, solar_irrad, sph                                           &
 !                 Infra-red properties
-    , planck_flux_top, planck_flux_bottom                               &
-    , diff_planck_band, l_ir_source_quad, diff_planck_band_2            &
+    , planck                                                            &
 !                 Surface properties
     , ls_brdf_trunc, n_brdf_basis_fnc, rho_alb                          &
     , f_brdf, brdf_sol, brdf_hemi                                       &
-    , planck_flux_ground                                                &
 !                 Tiling of the surface
     , l_tile, n_point_tile, n_tile, list_tile, rho_alb_tile             &
-    , planck_flux_tile                                                  &
 !                 Optical properties
     , ss_prop                                                           &
 !                 Cloudy properties
@@ -76,9 +73,11 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
 
   USE realtype_rd, ONLY: RealK
   USE def_control, ONLY: StrCtrl
+  USE def_atm,     ONLY: StrAtm
   USE def_cld,     ONLY: StrCld
   USE def_bound,   ONLY: StrBound
   USE def_out,     ONLY: StrOut
+  USE def_planck,  ONLY: StrPlanck
   USE def_ss_prop
   USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf
@@ -90,6 +89,9 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
 
 ! Control options:
   TYPE(StrCtrl),      INTENT(IN)    :: control
+
+! Atmospheric properties:
+  TYPE(StrAtm),       INTENT(IN)    :: atm
 
 ! Cloud properties:
   TYPE(StrCld),       INTENT(IN)    :: cld
@@ -232,28 +234,13 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
     , solar_irrad(nd_profile)
 !       Incident solar irradiance in the band
 
+  TYPE(StrPlanck), INTENT(INOUT) :: planck
+!   Planckian emission fields
+
   TYPE(StrSphGeo), INTENT(INOUT) :: sph
 !   Spherical geometry fields
   
-!                 Infra-red properties
-  REAL (RealK), INTENT(IN) ::                                           &
-      planck_flux_top(nd_profile)                                       &
-!       Planck function at bottom of column
-    , planck_flux_bottom(nd_profile)                                    &
-!       Planck function at bottom of column
-    , diff_planck_band(nd_profile, nd_layer)                            &
-!       Differences in the Planckian function (bottom-top) across
-!       layers
-    , diff_planck_band_2(nd_profile, nd_layer)
-!       Twice the second difference of Planckian in band
-  LOGICAL, INTENT(IN) ::                                                &
-      l_ir_source_quad
-!       Use a quadratic source function
-
 !                 Surface properties
-  REAL (RealK), INTENT(IN) ::                                           &
-      planck_flux_ground(nd_profile)
-!       Thermal source at surface in band
   INTEGER, INTENT(IN) ::                                                &
       ls_brdf_trunc                                                     &
 !       Order of truncation of BRDFs
@@ -284,11 +271,9 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
     , list_tile(nd_point_tile)
 !       List of points with surface tiling
   REAL (RealK), INTENT(IN) ::                                           &
-      rho_alb_tile(nd_point_tile, nd_brdf_basis_fnc, nd_tile)           &
+      rho_alb_tile(nd_point_tile, nd_brdf_basis_fnc, nd_tile)
 !       Weights for the basis functions of the BRDFs
 !       at the tiled points
-    , planck_flux_tile(nd_point_tile, nd_tile)
-!       Local Planckian fluxes on surface tiles
 
 !                 Optical properties
   TYPE(STR_ss_prop), INTENT(INOUT) :: ss_prop
@@ -415,6 +400,13 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
       photolysis_band(nd_j_profile, nd_viewing_level)
 !       Increments to the rate of photolysis
 
+  REAL (RealK) ::                                                       &
+      contrib_funci_part(nd_flux_profile, nd_layer)
+!       Contribution (or weighting) function
+  REAL (RealK) ::                                                       &
+      contrib_funcf_part(nd_flux_profile, nd_layer)
+!       Contribution (or weighting) function
+
   LOGICAL :: l_initial_band
 !       Flag to initialise band-by-band diagnostics
   
@@ -454,9 +446,9 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
       DO l=1, n_profile
         flux_inc_direct(l)=0.0e+00_RealK
         flux_direct_band(l, n_layer)=0.0e+00_RealK
-        flux_inc_down(l)=-planck_flux_top(l)
+        flux_inc_down(l)=-planck%flux(l, 0)
         d_planck_flux_surface(l)                                        &
-          =planck_flux_ground(l)-planck_flux_bottom(l)
+          =planck%flux_ground(l)-planck%flux(l, n_layer)
       END DO
       IF (l_clear) THEN
         DO l=1, n_profile
@@ -474,9 +466,9 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
       END DO
     ELSE
       DO l=1, n_profile
-        flux_inc_down(l)=-planck_flux_top(l)
+        flux_inc_down(l)=-planck%flux(l, 0)
         d_planck_flux_surface(l)                                        &
-          =planck_flux_ground(l)-planck_flux_bottom(l)
+          =planck%flux_ground(l)-planck%flux(l, n_layer)
       END DO
     END IF
 
@@ -491,7 +483,7 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
 
 ! DEPENDS ON: monochromatic_radiance
   CALL monochromatic_radiance(ierr                                      &
-    , control, cld, bound                                               &
+    , control, atm, cld, bound                                          &
 !                 Atmospheric properties
     , n_profile, n_layer, d_mass                                        &
 !                 Angular integration
@@ -513,7 +505,7 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
 !                 Spectral region
     , isolir                                                            &
 !                 Infra-red properties
-    , diff_planck_band, l_ir_source_quad, diff_planck_band_2            &
+    , planck                                                            &
 !                 Conditions at TOA
     , zen_0, flux_inc_direct, flux_inc_down                             &
     , i_direct_band                                                     &
@@ -547,6 +539,8 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
     , l_clear, i_solver_clear                                           &
 !                 Clear-sky fluxes calculated
     , flux_direct_clear_band, flux_total_clear_band                     &
+!                 Contribution function
+    , contrib_funci_part, contrib_funcf_part                            &
 !                 Dimensions of arrays
     , nd_profile, nd_layer, nd_layer_clr, id_ct, nd_column              &
     , nd_flux_profile, nd_radiance_profile, nd_j_profile                &
@@ -568,7 +562,7 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
     , flux_direct_band, flux_total_band                                 &
     , i_direct_band, radiance_band, photolysis_band                     &
     , flux_direct_clear_band, flux_total_clear_band                     &
-    , sph                                                               &
+    , sph, contrib_funci_part, contrib_funcf_part                       &
 !                   Dimensions
     , nd_flux_profile, nd_radiance_profile, nd_j_profile                &
     , nd_layer, nd_viewing_level, nd_direction                          &
@@ -598,7 +592,7 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
 !                   Increments to radiances
       , flux_direct_ground_band                                         &
       , flux_total_band(1, 2*n_layer+2)                                 &
-      , planck_flux_tile, planck_flux_bottom                            &
+      , planck%flux_tile, planck%flux(:, n_layer)                       &
 !                   Dimensions
       , nd_flux_profile, nd_point_tile, nd_tile                         &
       , nd_brdf_basis_fnc                                               &

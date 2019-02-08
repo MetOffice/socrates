@@ -47,6 +47,10 @@ TYPE StrOut
 !   Rates of photolysis
   REAL (RealK), ALLOCATABLE :: solar_tail_flux(:)
 !   Solar tail flux considered in LW region
+  REAL (RealK), ALLOCATABLE :: contrib_funci(:, :, :)
+!   Contribution function (intensity)
+  REAL (RealK), ALLOCATABLE :: contrib_funcf(:, :, :)
+!   Contribution function (flux)
 
 ! Diagnostic fluxes
   REAL (RealK), ALLOCATABLE :: flux_up_tile(:, :, :)
@@ -79,6 +83,10 @@ TYPE StrOut
 !   Clear-sky downward flux per band
   REAL (RealK), ALLOCATABLE :: flux_up_clear_band(:, :, :)
 !   Clear-sky upward flux per band
+  REAL (RealK), ALLOCATABLE :: contrib_funci_band(:, :, :)
+!   Contribution function per band (intensity)
+  REAL (RealK), ALLOCATABLE :: contrib_funcf_band(:, :, :)
+!   Contribution function per band (flux)
 
 ! Cloud diagnostics
   REAL (RealK), ALLOCATABLE :: tot_cloud_cover(:)
@@ -384,6 +392,28 @@ IF (control%l_spherical_path_diag) THEN
                                                  0:dimen%nd_layer+1          ))
 END IF
 
+IF (control%l_contrib_func) THEN
+  IF (.NOT. ALLOCATED(radout%contrib_funci))                                   &
+    ALLOCATE(radout%contrib_funci              ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 dimen%nd_channel            ))
+  IF (.NOT. ALLOCATED(radout%contrib_funcf))                                   &
+    ALLOCATE(radout%contrib_funcf              ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 dimen%nd_channel            ))
+END IF
+
+IF (control%l_contrib_func_band) THEN
+  IF (.NOT. ALLOCATED(radout%contrib_funci_band))                              &
+    ALLOCATE(radout%contrib_funci_band         ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 sp%dim%nd_band              ))
+  IF (.NOT. ALLOCATED(radout%contrib_funcf_band))                              &
+    ALLOCATE(radout%contrib_funcf_band         ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 sp%dim%nd_band              ))
+END IF
+
 END SUBROUTINE allocate_out
 !------------------------------------------------------------------------------
 SUBROUTINE deallocate_out(radout)
@@ -392,6 +422,14 @@ IMPLICIT NONE
 
 TYPE (StrOut), INTENT(INOUT) :: radout
 
+IF (ALLOCATED(radout%contrib_funcf_band)) &
+    DEALLOCATE(radout%contrib_funcf_band)
+IF (ALLOCATED(radout%contrib_funci_band)) &
+    DEALLOCATE(radout%contrib_funci_band)
+IF (ALLOCATED(radout%contrib_funcf)) &
+    DEALLOCATE(radout%contrib_funcf)
+IF (ALLOCATED(radout%contrib_funci)) &
+    DEALLOCATE(radout%contrib_funci)
 IF (ALLOCATED(radout%spherical_path)) &
     DEALLOCATE(radout%spherical_path)
 IF (ALLOCATED(radout%aerosol_asymmetry_band)) &

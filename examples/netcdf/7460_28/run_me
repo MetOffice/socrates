@@ -6,79 +6,43 @@ ierr=0
 # Test LW configuration on average columns
 cp 7460_28.surflw 7460_28.surf
 $RAD_SCRIPT/Cl_run_cdf -B 7460_28 -s $RAD_DIR/data/spectra/hadgem1/sp_lw_hadgem1_3 -R 1 9 -I -t 12 +R -v 11 -g 2 -c -C 2 -K 1 -d 1 -i 1
-mv 7460_28.dflx lw_avg.dflx
-mv 7460_28.hrts lw_avg.hrts
-mv 7460_28.nflx lw_avg.nflx
-mv 7460_28.uflx lw_avg.uflx
+fmove 7460_28 lw_avg
 
 # Test SW
 cp 7460_28.surfsw 7460_28.surf
 $RAD_SCRIPT/Cl_run_cdf -B 7460_28 -s $RAD_DIR/data/spectra/hadgem1/sp_sw_hadgem1_3 -R 1 6 -S -t 2 +R -v 11 -g 2 -r -C 2 -K 1 -d 3 -i 3
-mv 7460_28.hrts sw_avg.hrts
-mv 7460_28.nflx sw_avg.nflx
-mv 7460_28.sflx sw_avg.sflx
-mv 7460_28.uflx sw_avg.uflx
-mv 7460_28.vflx sw_avg.vflx
-mv 7460_28.dflx sw_avg.dflx
+fmove 7460_28 sw_avg
 
 # Test SW using delta-rescaling for the total flux but no rescaling for the direct flux 
 $RAD_SCRIPT/Cl_run_cdf -B 7460_28 -s $RAD_DIR/data/spectra/hadgem1/sp_sw_hadgem1_3 -R 1 6 -S -t 2 +R -v 11 -g 2 -r -C 2 -K 1 -d 3 -i 3 -ds 0 
-mv 7460_28.hrts sw_ds0_avg.hrts
-mv 7460_28.nflx sw_ds0_avg.nflx
-mv 7460_28.sflx sw_ds0_avg.sflx
-mv 7460_28.uflx sw_ds0_avg.uflx
-mv 7460_28.vflx sw_ds0_avg.vflx
-mv 7460_28.dflx sw_ds0_avg.dflx
+fmove 7460_28 sw_ds0_avg
 
 # Test SW using delta-rescaling for the total flux but csr-phase-function rescaling for the direct flux 
 $RAD_SCRIPT/Cl_run_cdf -B 7460_28 -s $RAD_DIR/data/spectra/hadgem1/sp_sw_hadgem1_3 -R 1 6 -S -t 2 +R -v 11 -g 2 -r -C 2 -K 1 -d 3 -i 3 -ds 2 -ha 2.5 
-mv 7460_28.hrts sw_ds2_avg.hrts
-mv 7460_28.nflx sw_ds2_avg.nflx
-mv 7460_28.sflx sw_ds2_avg.sflx
-mv 7460_28.uflx sw_ds2_avg.uflx
-mv 7460_28.vflx sw_ds2_avg.vflx
-mv 7460_28.dflx sw_ds2_avg.dflx
+fmove 7460_28 sw_ds2_avg
 
 # Test SW using different direct/diffuse albedos
 cp 7460_28.surfsw2 7460_28.surf
 $RAD_SCRIPT/Cl_run_cdf -B 7460_28 -s $RAD_DIR/data/spectra/hadgem1/sp_sw_hadgem1_3 -R 1 6 -S -t 2 +R -v 11 -g 2 -r -C 2 -K 1 -d 3 -i 3
-mv 7460_28.hrts sw2_avg.hrts
-mv 7460_28.nflx sw2_avg.nflx
-mv 7460_28.sflx sw2_avg.sflx
-mv 7460_28.uflx sw2_avg.uflx
-mv 7460_28.vflx sw2_avg.vflx
-mv 7460_28.dflx sw2_avg.dflx
+fmove 7460_28 sw2_avg
 
 # Use delta-rescaling for the total flux but no rescaling for the direct flux.
 # Different direct/diffuse albedos here allow the unscaled direct flux to
 # affect the total flux reflected at the surface.
 cp 7460_28.surfsw2 7460_28.surf
 $RAD_SCRIPT/Cl_run_cdf -B 7460_28 -s $RAD_DIR/data/spectra/hadgem1/sp_sw_hadgem1_3 -R 1 6 -S -t 2 +R -v 11 -g 2 -r -C 2 -K 1 -d 3 -i 3 -ds 0
-mv 7460_28.hrts sw2_ds0_avg.hrts
-mv 7460_28.nflx sw2_ds0_avg.nflx
-mv 7460_28.sflx sw2_ds0_avg.sflx
-mv 7460_28.uflx sw2_ds0_avg.uflx
-mv 7460_28.vflx sw2_ds0_avg.vflx
-mv 7460_28.dflx sw2_ds0_avg.dflx
+fmove 7460_28 sw2_ds0_avg
 
 # Test for full array of columns
 cd ipa0
 
 cp 7460_28.surflw 7460_28.surf
 $RAD_SCRIPT/Cl_run_cdf -B 7460_28 -s $RAD_DIR/data/spectra/hadgem1/sp_lw_hadgem1_3 -R 1 9 -I -t 12 +R -v 11 -g 2 -c -C 2 -K 1 -d 1 -i 1
-mv 7460_28.dflx lw.dflx
-mv 7460_28.hrts lw.hrts
-mv 7460_28.nflx lw.nflx
-mv 7460_28.uflx lw.uflx
+fmove 7460_28 lw
 
 cp 7460_28.surfsw 7460_28.surf
 $RAD_SCRIPT/Cl_run_cdf -B 7460_28 -s $RAD_DIR/data/spectra/hadgem1/sp_sw_hadgem1_3 -R 1 6 -S -t 2 +R -v 11 -g 2 -r -C 2 -K 1 -d 3 -i 3
-mv 7460_28.hrts sw.hrts
-mv 7460_28.nflx sw.nflx
-mv 7460_28.sflx sw.sflx
-mv 7460_28.uflx sw.uflx
-mv 7460_28.vflx sw.vflx
-mv 7460_28.dflx sw.dflx
+fmove 7460_28 sw
 
 diff -q ref_lw.dflx lw.dflx || ierr=1
 diff -q ref_lw.hrts lw.hrts || ierr=1

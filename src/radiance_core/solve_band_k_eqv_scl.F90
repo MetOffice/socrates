@@ -13,7 +13,7 @@
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
-    , control, dimen, cld, bound, radout                                &
+    , control, dimen, atm, cld, bound, radout                           &
 !                   Atmospheric properties
     , n_profile, n_layer, d_mass                                        &
 !                   Angular integration
@@ -35,17 +35,13 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 !                   Solar properties
     , zen_0, solar_irrad, sph                                           &
 !                   Infra-red properties
-    , planck_flux_band                                                  &
-    , diff_planck_band                                                  &
-    , l_ir_source_quad, diff_planck_band_2                              &
+    , planck                                                            &
 !                   Surface properties
     , ls_brdf_trunc, n_brdf_basis_fnc, rho_alb                          &
     , f_brdf, brdf_sol, brdf_hemi                                       &
     , diff_albedo_basis                                                 &
-    , planck_flux_surface                                               &
 !                   Tiling of the surface
     , l_tile, n_point_tile, n_tile, list_tile, rho_alb_tile             &
-    , planck_flux_tile                                                  &
 !                   Optical properties
     , ss_prop                                                           &
 !                   Cloudy properties
@@ -86,9 +82,11 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
   USE realtype_rd, ONLY: RealK
   USE def_control, ONLY: StrCtrl
   USE def_dimen,   ONLY: StrDim
+  USE def_atm,     ONLY: StrAtm
   USE def_cld,     ONLY: StrCld
   USE def_bound,   ONLY: StrBound
   USE def_out,     ONLY: StrOut
+  USE def_planck,  ONLY: StrPlanck
   USE def_ss_prop
   USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf
@@ -105,6 +103,9 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 
 ! Dimensions:
   TYPE(StrDim),       INTENT(IN)    :: dimen
+
+! Atmospheric properties:
+  TYPE(StrAtm),       INTENT(IN)    :: atm
 
 ! Cloud properties:
   TYPE(StrCld),       INTENT(IN)    :: cld
@@ -267,26 +268,13 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
     , solar_irrad(nd_profile)
 !       Incident solar irradiance in band
 
+  TYPE(StrPlanck), INTENT(INOUT) :: planck
+!   Planckian emission fields
+
   TYPE(StrSphGeo), INTENT(INOUT) :: sph
 !   Spherical geometry fields
 
-!                   Infra-red properties
-  LOGICAL, INTENT(IN) ::                                                &
-      l_ir_source_quad
-!       Use a quadratic source function
-  REAL (RealK), INTENT(IN) ::                                           &
-      planck_flux_band(nd_profile, 0: nd_layer)                         &
-!       Flux Planckian source in band
-    , diff_planck_band(nd_profile, nd_layer)                            &
-!       First differences in the flux Planckian across layers
-!       in this band
-    , diff_planck_band_2(nd_profile, nd_layer)
-!       Twice 2nd differences in the flux Planckian in band
-
 !                   Surface properties
-  REAL (RealK), INTENT(IN) ::                                           &
-      planck_flux_surface(nd_profile)
-!       Flux Planckian at the surface temperature
   INTEGER, INTENT(IN) ::                                                &
       ls_brdf_trunc                                                     &
 !       Order of truncation of BRDFs
@@ -319,11 +307,9 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
     , list_tile(nd_point_tile)
 !       List of points with surface tiling
   REAL (RealK), INTENT(IN) ::                                           &
-      rho_alb_tile(nd_point_tile, nd_brdf_basis_fnc, nd_tile)           &
+      rho_alb_tile(nd_point_tile, nd_brdf_basis_fnc, nd_tile)
 !       Weights for the basis functions of the BRDFs
 !       at the tiled points
-    , planck_flux_tile(nd_point_tile, nd_tile)
-!       Local Planckian fluxes on surface tiles
 
 !                   Optical properties
   TYPE(str_ss_prop), INTENT(INOUT) :: ss_prop
@@ -516,6 +502,13 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 
   REAL (RealK), ALLOCATABLE :: sph_mass_path(:,:,:)
 !       Path through spherical geometry * layer mass
+
+  REAL (RealK) ::                                                       &
+      contrib_funci_part(nd_flux_profile, nd_layer)
+!       Contribution (or weighting) function
+  REAL (RealK) ::                                                       &
+      contrib_funcf_part(nd_flux_profile, nd_layer)
+!       Contribution (or weighting) function
 
   REAL (RealK) :: temp(n_profile),temp_exp(n_profile)
   REAL (RealK) :: temp_max = LOG(1.0_RealK/EPSILON(temp_max))
@@ -848,9 +841,9 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 !       total upward and downward fluxes at the boundaries.
         DO l=1, n_profile
           flux_inc_direct(l)=0.0e+00_RealK
-          flux_inc_down(l)=-planck_flux_band(l, 0)
-          d_planck_flux_surface(l)=planck_flux_surface(l)               &
-            -planck_flux_band(l, n_layer)
+          flux_inc_down(l)=-planck%flux(l, 0)
+          d_planck_flux_surface(l)=planck%flux_ground(l)                &
+            -planck%flux(l, n_layer)
         END DO
 
 !       Set the optical depths of each layer.
@@ -866,7 +859,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
         CALL monochromatic_gas_flux(n_profile, n_layer                  &
           , tau_gas                                                     &
           , isolir, zen_0, flux_inc_direct, flux_inc_down               &
-          , diff_planck_band, d_planck_flux_surface                     &
+          , planck%diff, d_planck_flux_surface                          &
           , diffuse_albedo, diffuse_albedo                              &
           , diffusivity_factor_minor                                    &
           , flux_direct_term, flux_term                                 &
@@ -971,10 +964,9 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
         DO l=1, n_profile
           flux_inc_direct(l)=0.0e+00_RealK
           flux_direct_part(l, n_layer)=0.0e+00_RealK
-          flux_inc_down(l)=-planck_flux_band(l, 0)
+          flux_inc_down(l)=-planck%flux(l, 0)
           d_planck_flux_surface(l)                                      &
-            =planck_flux_surface(l)                                     &
-            -planck_flux_band(l, n_layer)
+            =planck%flux_ground(l)-planck%flux(l, n_layer)
         END DO
         IF (l_clear) THEN
           DO l=1, n_profile
@@ -992,9 +984,9 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
         END DO
       ELSE
         DO l=1, n_profile
-          flux_inc_down(l)=-planck_flux_band(l, 0)
+          flux_inc_down(l)=-planck%flux(l, 0)
           d_planck_flux_surface(l)                                      &
-            =planck_flux_surface(l)-planck_flux_band(l, n_layer)
+            =planck%flux_ground(l)-planck%flux(l, n_layer)
         END DO
       END IF
 
@@ -1011,7 +1003,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 
 ! DEPENDS ON: mcica_sample
       CALL mcica_sample(ierr                                            &
-        , control, dimen, cld, bound                                    &
+        , control, dimen, atm, cld, bound                               &
 !                   Atmospheric properties
         , n_profile, n_layer, d_mass                                    &
 !                   Angular integration
@@ -1034,8 +1026,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 !                   Spectral region
         , isolir                                                        &
 !                   Infra-red properties
-        , diff_planck_band                                              &
-        , l_ir_source_quad, diff_planck_band_2                          &
+        , planck                                                        &
 !                   Conditions at TOA
         , zen_0, flux_inc_direct, flux_inc_down                         &
         , i_direct_part                                                 &
@@ -1073,6 +1064,8 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
         , l_clear, i_solver_clear                                       &
 !                   Clear-sky fluxes calculated
         , flux_direct_clear_part, flux_total_clear_part                 &
+!                   Contribution function
+        , contrib_funci_part, contrib_funcf_part                        &
 !                   Dimensions of arrays
         , nd_profile, nd_layer, nd_layer_clr, id_ct, nd_column          &
         , nd_flux_profile, nd_radiance_profile, nd_j_profile            &
@@ -1086,7 +1079,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 
 ! DEPENDS ON: monochromatic_radiance
       CALL monochromatic_radiance(ierr                                  &
-        , control, cld, bound                                           &
+        , control, atm, cld, bound                                      &
 !                   Atmospheric properties
         , n_profile, n_layer, d_mass                                    &
 !                   Angular integration
@@ -1109,8 +1102,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 !                   Spectral region
         , isolir                                                        &
 !                   Infra-red properties
-        , diff_planck_band                                              &
-        , l_ir_source_quad, diff_planck_band_2                          &
+        , planck                                                        &
 !                   Conditions at TOA
         , zen_0, flux_inc_direct, flux_inc_down                         &
         , i_direct_part                                                 &
@@ -1144,6 +1136,8 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
         , l_clear, i_solver_clear                                       &
 !                   Clear-sky fluxes calculated
         , flux_direct_clear_part, flux_total_clear_part                 &
+!                   Contribution function
+        , contrib_funci_part, contrib_funcf_part                        &
 !                   Dimensions of arrays
         , nd_profile, nd_layer, nd_layer_clr, id_ct, nd_column          &
         , nd_flux_profile, nd_radiance_profile, nd_j_profile            &
@@ -1171,7 +1165,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
       , flux_direct_part, flux_total_part                               &
       , i_direct_part, radiance_part, photolysis_part                   &
       , flux_direct_clear_part, flux_total_clear_part                   &
-      , sph                                                             &
+      , sph, contrib_funci_part, contrib_funcf_part                     &
 !                   Dimensions
       , nd_flux_profile, nd_radiance_profile, nd_j_profile              &
       , nd_layer, nd_viewing_level, nd_direction                        &
@@ -1201,7 +1195,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr                                    &
 !                   Increments to radiances
         , flux_direct_ground_part                                       &
         , flux_total_part(1, 2*n_layer+2)                               &
-        , planck_flux_tile, planck_flux_band(1, n_layer)                &
+        , planck%flux_tile, planck%flux(1, n_layer)                     &
 !                   Dimensions
         , nd_flux_profile, nd_point_tile, nd_tile                       &
         , nd_brdf_basis_fnc                                             &

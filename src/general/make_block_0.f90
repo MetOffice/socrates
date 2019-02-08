@@ -87,7 +87,7 @@ SUBROUTINE make_block_0 &
       RETURN
     ENDIF
   ENDDO
-  Spectrum%Dim%nd_species = Spectrum%Gas%n_absorb
+  Spectrum%Dim%nd_species = MAX(Spectrum%Gas%n_absorb, 1)
 !
 ! Prepare the list of gaeous absorbers.
   ALLOCATE(Spectrum%Gas%type_absorb(Spectrum%Dim%nd_species))

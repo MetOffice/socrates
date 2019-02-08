@@ -135,7 +135,11 @@ PROGRAM l_run_cdf
 !       Net flux
   REAL  (RealK), ALLOCATABLE :: heating_rate(:,:,:)
 !       Heating rates
-
+  REAL  (RealK), ALLOCATABLE :: contrib_func_i(:,:,:)
+!       Contribution function (to the upwards intensity at TOA)
+  REAL  (RealK), ALLOCATABLE :: contrib_func_f(:,:,:)
+!       Contribution function (to the outgoing flux at TOA)
+  
 ! Controlling variables:
   INTEGER :: i, j, l, ic, ll
 !       Loop variables
@@ -232,6 +236,33 @@ PROGRAM l_run_cdf
 
 
 ! ------------------------------------------------------------------
+! Diagnostics
+! ------------------------------------------------------------------
+  control%l_blue_flux_surf = .FALSE.
+  control%l_cloud_absorptivity = .FALSE.
+  control%l_cloud_extinction = .FALSE.
+  control%l_ls_cloud_absorptivity = .FALSE.
+  control%l_ls_cloud_extinction = .FALSE.
+  control%l_cnv_cloud_absorptivity = .FALSE.
+  control%l_cnv_cloud_extinction = .FALSE.
+  control%l_flux_direct_band = .FALSE.
+  control%l_flux_direct_div_band = .FALSE.
+  control%l_flux_direct_sph_band = .FALSE.
+  control%l_flux_down_band = .FALSE.
+  control%l_flux_up_band = .FALSE.
+  control%l_flux_direct_clear_band = .FALSE.
+  control%l_flux_direct_clear_div_band = .FALSE.
+  control%l_flux_direct_clear_sph_band = .FALSE.
+  control%l_flux_down_clear_band = .FALSE.
+  control%l_flux_up_clear_band = .FALSE.
+  control%l_aerosol_absorption_band = .FALSE.
+  control%l_aerosol_scattering_band = .FALSE.
+  control%l_aerosol_asymmetry_band = .FALSE.
+  control%l_spherical_path_diag = .FALSE.
+  control%l_contrib_func = .FALSE.
+  control%l_contrib_func_band = .FALSE.
+
+! ------------------------------------------------------------------
 ! Set array sizes and allocate arrays:
 ! ------------------------------------------------------------------
   file_name(1: length_name+1+len_file_suffix)                           &
@@ -296,6 +327,15 @@ PROGRAM l_run_cdf
               dimen%nd_channel)                                       )
   ALLOCATE( heating_rate(dimen%nd_profile, dimen%nd_layer,              &
               dimen%nd_channel)                                       )
+  IF (control%l_contrib_func) THEN
+    ALLOCATE( contrib_func_i(dimen%nd_profile, dimen%nd_layer,          &
+                dimen%nd_channel)                                     )
+    ALLOCATE( contrib_func_f(dimen%nd_profile, dimen%nd_layer,          &
+                dimen%nd_channel)                                     )
+  ELSE
+    ALLOCATE( contrib_func_i(1, 1, 1) )
+    ALLOCATE( contrib_func_f(1, 1, 1) )
+  END IF
 
   npd_cdl_data = Max(dimen%nd_profile*dimen%nd_layer*dimen%nd_channel,  &
                      dimen%nd_profile*spectrum%dim%nd_band*             &
@@ -1104,14 +1144,14 @@ PROGRAM l_run_cdf
     cld%frac_cloudy=frac_cloudy_full
     IF (cld%n_cloud_type == 2) THEN
       IF (ALLOCATED(cic_sub_full)) THEN
-        cld%c_sub(:,:,:,1)=clw_sub_full
-        cld%c_sub(:,:,:,2)=cic_sub_full
+        cld%c_sub(1:atm%n_profile,1:atm%n_layer,:,1)=clw_sub_full
+        cld%c_sub(1:atm%n_profile,1:atm%n_layer,:,2)=cic_sub_full
       ELSE
-        cld%c_sub(:,:,:,1)=clw_sub_full
-        cld%c_sub(:,:,:,2)=clw_sub_full
+        cld%c_sub(1:atm%n_profile,1:atm%n_layer,:,1)=clw_sub_full
+        cld%c_sub(1:atm%n_profile,1:atm%n_layer,:,2)=clw_sub_full
       ENDIF
     ELSE IF (cld%n_cloud_type == 1) THEN
-        cld%c_sub(:,:,:,1)=clw_sub_full    
+        cld%c_sub(1:atm%n_profile,1:atm%n_layer,:,1)=clw_sub_full    
     ENDIF
   ENDIF
 
@@ -1234,6 +1274,10 @@ END IF
         ENDDO
       ENDIF
     ENDDO
+    IF (control%l_contrib_func) THEN
+      contrib_func_i = radout%contrib_funci
+      contrib_func_f = radout%contrib_funcf
+    END IF
 
 !   Write the output files.
     CALL output_flux_cdf(ierr,                                          &
@@ -1247,6 +1291,7 @@ END IF
       flux_total, flux_diffuse_down,                                    &
       radout%flux_up, flux_net,                                         &
       flux_direct, heating_rate,                                        &
+      contrib_func_i, contrib_func_f,                                   &
       dimen%nd_profile, npd_latitude, npd_longitude, dimen%nd_layer,    &
       dimen%nd_channel,                                                 &
       npd_cdl_dimen, npd_cdl_dimen_size,                                &
@@ -1310,6 +1355,7 @@ END IF
   DEALLOCATE( flux_total                )
   DEALLOCATE( flux_net                  )
   DEALLOCATE( heating_rate              )
-
+  DEALLOCATE( contrib_func_i            )
+  DEALLOCATE( contrib_func_f            )
 
 END PROGRAM l_run_cdf

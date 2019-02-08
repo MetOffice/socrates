@@ -4,30 +4,18 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to convert differential IR radiances to actual ones.
+! Convert differential IR radiances or fluxes to actual ones.
 !
-! Purpose:
-!   This subroutine receives differntial IR radiances or fluxes
-!   and returns actual values.
-!
-! Method:
-!   Striaghtforward.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
-!
-!- ---------------------------------------------------------------------
-SUBROUTINE adjust_ir_radiance(n_profile, n_layer, n_viewing_level       &
-    , n_direction, i_angular_integration, i_sph_mode                    &
-    , planck_flux, planck_radiance                                      &
-    , flux_down, flux_up, radiance                                      &
-    , l_clear, flux_down_clear, flux_up_clear                           &
-    , nd_2sg_profile, nd_flux_profile, nd_radiance_profile              &
-    , nd_layer, nd_direction, nd_viewing_level                          &
-    )
+!------------------------------------------------------------------------------
+SUBROUTINE adjust_ir_radiance(control, dimen, atm, radout, &
+    planck, i_band, l_clear)
 
-
-  USE realtype_rd, ONLY: RealK
+  USE realtype_rd,  ONLY: RealK
+  USE def_control,  ONLY: StrCtrl
+  USE def_dimen,    ONLY: StrDim
+  USE def_atm,      ONLY: StrAtm
+  USE def_out,      ONLY: StrOut
+  USE def_planck,   ONLY: StrPlanck
   USE rad_pcf
   USE rad_ccf, ONLY: pi
   USE yomhook, ONLY: lhook, dr_hook
@@ -36,68 +24,32 @@ SUBROUTINE adjust_ir_radiance(n_profile, n_layer, n_viewing_level       &
   IMPLICIT NONE
 
 
-! Dummy array sizes
-  INTEGER, INTENT(IN) ::                                                &
-      nd_2sg_profile                                                    &
-!       Size allocated for profiles of fluxes
-    , nd_flux_profile                                                   &
-!       Size allocated for profiles of output fluxes
-    , nd_radiance_profile                                               &
-!       Size allocated for atmospheric profiles for
-!       quantities used in calculations of radiances
-    , nd_layer                                                          &
-!       Size allocated for atmospheric layers
-    , nd_viewing_level                                                  &
-!       Size allocated for levels for radiances
-    , nd_direction
-!       Size allocated for directions
+! Control options:
+  TYPE(StrCtrl),     INTENT(IN)    :: control
+
+! Dimensions:
+  TYPE(StrDim),      INTENT(IN)    :: dimen
+
+! Atmospheric properties:
+  TYPE(StrAtm),      INTENT(IN)    :: atm
+
+! Output fields:
+  TYPE(StrOut),      INTENT(INOUT) :: radout
 
 
-! Dummy arguments
-  INTEGER, INTENT(IN) ::                                                &
-      n_profile                                                         &
-!       Number of atmospheric profiles
-    , n_layer                                                           &
-!       Number of atmospheric layers
-    , n_direction                                                       &
-!       Number of directions
-    , n_viewing_level
-!       Number of levels at which to calculate radiances
-  INTEGER, INTENT(IN) ::                                                &
-      i_angular_integration                                             &
-!       Angular integration scheme
-    , i_sph_mode
-!       Mode in which the spherical solver is used
-  REAL (RealK), INTENT(IN) ::                                           &
-      planck_flux(nd_flux_profile, 0: nd_layer)                         &
-!       Planckian fluxes
-    , planck_radiance(nd_radiance_profile, nd_viewing_level)
-!       Planckian radiances
-  LOGICAL, INTENT(IN) ::                                                &
-      l_clear
-!       Calculate clear-sky fluxes
+! Planckian emission fields
+  TYPE(StrPlanck),   INTENT(IN)    :: planck
 
-  REAL (RealK), INTENT(INOUT) ::                                        &
-      flux_down(nd_flux_profile, 0: nd_layer)                           &
-!       Downward fluxes
-    , flux_up(nd_flux_profile, 0: nd_layer)                             &
-!       Upward fluxes
-    , radiance(nd_radiance_profile, nd_viewing_level, nd_direction)     &
-!       Radiances in specified directions
-    , flux_down_clear(nd_2sg_profile, 0: nd_layer)                      &
-!       Clear downward flux
-    , flux_up_clear(nd_2sg_profile, 0: nd_layer)
-!       Clear upward flux
+  INTEGER, INTENT(IN) :: i_band
+!     Band being considered
+
+  LOGICAL, INTENT(IN) :: l_clear
+!     Calculate clear-sky fluxes
 
 
 ! Local arguments
-  INTEGER                                                               &
-      i                                                                 &
-!       Loop variable
-    , id                                                                &
-!       Loop variable
-    , l
-!       Loop variable
+  INTEGER :: i, id, l
+!     Loop variables
 
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
@@ -108,43 +60,108 @@ SUBROUTINE adjust_ir_radiance(n_profile, n_layer, n_viewing_level       &
 
   IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
-  IF ( (i_angular_integration == ip_two_stream).OR.                     &
-       (i_angular_integration == ip_ir_gauss) ) THEN
+  IF ( (control%i_angular_integration == ip_two_stream).OR. &
+       (control%i_angular_integration == ip_ir_gauss) ) THEN
 
-    DO i=0, n_layer
-      DO l=1, n_profile
-        flux_up(l, i)=flux_up(l, i)+planck_flux(l, i)
-        flux_down(l, i)=flux_down(l, i)+planck_flux(l, i)
+    DO i=0, atm%n_layer
+      DO l=1, atm%n_profile
+        radout%flux_up(l, i, control%map_channel(i_band)) = &
+          radout%flux_up(l, i, control%map_channel(i_band)) &
+          + planck%flux(l, i)
+        radout%flux_down(l, i, control%map_channel(i_band)) = &
+          radout%flux_down(l, i, control%map_channel(i_band)) &
+          + planck%flux(l, i)
       END DO
     END DO
     IF (l_clear) THEN
-      DO i=0, n_layer
-        DO l=1, n_profile
-          flux_up_clear(l,i)=flux_up_clear(l,i)+planck_flux(l,i)
-          flux_down_clear(l,i)=flux_down_clear(l,i)+planck_flux(l,i)
+      DO i=0, atm%n_layer
+        DO l=1, atm%n_profile
+          radout%flux_up_clear(l, i, control%map_channel(i_band)) = &
+            radout%flux_up_clear(l, i, control%map_channel(i_band)) &
+            + planck%flux(l, i)
+          radout%flux_down_clear(l, i, control%map_channel(i_band)) = &
+            radout%flux_down_clear(l, i, control%map_channel(i_band)) &
+            + planck%flux(l, i)
         END DO
       END DO
     END IF
 
-  ELSE IF (i_angular_integration == ip_spherical_harmonic) THEN
+    IF (control%l_flux_up_band) THEN
+      DO i=0, atm%n_layer
+        DO l=1, atm%n_profile
+          radout%flux_up_band(l, i, i_band) = &
+            radout%flux_up_band(l, i, i_band) + planck%flux(l, i)
+        END DO
+      END DO
+    END IF
+    IF (control%l_flux_down_band) THEN
+      DO i=0, atm%n_layer
+        DO l=1, atm%n_profile
+          radout%flux_down_band(l, i, i_band) = &
+            radout%flux_down_band(l, i, i_band) + planck%flux(l, i)
+        END DO
+      END DO
+    END IF
+    IF (l_clear) THEN
+      IF (control%l_flux_up_clear_band) THEN
+        DO i=0, atm%n_layer
+          DO l=1, atm%n_profile
+            radout%flux_up_clear_band(l, i, i_band) = &
+              radout%flux_up_clear_band(l, i, i_band) + planck%flux(l, i)
+          END DO
+        END DO
+      END IF
+!      IF (control%l_flux_down_clear_band) THEN
+!        DO i=0, atm%n_layer
+!          DO l=1, atm%n_profile
+!            radout%flux_down_clear_band(l, i, i_band) = &
+!              radout%flux_down_clear_band(l, i, i_band) + planck%flux(l, i)
+!          END DO
+!        END DO
+!      END IF
+    END IF
+
+  ELSE IF (control%i_angular_integration == ip_spherical_harmonic) THEN
 
 !   Planckian radiances are always used with spherical harmonics,
 !   even when calculating fluxes. The number of levels should
 !   be set appropriately above.
-    IF (i_sph_mode == ip_sph_mode_flux) THEN
-      DO i=0, n_layer
-        DO l=1, n_profile
-          flux_up(l, i)=flux_up(l, i)+pi*planck_radiance(l, i+1)
-          flux_down(l, i)=flux_down(l, i)                               &
-            +pi*planck_radiance(l, i+1)
+    IF (control%i_sph_mode == ip_sph_mode_flux) THEN
+      DO i=0, atm%n_layer
+        DO l=1, atm%n_profile
+          radout%flux_up(l, i, control%map_channel(i_band)) = &
+            radout%flux_up(l, i, control%map_channel(i_band)) &
+            + pi*planck%radiance(l, i+1)
+          radout%flux_down(l, i, control%map_channel(i_band)) = &
+            radout%flux_down(l, i, control%map_channel(i_band)) &
+            + pi*planck%radiance(l, i+1)
         END DO
       END DO
-    ELSE IF (i_sph_mode == ip_sph_mode_rad) THEN
-      DO id=1, n_direction
-        DO i=1, n_viewing_level
-          DO l=1, n_profile
-            radiance(l, i, id)=radiance(l, i, id)                       &
-              +planck_radiance(l, i)
+      IF (control%l_flux_up_band) THEN
+        DO i=0, atm%n_layer
+          DO l=1, atm%n_profile
+            radout%flux_up_band(l, i, i_band) = &
+              radout%flux_up_band(l, i, i_band) &
+              + pi*planck%radiance(l, i+1)
+          END DO
+        END DO
+      END IF
+      IF (control%l_flux_down_band) THEN
+        DO i=0, atm%n_layer
+          DO l=1, atm%n_profile
+            radout%flux_down_band(l, i, i_band) = &
+              radout%flux_down_band(l, i, i_band) &
+              + pi*planck%radiance(l, i+1)
+          END DO
+        END DO
+      END IF
+    ELSE IF (control%i_sph_mode == ip_sph_mode_rad) THEN
+      DO id=1, atm%n_direction
+        DO i=1, atm%n_viewing_level
+          DO l=1, atm%n_profile
+            radout%radiance(l, i, id, control%map_channel(i_band)) = &
+              radout%radiance(l, i, id, control%map_channel(i_band)) &
+              + planck%radiance(l, i)
           END DO
         END DO
       END DO

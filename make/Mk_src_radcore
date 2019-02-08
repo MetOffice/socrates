@@ -6,6 +6,7 @@ SOURCE_RADCORE=	adjust_ir_radiance.f90 \
 		build_sph_matrix.f90 \
 		calc_brdf.f90 \
 		calc_cg_coeff.f90 \
+                calc_contrib_func.f90 \
 		calc_flux_ipa.f90 \
 		calc_gauss_weight_90.f90 \
 		calc_radiance_ipa.f90 \
@@ -20,6 +21,7 @@ SOURCE_RADCORE=	adjust_ir_radiance.f90 \
 		column_solver.f90 \
 		copy_clr_full.f90 \
 		copy_clr_sol.f90 \
+		def_planck.f90 \
 		def_ss_prop.f90 \
 		def_spherical_geometry.f90 \
 		diff_albedo_basis.f90 \

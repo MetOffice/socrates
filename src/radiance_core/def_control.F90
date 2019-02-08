@@ -313,7 +313,10 @@ TYPE StrCtrl
 !   Calculate total aerosol asymmetry (weighted by scattering) per band
   LOGICAL :: l_spherical_path_diag                                = .FALSE.
 !   Output the direct beam path through spherical layers
-
+  LOGICAL :: l_contrib_func                                       = .FALSE.
+!   Output the contribution function
+  LOGICAL :: l_contrib_func_band                                  = .FALSE.
+!   Output the contribution function per band
 
 ! Satellite Data:
 

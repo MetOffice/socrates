@@ -67,7 +67,11 @@ SUBROUTINE make_block_14 &
   write(iu_stdout, '(//a)') &
     'Do you wish to exclude regions from particular bands? (y/n)'
   read(iu_stdin, '(a)') char_yn
-  if ( (char_yn.ne.'y').and.(char_yn.ne.'Y') ) return
+  if ( (char_yn.ne.'y').and.(char_yn.ne.'Y') ) then
+    SpDim%nd_exclude = 1
+    ALLOCATE(SpBasic%index_exclude(SpDim%nd_exclude, SpDim%nd_band))
+    return
+  end if
 !
   l_exclude=.TRUE.
   SpDim%nd_exclude=0

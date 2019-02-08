@@ -33,6 +33,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
   USE parkind1,     ONLY: jprb, jpim
   USE ereport_mod,  ONLY: ereport
 
+  USE def_planck, ONLY: StrPlanck, allocate_planck, deallocate_planck
   USE def_spherical_geometry, ONLY: StrSphGeo, allocate_sph, deallocate_sph
   USE spherical_path_mod,     ONLY: spherical_path
   
@@ -195,18 +196,6 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
     , k_continuum_mono(spectrum%dim%nd_continuum)
 !       Monochromatic continuum components
 
-! Thermal arrays:
-  REAL (RealK) ::                                                              &
-      planck_flux_band(dimen%nd_profile, 0: dimen%nd_layer)                    &
-!       Planckian flux in band at edges of layers
-    , diff_planck_band(dimen%nd_profile, dimen%nd_layer)                       &
-!       Difference in the Planckian flux across layers
-    , diff_planck_band_2(dimen%nd_profile, dimen%nd_layer)                     &
-!       Twice the 2nd difference of in the Planckian flux across
-!       layers
-    , planck_flux_ground(dimen%nd_profile)
-!       Planckian flux at the surface temperature
-
 ! Surface BRDF terms
   LOGICAL                                                                      &
       l_diff_alb
@@ -233,6 +222,9 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 ! Fundamental optical properties of layers:
   TYPE(str_ss_prop) :: ss_prop
 !   Single scattering properties of the atmosphere
+
+  TYPE(StrPlanck) :: planck
+!   Planckian emission fields
 
   TYPE(StrSphGeo) :: sph
 !   Spherical geometry fields
@@ -304,9 +296,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !       Direct solar irradiance on levels (not split by
 !       diagnostic bands or returned, but retained for
 !       future use)
-  REAL (RealK) ::                                                              &
-      planck_radiance_band(dimen%nd_radiance_profile, dimen%nd_viewing_level)
-!       Planckian radiance in the current band
+
   LOGICAL                                                                      &
       l_initial
 !       Flag to run the routine incrementing diagnostics in
@@ -338,11 +328,6 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
   REAL (RealK) ::                                                              &
       area_column(dimen%nd_profile, dimen%nd_column)
 !       Areas of columns
-
-! Local variables for tiled fluxes:
-  REAL (RealK) ::                                                              &
-      planck_flux_tile(dimen%nd_point_tile, dimen%nd_tile)
-!       Local Planckian fluxes on surface tiles
 
 ! Secondary arrays for diagnostics
   REAL (RealK) ::                                                              &
@@ -1460,8 +1445,10 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       END DO
     END IF
 
-    IF (control%isolir == ip_infra_red) THEN
+!   Allocate space for the Planckian emission fields
+    CALL allocate_planck(planck, dimen)
 
+    IF (control%isolir == ip_infra_red) THEN
 !     Calculate the change in the thermal source function
 !     across each layer for the infra-red part of the spectrum.
 
@@ -1472,14 +1459,14 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , spectrum%planck%thermal_coeff(0, i_band)                           &
           , spectrum%planck%t_ref_planck                                       &
           , spectrum%planck%theta_planck_tbl, atm%t_level, bound%t_ground      &
-          , planck_flux_band, diff_planck_band                                 &
-          , planck_flux_ground                                                 &
-          , control%l_ir_source_quad, atm%t, diff_planck_band_2                &
+          , planck%flux, planck%diff                                           &
+          , planck%flux_ground                                                 &
+          , control%l_ir_source_quad, atm%t, planck%diff_2                     &
           , control%i_angular_integration                                      &
           , atm%n_viewing_level, i_rad_layer, frac_rad_layer                   &
-          , planck_radiance_band                                               &
+          , planck%radiance                                                    &
           , control%l_tile, bound%n_point_tile, bound%n_tile, bound%list_tile  &
-          , bound%frac_tile, bound%t_tile, planck_flux_tile                    &
+          , bound%frac_tile, bound%t_tile, planck%flux_tile                    &
           , dimen%nd_profile, dimen%nd_layer, spectrum%dim%nd_thermal_coeff    &
           , dimen%nd_radiance_profile, dimen%nd_viewing_level                  &
           , dimen%nd_point_tile, dimen%nd_tile                                 &
@@ -1490,14 +1477,14 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , spectrum%planck%n_deg_fit                                          &
           , spectrum%planck%thermal_coeff(0, i_band)                           &
           , spectrum%planck%t_ref_planck, atm%t_level, bound%t_ground          &
-          , planck_flux_band, diff_planck_band                                 &
-          , planck_flux_ground                                                 &
-          , control%l_ir_source_quad, atm%t, diff_planck_band_2                &
+          , planck%flux, planck%diff                                           &
+          , planck%flux_ground                                                 &
+          , control%l_ir_source_quad, atm%t, planck%diff_2                     &
           , control%i_angular_integration                                      &
           , atm%n_viewing_level, i_rad_layer, frac_rad_layer                   &
-          , planck_radiance_band                                               &
+          , planck%radiance                                                    &
           , control%l_tile, bound%n_point_tile, bound%n_tile, bound%list_tile  &
-          , bound%frac_tile, bound%t_tile, planck_flux_tile                    &
+          , bound%frac_tile, bound%t_tile, planck%flux_tile                    &
           , dimen%nd_profile, dimen%nd_layer, spectrum%dim%nd_thermal_coeff    &
           , dimen%nd_radiance_profile, dimen%nd_viewing_level                  &
           , dimen%nd_point_tile, dimen%nd_tile                                 &
@@ -1516,7 +1503,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
 ! DEPENDS ON: solve_band_without_gas
       CALL solve_band_without_gas(ierr                                         &
-        , control, cld, bound, radout, i_band                                  &
+        , control, atm, cld, bound, radout, i_band                             &
 !                 Atmospheric properties
         , atm%n_profile, atm%n_layer, atm%mass                                 &
 !                 Angular integration
@@ -1537,16 +1524,14 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Solar properties
         , bound%zen_0, solar_irrad_band, sph                                   &
 !                 Infra-red properties
-        , planck_flux_band(1, 0), planck_flux_band(1, atm%n_layer)             &
-        , diff_planck_band, control%l_ir_source_quad, diff_planck_band_2       &
+        , planck                                                               &
 !                 Surface properties
         , control%ls_brdf_trunc, bound%n_brdf_basis_fnc                        &
         , bound%rho_alb(1, 1, i_band)                                          &
         , bound%f_brdf, brdf_sol, brdf_hemi                                    &
-        , planck_flux_ground                                                   &
 !                 Tiling of the surface
         , control%l_tile, bound%n_point_tile, bound%n_tile, bound%list_tile    &
-        , bound%rho_alb_tile(1, 1, 1, i_band), planck_flux_tile                &
+        , bound%rho_alb_tile(1, 1, 1, i_band)                                  &
 !                 Optical Properties
         , ss_prop                                                              &
 !                 Cloudy properties
@@ -1591,7 +1576,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       CASE (ip_overlap_single)
 ! DEPENDS ON: solve_band_one_gas
         CALL solve_band_one_gas(ierr                                           &
-          , control, cld, bound, radout, i_band                                &
+          , control, atm, cld, bound, radout, i_band                           &
 !                 Atmospheric properties
           , atm%n_profile, atm%n_layer, atm%mass                               &
 !                 Angular integration
@@ -1615,19 +1600,14 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Solar properties
           , bound%zen_0, solar_irrad_band, sph                                 &
 !                 Infra-red properties
-          , planck_flux_band(1, 0)                                             &
-          , planck_flux_band(1, atm%n_layer)                                   &
-          , diff_planck_band                                                   &
-          , control%l_ir_source_quad, diff_planck_band_2                       &
+          , planck                                                             &
 !                 Surface properties
           , control%ls_brdf_trunc, bound%n_brdf_basis_fnc                      &
           , bound%rho_alb(1, 1, i_band)                                        &
           , bound%f_brdf, brdf_sol, brdf_hemi                                  &
-          , planck_flux_ground                                                 &
 !                 Tiling of the surface
           , control%l_tile, bound%n_point_tile, bound%n_tile, bound%list_tile  &
           , bound%rho_alb_tile(1, 1, 1, i_band)                                &
-          , planck_flux_tile                                                   &
 !                 Optical Properties
           , ss_prop                                                            &
 !                 Cloudy properties
@@ -1666,7 +1646,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       CASE (ip_overlap_random)
 ! DEPENDS ON: solve_band_random_overlap
         CALL solve_band_random_overlap(ierr                                    &
-          , control, cld, bound, radout, i_band                                &
+          , control, atm, cld, bound, radout, i_band                           &
 !                 Atmospheric properties
           , atm%n_profile, atm%n_layer, atm%mass                               &
 !                 Angular integration
@@ -1690,19 +1670,14 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Solar properties
           , bound%zen_0, solar_irrad_band, sph                                 &
 !                 Infra-red properties
-          , planck_flux_band(1, 0)                                             &
-          , planck_flux_band(1, atm%n_layer)                                   &
-          , diff_planck_band                                                   &
-          , control%l_ir_source_quad, diff_planck_band_2                       &
+          , planck                                                             &
 !                 Surface properties
           , control%ls_brdf_trunc, bound%n_brdf_basis_fnc                      &
           , bound%rho_alb(1, 1, i_band)                                        &
           , bound%f_brdf, brdf_sol, brdf_hemi                                  &
-          , planck_flux_ground                                                 &
 !                 Tiling of the surface
           , control%l_tile, bound%n_point_tile, bound%n_tile, bound%list_tile  &
           , bound%rho_alb_tile(1, 1, 1, i_band)                                &
-          , planck_flux_tile                                                   &
 !                 Optical Properties
           , ss_prop                                                            &
 !                 Cloudy properties
@@ -1743,7 +1718,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
         nd_esft_max = MAX(control%n_esft_red, nd_k_term)
 ! DEPENDS ON: solve_band_random_overlap_resort_rebin
         CALL solve_band_random_overlap_resort_rebin(ierr                       &
-          , control, cld, bound, radout, i_band                                &
+          , control, atm, cld, bound, radout, i_band                           &
 !                 Atmospheric properties
           , atm%n_profile, atm%n_layer, atm%mass                               &
 !                 Angular integration
@@ -1768,19 +1743,14 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Solar properties
           , bound%zen_0, solar_irrad_band, sph                                 &
 !                 Infra-red properties
-          , planck_flux_band(1, 0)                                             &
-          , planck_flux_band(1, atm%n_layer)                                   &
-          , diff_planck_band                                                   &
-          , control%l_ir_source_quad, diff_planck_band_2                       &
+          , planck                                                             &
 !                 Surface properties
           , control%ls_brdf_trunc, bound%n_brdf_basis_fnc                      &
           , bound%rho_alb(1, 1, i_band)                                        &
           , bound%f_brdf, brdf_sol, brdf_hemi                                  &
-          , planck_flux_ground                                                 &
 !                 Tiling of the surface
           , control%l_tile, bound%n_point_tile, bound%n_tile, bound%list_tile  &
           , bound%rho_alb_tile(1, 1, 1, i_band)                                &
-          , planck_flux_tile                                                   &
 !                 Optical Properties
           , ss_prop                                                            &
 !                 Cloudy properties
@@ -1819,7 +1789,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       CASE (ip_overlap_k_eqv_scl)
 ! DEPENDS ON: solve_band_k_eqv_scl
         CALL solve_band_k_eqv_scl(ierr                                         &
-          , control, dimen, cld, bound, radout                                 &
+          , control, dimen, atm, cld, bound, radout                            &
 !                 Atmospheric properties
           , atm%n_profile, atm%n_layer, atm%mass                               &
 !                 Angular integration
@@ -1842,19 +1812,15 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Solar properties
           , bound%zen_0, solar_irrad_band, sph                                 &
 !                 Infra-red properties
-          , planck_flux_band                                                   &
-          , diff_planck_band                                                   &
-          , control%l_ir_source_quad, diff_planck_band_2                       &
+          , planck                                                             &
 !                 Surface properties
           , control%ls_brdf_trunc, bound%n_brdf_basis_fnc                      &
           , bound%rho_alb(1, 1, i_band)                                        &
           , bound%f_brdf, brdf_sol, brdf_hemi                                  &
           , diffuse_alb_basis                                                  &
-          , planck_flux_ground                                                 &
 !                 Tiling of the surface
           , control%l_tile, bound%n_point_tile, bound%n_tile, bound%list_tile  &
           , bound%rho_alb_tile(1, 1, 1, i_band)                                &
-          , planck_flux_tile                                                   &
 !                 Optical Properties
           , ss_prop                                                            &
 !                 Cloudy properties
@@ -1897,7 +1863,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       CASE (ip_overlap_k_eqv, ip_overlap_k_eqv_mod)
 ! DEPENDS ON: solve_band_k_eqv
         CALL solve_band_k_eqv(ierr                                             &
-          , control, dimen, cld, bound, radout                                 &
+          , control, dimen, atm, cld, bound, radout                            &
 !                 Atmospheric properties
           , atm%n_profile, atm%n_layer, i_top, atm%p, atm%t, atm%mass          &
 !                 Angular integration
@@ -1927,19 +1893,15 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Solar properties
           , bound%zen_0, solar_irrad_band, sph                                 &
 !                 Infra-red properties
-          , planck_flux_band                                                   &
-          , diff_planck_band                                                   &
-          , control%l_ir_source_quad, diff_planck_band_2                       &
+          , planck                                                             &
 !                 Surface properties
           , control%ls_brdf_trunc, bound%n_brdf_basis_fnc                      &
           , bound%rho_alb(1, 1, i_band)                                        &
           , bound%f_brdf, brdf_sol, brdf_hemi                                  &
           , diffuse_alb_basis                                                  &
-          , planck_flux_ground                                                 &
 !                 Tiling of the surface
           , control%l_tile, bound%n_point_tile, bound%n_tile, bound%list_tile  &
           , bound%rho_alb_tile(1, 1, 1, i_band)                                &
-          , planck_flux_tile                                                   &
 !                 Optical Properties
           , ss_prop                                                            &
 !                 Cloudy properties
@@ -1983,7 +1945,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       CASE (ip_overlap_mix_ses2)
 ! DEPENDS ON: solve_band_ses
         CALL solve_band_ses(ierr                                               &
-          , control, dimen, cld, bound, radout                                 &
+          , control, dimen, atm, cld, bound, radout                            &
 !                 Atmospheric properties
           , atm%n_profile, atm%n_layer, atm%mass                               &
 !                 Angular integration
@@ -2012,19 +1974,14 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Solar properties
           , bound%zen_0, solar_irrad_band_ses, control%l_solar_tail_flux, sph  &
 !                 Infra-red properties
-          , planck_flux_band(1, 0)                                             &
-          , planck_flux_band(1, atm%n_layer)                                   &
-          , diff_planck_band                                                   &
-          , control%l_ir_source_quad, diff_planck_band_2                       &
+          , planck                                                             &
 !                 Surface properties
           , control%ls_brdf_trunc, bound%n_brdf_basis_fnc                      &
           , bound%rho_alb(1, 1, i_band)                                        &
           , bound%f_brdf, brdf_sol, brdf_hemi                                  &
-          , planck_flux_ground                                                 &
 !                 Tiling of the surface
           , control%l_tile, bound%n_point_tile, bound%n_tile, bound%list_tile  &
           , bound%rho_alb_tile(1, 1, 1, i_band)                                &
-          , planck_flux_tile                                                   &
 !                 Optical Properties
           , ss_prop                                                            &
 !                 Cloudy properties
@@ -2334,26 +2291,17 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
     DEALLOCATE(k_abs_layer)
 
 
-!   Make any adjustments to fluxes and radiances to convert
-!   to actual values. This is done inside the loop over bands
-!   to allow for division of the output fluxes between
-!   separate diagnostic bands.
+!   Make any adjustments to fluxes and radiances to convert to actual values.
+!   This is done inside the loop over bands to allow for division of the
+!   output fluxes between separate diagnostic bands.
     IF (control%isolir == ip_infra_red) THEN
 ! DEPENDS ON: adjust_ir_radiance
-      CALL adjust_ir_radiance(atm%n_profile, atm%n_layer, atm%n_viewing_level  &
-        , atm%n_direction, control%i_angular_integration, control%i_sph_mode   &
-        , planck_flux_band, planck_radiance_band                               &
-        , radout%flux_down(1, 0, control%map_channel(i_band))                  &
-        , radout%flux_up(1, 0, control%map_channel(i_band))                    &
-        , radout%radiance(1, 1, 1, control%map_channel(i_band))                &
-        , l_clear_band                                                         &
-        , radout%flux_down_clear(1, 0, control%map_channel(i_band))            &
-        , radout%flux_up_clear(1, 0, control%map_channel(i_band))              &
-        , dimen%nd_2sg_profile, dimen%nd_flux_profile                          &
-        , dimen%nd_radiance_profile                                            &
-        , dimen%nd_layer, dimen%nd_direction, dimen%nd_viewing_level           &
-        )
+      CALL adjust_ir_radiance(control, dimen, atm, radout, &
+        planck, i_band, l_clear_band)
     END IF
+
+!   Deallocate Planckian emission fields
+    CALL deallocate_planck(planck)
 
 !   Set band-by-band flux diagnostics
     IF (control%l_flux_down_clear_band) THEN

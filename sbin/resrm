@@ -2,7 +2,7 @@
 #
 # Script to remove all files of results with a given base name.
 #
-for suffix in uflx dflx sflx nflx vflx hrts radn
+for suffix in uflx dflx sflx nflx vflx hrts radn cfi cff
 do
    if [ -f $1.$suffix ]
       then rm -f $1.$suffix
