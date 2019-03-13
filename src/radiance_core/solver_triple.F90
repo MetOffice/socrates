@@ -4,16 +4,13 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to solve for mixed fluxes scattering without a matrix.
+! Subroutine to solve for mixed fluxes scattering without a matrix.
 !
 ! Method:
 !   Gaussian elimination in an upward direction is employed to
 !   determine effective albedos for lower levels of the atmosphere.
 !   This allows a downward pass of back-substitution to be carried
 !   out to determine the upward and downward fluxes.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE solver_triple(n_profile, n_layer, n_cloud_top                &
@@ -141,18 +138,18 @@ SUBROUTINE solver_triple(n_profile, n_layer, n_cloud_top                &
 
 ! Effective coupling albedos and source functions:
   REAL (RealK) ::                                                       &
-      alpha11(nd_profile, nd_layer+1)                                   &
-    , alpha12(nd_profile, nd_layer+1)                                   &
-    , alpha13(nd_profile, nd_layer+1)                                   &
-    , alpha21(nd_profile, nd_layer+1)                                   &
-    , alpha22(nd_profile, nd_layer+1)                                   &
-    , alpha23(nd_profile, nd_layer+1)                                   &
-    , alpha31(nd_profile, nd_layer+1)                                   &
-    , alpha32(nd_profile, nd_layer+1)                                   &
-    , alpha33(nd_profile, nd_layer+1)                                   &
-    , g1(nd_profile, nd_layer+1)                                        &
-    , g2(nd_profile, nd_layer+1)                                        &
-    , g3(nd_profile, nd_layer+1)
+      alpha11(nd_profile)                                               &
+    , alpha12(nd_profile)                                               &
+    , alpha13(nd_profile)                                               &
+    , alpha21(nd_profile)                                               &
+    , alpha22(nd_profile)                                               &
+    , alpha23(nd_profile)                                               &
+    , alpha31(nd_profile)                                               &
+    , alpha32(nd_profile)                                               &
+    , alpha33(nd_profile)                                               &
+    , g1(nd_profile)                                                    &
+    , g2(nd_profile)                                                    &
+    , g3(nd_profile)
 ! Terms for downward propagation:
   REAL (RealK) ::                                                       &
       gamma11(nd_profile, nd_layer)                                     &
@@ -188,21 +185,23 @@ SUBROUTINE solver_triple(n_profile, n_layer, n_cloud_top                &
     , lambda3                                                           &
     , lambda2                                                           &
     , lambda1                                                           &
-    , lambda
+    , lambda                                                            &
+    , dum1, dum2, dum3
+!           dummy variables
 
 ! Temporary fluxes
   REAL (RealK) ::                                                       &
-      flux_down_1(nd_profile, 0: nd_layer)                              &
+      flux_down_1(nd_profile)                                           &
 !       Downward fluxes outside clouds just below i'th level
-    , flux_down_2(nd_profile, 0: nd_layer)                              &
+    , flux_down_2(nd_profile)                                           &
 !       Downward fluxes inside clouds just below i'th level
-    , flux_down_3(nd_profile, 0: nd_layer)                              &
+    , flux_down_3(nd_profile)                                           &
 !       Downward fluxes inside clouds just below i'th level
-    , flux_up_1(nd_profile, 0: nd_layer)                                &
+    , flux_up_1(nd_profile)                                             &
 !       Upward fluxes outside clouds just above i'th level
-    , flux_up_2(nd_profile, 0: nd_layer)                                &
+    , flux_up_2(nd_profile)                                             &
 !       Upward fluxes inside clouds just above i'th level
-    , flux_up_3(nd_profile, 0: nd_layer)
+    , flux_up_3(nd_profile)
 !       Upward fluxes inside clouds just above i'th level
 
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
@@ -218,181 +217,181 @@ SUBROUTINE solver_triple(n_profile, n_layer, n_cloud_top                &
 ! assumed that 1 represents clear skies, 2 represents startiform
 ! clouds and 3 represents convective cloud.
 
-! Initialize at the bottom of the column for upward elimination.
-  DO l=1, n_profile
-    alpha11(l, n_layer+1)=albedo_surface_diff(l)
-    alpha12(l, n_layer+1)=0.0e+00_RealK
-    alpha13(l, n_layer+1)=0.0e+00_RealK
-    alpha21(l, n_layer+1)=0.0e+00_RealK
-    alpha22(l, n_layer+1)=albedo_surface_diff(l)
-    alpha23(l, n_layer+1)=0.0e+00_RealK
-    alpha31(l, n_layer+1)=0.0e+00_RealK
-    alpha32(l, n_layer+1)=0.0e+00_RealK
-    alpha33(l, n_layer+1)=albedo_surface_diff(l)
-    g1(l, n_layer+1)=source_ground_free(l)
-    g2(l, n_layer+1)=source_ground_strat(l)
-    g3(l, n_layer+1)=source_ground_conv(l)
-  END DO
-
 ! Upward elimination through the cloudy layers.
-  DO i=n_layer, n_cloud_top, -1
-    DO l=1, n_profile
+  DO i=n_layer+1, 1, -1
+    IF ( i < n_layer+1 .AND. i >= n_cloud_top ) THEN
+      DO l=1, n_profile
 
-      theta11=alpha11(l, i+1)*v11(l, i)+alpha12(l, i+1)*v21(l, i)       &
-        +alpha13(l, i+1)*v31(l, i)
-      theta12=alpha11(l, i+1)*v12(l, i)+alpha12(l, i+1)*v22(l, i)       &
-        +alpha13(l, i+1)*v32(l, i)
-      theta13=alpha11(l, i+1)*v13(l, i)+alpha12(l, i+1)*v23(l, i)       &
-        +alpha13(l, i+1)*v33(l, i)
-      theta21=alpha21(l, i+1)*v11(l, i)+alpha22(l, i+1)*v21(l, i)       &
-        +alpha23(l, i+1)*v31(l, i)
-      theta22=alpha21(l, i+1)*v12(l, i)+alpha22(l, i+1)*v22(l, i)       &
-        +alpha23(l, i+1)*v32(l, i)
-      theta23=alpha21(l, i+1)*v13(l, i)+alpha22(l, i+1)*v23(l, i)       &
-        +alpha23(l, i+1)*v33(l, i)
-      theta31=alpha31(l, i+1)*v11(l, i)+alpha32(l, i+1)*v21(l, i)       &
-        +alpha33(l, i+1)*v31(l, i)
-      theta32=alpha31(l, i+1)*v12(l, i)+alpha32(l, i+1)*v22(l, i)       &
-        +alpha33(l, i+1)*v32(l, i)
-      theta33=alpha31(l, i+1)*v13(l, i)+alpha32(l, i+1)*v23(l, i)       &
-        +alpha33(l, i+1)*v33(l, i)
-      beta31(l, i)=-theta31*r(l, i)
-      beta32(l, i)=-theta32*r_strat(l, i)
-      beta33_inv(l, i)=1.0e+00_RealK                                    &
-        /(1.0e+00_RealK-theta33*r_conv(l, i))
-      gamma31(l, i)=theta31*t(l, i)
-      gamma32(l, i)=theta32*t_strat(l, i)
-      gamma33(l, i)=theta33*t_conv(l, i)
-      h3(l, i)=g3(l, i+1)+theta31*s_down(l, i)                          &
-        +theta32*s_down_strat(l, i)                                     &
-        +theta33*s_down_conv(l, i)
+        theta11=alpha11(l)*v11(l, i)+alpha12(l)*v21(l, i)               &
+          +alpha13(l)*v31(l, i)
+        theta12=alpha11(l)*v12(l, i)+alpha12(l)*v22(l, i)               &
+          +alpha13(l)*v32(l, i)
+        theta13=alpha11(l)*v13(l, i)+alpha12(l)*v23(l, i)               &
+          +alpha13(l)*v33(l, i)
+        theta21=alpha21(l)*v11(l, i)+alpha22(l)*v21(l, i)               &
+          +alpha23(l)*v31(l, i)
+        theta22=alpha21(l)*v12(l, i)+alpha22(l)*v22(l, i)               &
+          +alpha23(l)*v32(l, i)
+        theta23=alpha21(l)*v13(l, i)+alpha22(l)*v23(l, i)               &
+          +alpha23(l)*v33(l, i)
+        theta31=alpha31(l)*v11(l, i)+alpha32(l)*v21(l, i)               &
+          +alpha33(l)*v31(l, i)
+        theta32=alpha31(l)*v12(l, i)+alpha32(l)*v22(l, i)               &
+          +alpha33(l)*v32(l, i)
+        theta33=alpha31(l)*v13(l, i)+alpha32(l)*v23(l, i)               &
+          +alpha33(l)*v33(l, i)
+        beta31(l, i)=-theta31*r(l, i)
+        beta32(l, i)=-theta32*r_strat(l, i)
+        beta33_inv(l, i)=1.0e+00_RealK                                  &
+          /(1.0e+00_RealK-theta33*r_conv(l, i))
+        gamma31(l, i)=theta31*t(l, i)
+        gamma32(l, i)=theta32*t_strat(l, i)
+        gamma33(l, i)=theta33*t_conv(l, i)
+        h3(l, i)=g3(l)+theta31*s_down(l, i)                             &
+          +theta32*s_down_strat(l, i)                                   &
+          +theta33*s_down_conv(l, i)
 
-      lambda3=theta23*r_conv(l, i)*beta33_inv(l, i)
-      beta22_inv(l, i)=1.0e+00_RealK                                    &
-        /(1.0e+00_RealK-theta22*r_strat(l, i)+lambda3*beta32(l, i))
-      beta21(l, i)=-theta21*r(l, i)+lambda3*beta31(l, i)
-      gamma21(l, i)=theta21*t(l, i)+lambda3*gamma31(l, i)
-      gamma22(l, i)=theta22*t_strat(l, i)+lambda3*gamma32(l, i)
-      gamma23(l, i)=theta23*t_conv(l, i)+lambda3*gamma33(l, i)
-      h2(l, i)=g2(l, i+1)+theta21*s_down(l, i)                          &
-        +theta22*s_down_strat(l, i)+theta23*s_down_conv(l, i)           &
-        +lambda3*h3(l, i)
+        lambda3=theta23*r_conv(l, i)*beta33_inv(l, i)
+        beta22_inv(l, i)=1.0e+00_RealK                                  &
+          /(1.0e+00_RealK-theta22*r_strat(l, i)+lambda3*beta32(l, i))
+        beta21(l, i)=-theta21*r(l, i)+lambda3*beta31(l, i)
+        gamma21(l, i)=theta21*t(l, i)+lambda3*gamma31(l, i)
+        gamma22(l, i)=theta22*t_strat(l, i)+lambda3*gamma32(l, i)
+        gamma23(l, i)=theta23*t_conv(l, i)+lambda3*gamma33(l, i)
+        h2(l, i)=g2(l)+theta21*s_down(l, i)                             &
+          +theta22*s_down_strat(l, i)+theta23*s_down_conv(l, i)         &
+          +lambda3*h3(l, i)
 
-      lambda3=theta13*r_conv(l, i)*beta33_inv(l, i)
-      lambda2=(theta12*r_strat(l, i)-lambda3*beta32(l, i))              &
-        *beta22_inv(l, i)
-      beta11_inv(l, i)=1.0e+00_RealK                                    &
-        /(1.0e+00_RealK-theta11*r(l, i)+lambda3*beta31(l, i)            &
-        +lambda2*beta21(l, i))
-      gamma11(l, i)=theta11*t(l, i)+lambda3*gamma31(l, i)               &
-        +lambda2*gamma21(l, i)
-      gamma12(l, i)=theta12*t_strat(l, i)+lambda3*gamma32(l, i)         &
-        +lambda2*gamma22(l, i)
-      gamma13(l, i)=theta13*t_conv(l, i)+lambda3*gamma33(l, i)          &
-        +lambda2*gamma23(l, i)
-      h1(l, i)=g1(l, i+1)+theta11*s_down(l, i)                          &
-        +theta12*s_down_strat(l, i)+theta13*s_down_conv(l, i)           &
-        +lambda3*h3(l, i)+lambda2*h2(l, i)
+        lambda3=theta13*r_conv(l, i)*beta33_inv(l, i)
+        lambda2=(theta12*r_strat(l, i)-lambda3*beta32(l, i))            &
+          *beta22_inv(l, i)
+        beta11_inv(l, i)=1.0e+00_RealK                                  &
+          /(1.0e+00_RealK-theta11*r(l, i)+lambda3*beta31(l, i)          &
+          +lambda2*beta21(l, i))
+        gamma11(l, i)=theta11*t(l, i)+lambda3*gamma31(l, i)             &
+          +lambda2*gamma21(l, i)
+        gamma12(l, i)=theta12*t_strat(l, i)+lambda3*gamma32(l, i)       &
+          +lambda2*gamma22(l, i)
+        gamma13(l, i)=theta13*t_conv(l, i)+lambda3*gamma33(l, i)        &
+          +lambda2*gamma23(l, i)
+        h1(l, i)=g1(l)+theta11*s_down(l, i)                             &
+          +theta12*s_down_strat(l, i)+theta13*s_down_conv(l, i)         &
+          +lambda3*h3(l, i)+lambda2*h2(l, i)
 
-      lambda3=u33(l, i-1)*t_conv(l, i)*beta33_inv(l, i)
-      lambda2=(u32(l, i-1)*t_strat(l, i)+lambda3*beta32(l, i))          &
-        *beta22_inv(l, i)
-      lambda1=(u31(l, i-1)*t(l, i)+lambda3*beta31(l, i)                 &
-        +lambda2*beta21(l, i))*beta11_inv(l, i)
-      alpha31(l, i)=u31(l, i-1)*r(l, i)+lambda3*gamma31(l, i)           &
-        +lambda2*gamma21(l, i)+lambda1*gamma11(l, i)
-      alpha32(l, i)=u32(l, i-1)*r_strat(l, i)                           &
-        +lambda3*gamma32(l, i)+lambda2*gamma22(l, i)                    &
-        +lambda1*gamma12(l, i)
-      alpha33(l, i)=u33(l, i-1)*r_conv(l, i)                            &
-        +lambda3*gamma33(l, i)+lambda2*gamma23(l, i)                    &
-        +lambda1*gamma13(l, i)
-      g3(l, i)=u31(l, i-1)*s_up(l, i)+u32(l, i-1)*s_up_strat(l, i)      &
-        +u33(l, i-1)*s_up_conv(l, i)                                    &
-        +lambda3*h3(l, i)+lambda2*h2(l, i)+lambda1*h1(l, i)
+        lambda3=u33(l, i-1)*t_conv(l, i)*beta33_inv(l, i)
+        lambda2=(u32(l, i-1)*t_strat(l, i)+lambda3*beta32(l, i))        &
+          *beta22_inv(l, i)
+        lambda1=(u31(l, i-1)*t(l, i)+lambda3*beta31(l, i)               &
+          +lambda2*beta21(l, i))*beta11_inv(l, i)
+        alpha31(l)=u31(l, i-1)*r(l, i)+lambda3*gamma31(l, i)            &
+          +lambda2*gamma21(l, i)+lambda1*gamma11(l, i)
+        alpha32(l)=u32(l, i-1)*r_strat(l, i)                            &
+          +lambda3*gamma32(l, i)+lambda2*gamma22(l, i)                  &
+          +lambda1*gamma12(l, i)
+        alpha33(l)=u33(l, i-1)*r_conv(l, i)                             &
+          +lambda3*gamma33(l, i)+lambda2*gamma23(l, i)                  &
+          +lambda1*gamma13(l, i)
+        g3(l)=u31(l, i-1)*s_up(l, i)+u32(l, i-1)*s_up_strat(l, i)       &
+          +u33(l, i-1)*s_up_conv(l, i)                                  &
+          +lambda3*h3(l, i)+lambda2*h2(l, i)+lambda1*h1(l, i)
 
-      lambda3=u23(l, i-1)*t_conv(l, i)*beta33_inv(l, i)
-      lambda2=(u22(l, i-1)*t_strat(l, i)+lambda3*beta32(l, i))          &
-        *beta22_inv(l, i)
-      lambda1=(u21(l, i-1)*t(l, i)+lambda3*beta31(l, i)                 &
-        +lambda2*beta21(l, i))*beta11_inv(l, i)
-      alpha21(l, i)=u21(l, i-1)*r(l, i)+lambda3*gamma31(l, i)           &
-        +lambda2*gamma21(l, i)+lambda1*gamma11(l, i)
-      alpha22(l, i)=u22(l, i-1)*r_strat(l, i)                           &
-        +lambda3*gamma32(l, i)+lambda2*gamma22(l, i)                    &
-        +lambda1*gamma12(l, i)
-      alpha23(l, i)=u23(l, i-1)*r_conv(l, i)                            &
-        +lambda3*gamma33(l, i)+lambda2*gamma23(l, i)                    &
-        +lambda1*gamma13(l, i)
-      g2(l, i)=u21(l, i-1)*s_up(l, i)+u22(l, i-1)*s_up_strat(l, i)      &
-        +u23(l, i-1)*s_up_conv(l, i)                                    &
-        +lambda3*h3(l, i)+lambda2*h2(l, i)+lambda1*h1(l, i)
+        lambda3=u23(l, i-1)*t_conv(l, i)*beta33_inv(l, i)
+        lambda2=(u22(l, i-1)*t_strat(l, i)+lambda3*beta32(l, i))        &
+          *beta22_inv(l, i)
+        lambda1=(u21(l, i-1)*t(l, i)+lambda3*beta31(l, i)               &
+          +lambda2*beta21(l, i))*beta11_inv(l, i)
+        alpha21(l)=u21(l, i-1)*r(l, i)+lambda3*gamma31(l, i)            &
+          +lambda2*gamma21(l, i)+lambda1*gamma11(l, i)
+        alpha22(l)=u22(l, i-1)*r_strat(l, i)                            &
+          +lambda3*gamma32(l, i)+lambda2*gamma22(l, i)                  &
+          +lambda1*gamma12(l, i)
+        alpha23(l)=u23(l, i-1)*r_conv(l, i)                             &
+          +lambda3*gamma33(l, i)+lambda2*gamma23(l, i)                  &
+          +lambda1*gamma13(l, i)
+        g2(l)=u21(l, i-1)*s_up(l, i)+u22(l, i-1)*s_up_strat(l, i)       &
+          +u23(l, i-1)*s_up_conv(l, i)                                  &
+          +lambda3*h3(l, i)+lambda2*h2(l, i)+lambda1*h1(l, i)
 
-      lambda3=u13(l, i-1)*t_conv(l, i)*beta33_inv(l, i)
-      lambda2=(u12(l, i-1)*t_strat(l, i)+lambda3*beta32(l, i))          &
-        *beta22_inv(l, i)
-      lambda1=(u11(l, i-1)*t(l, i)+lambda3*beta31(l, i)                 &
-        +lambda2*beta21(l, i))*beta11_inv(l, i)
-      alpha11(l, i)=u11(l, i-1)*r(l, i)+lambda3*gamma31(l, i)           &
-        +lambda2*gamma21(l, i)+lambda1*gamma11(l, i)
-      alpha12(l, i)=u12(l, i-1)*r_strat(l, i)                           &
-        +lambda3*gamma32(l, i)+lambda2*gamma22(l, i)                    &
-        +lambda1*gamma12(l, i)
-      alpha13(l, i)=u13(l, i-1)*r_conv(l, i)                            &
-        +lambda3*gamma33(l, i)+lambda2*gamma23(l, i)                    &
-        +lambda1*gamma13(l, i)
-      g1(l, i)=u11(l, i-1)*s_up(l, i)+u12(l, i-1)*s_up_strat(l, i)      &
-        +u13(l, i-1)*s_up_conv(l, i)                                    &
-        +lambda3*h3(l, i)+lambda2*h2(l, i)+lambda1*h1(l, i)
+        lambda3=u13(l, i-1)*t_conv(l, i)*beta33_inv(l, i)
+        lambda2=(u12(l, i-1)*t_strat(l, i)+lambda3*beta32(l, i))        &
+          *beta22_inv(l, i)
+        lambda1=(u11(l, i-1)*t(l, i)+lambda3*beta31(l, i)               &
+          +lambda2*beta21(l, i))*beta11_inv(l, i)
+        alpha11(l)=u11(l, i-1)*r(l, i)+lambda3*gamma31(l, i)            &
+          +lambda2*gamma21(l, i)+lambda1*gamma11(l, i)
+        alpha12(l)=u12(l, i-1)*r_strat(l, i)                            &
+          +lambda3*gamma32(l, i)+lambda2*gamma22(l, i)                  &
+          +lambda1*gamma12(l, i)
+        alpha13(l)=u13(l, i-1)*r_conv(l, i)                             &
+          +lambda3*gamma33(l, i)+lambda2*gamma23(l, i)                  &
+          +lambda1*gamma13(l, i)
+        g1(l)=u11(l, i-1)*s_up(l, i)+u12(l, i-1)*s_up_strat(l, i)       &
+          +u13(l, i-1)*s_up_conv(l, i)                                  &
+          +lambda3*h3(l, i)+lambda2*h2(l, i)+lambda1*h1(l, i)
 
-    END DO
-  END DO
+      END DO
 
-! The layer above the cloud, if the cloud does not reach to the top
-! of the column: only one set of alphas is now needed.
+    ELSE IF ( i < n_cloud_top-1 ) THEN
 
-  IF (n_cloud_top >  1) THEN
+!     Continue through the cloud free region: if there is no such
+!     region the DO-loop will not be executed.
+      DO l=1, n_profile
 
-    i=n_cloud_top-1
-    DO l=1, n_profile
+        beta11_inv(l, i)=1.0e+00_RealK                                  &
+          /(1.0e+00_RealK-alpha11(l)*r(l, i))
+        gamma11(l, i)=alpha11(l)*t(l, i)
+        h1(l, i)=g1(l)+alpha11(l)*s_down(l, i)
 
-      IF (n_cloud_top <  n_layer) THEN
-!       If there is no cloud in the column the V's will not be
-!       assigned so an IF-test is required.
-        theta11=alpha11(l, i+1)*v11(l, i)+alpha12(l, i+1)*v21(l, i)     &
-          +alpha13(l, i+1)*v31(l, i)
-      ELSE
-        theta11=alpha11(l, i+1)
-      END IF
+        lambda1=t(l, i)*beta11_inv(l, i)
+        alpha11(l)=r(l, i)+lambda1*gamma11(l, i)
+        g1(l)=s_up(l, i)+lambda1*h1(l, i)
 
-      beta11_inv(l,i)=1.0e+00_RealK/(1.0e+00_RealK-theta11*r(l,i))
-      gamma11(l, i)=theta11*t(l, i)
-      h1(l, i)=g1(l, i+1)+theta11*s_down(l, i)
+      END DO
 
-      lambda=t(l, i)*beta11_inv(l, i)
-      alpha11(l, i)=r(l, i)+lambda*gamma11(l, i)
-      g1(l, i)=s_up(l, i)+lambda*h1(l, i)
+    ELSE IF ( i == n_cloud_top-1 ) THEN
 
-    END DO
+!     The layer above the cloud, if the cloud does not reach to the top
+!     of the column: only one set of alphas is now needed.
+      DO l=1, n_profile
 
-  END IF
+        IF (n_cloud_top <  n_layer) THEN
+!         If there is no cloud in the column the V's will not be
+!         assigned so an IF-test is required.
+          theta11=alpha11(l)*v11(l, i)+alpha12(l)*v21(l, i)             &
+            +alpha13(l)*v31(l, i)
+        ELSE
+          theta11=alpha11(l)
+        END IF
 
+        beta11_inv(l,i)=1.0e+00_RealK/(1.0e+00_RealK-theta11*r(l,i))
+        gamma11(l, i)=theta11*t(l, i)
+        h1(l, i)=g1(l)+theta11*s_down(l, i)
 
-! Continue through the cloud free region: if there is no such
-! region the DO-loop will not be executed.
-  DO i=n_cloud_top-2, 1, -1
-    DO l=1, n_profile
+        lambda=t(l, i)*beta11_inv(l, i)
+        alpha11(l)=r(l, i)+lambda*gamma11(l, i)
+        g1(l)=s_up(l, i)+lambda*h1(l, i)
 
-      beta11_inv(l, i)=1.0e+00_RealK                                    &
-        /(1.0e+00_RealK-alpha11(l, i+1)*r(l, i))
-      gamma11(l, i)=alpha11(l, i+1)*t(l, i)
-      h1(l, i)=g1(l, i+1)+alpha11(l, i+1)*s_down(l, i)
+      END DO
 
-      lambda1=t(l, i)*beta11_inv(l, i)
-      alpha11(l, i)=r(l, i)+lambda1*gamma11(l, i)
-      g1(l, i)=s_up(l, i)+lambda1*h1(l, i)
+    ELSE IF ( I == n_layer+1 ) THEN
 
-    END DO
+!     Initialize at the bottom of the column for upward elimination.
+      DO l=1, n_profile
+        alpha11(l)=albedo_surface_diff(l)
+        alpha12(l)=0.0e+00_RealK
+        alpha13(l)=0.0e+00_RealK
+        alpha21(l)=0.0e+00_RealK
+        alpha22(l)=albedo_surface_diff(l)
+        alpha23(l)=0.0e+00_RealK
+        alpha31(l)=0.0e+00_RealK
+        alpha32(l)=0.0e+00_RealK
+        alpha33(l)=albedo_surface_diff(l)
+        g1(l)=source_ground_free(l)
+        g2(l)=source_ground_strat(l)
+        g3(l)=source_ground_conv(l)
+      END DO
+
+    END IF
   END DO
 
 
@@ -402,13 +401,13 @@ SUBROUTINE solver_triple(n_profile, n_layer, n_cloud_top                &
   END DO
   IF (n_cloud_top >  1) THEN
     DO l=1, n_profile
-      flux_total(l, 1)=alpha11(l, 1)*flux_total(l, 2)+g1(l, 1)
+      flux_total(l, 1)=alpha11(l)*flux_total(l, 2)+g1(l)
     END DO
   ELSE
     DO l=1, n_profile
-      flux_total(l, 1)=g1(l, 1)+flux_inc_down(l)                        &
-        *(v11(l, 0)*alpha11(l, 1)+v21(l, 0)*alpha12(l, 1)               &
-        + v31(l, 0)*alpha13(l, 1))
+      flux_total(l, 1)=g1(l)+flux_inc_down(l)                           &
+        *(v11(l, 0)*alpha11(l)+v21(l, 0)*alpha12(l)                     &
+        + v31(l, 0)*alpha13(l))
     END DO
   END IF
 
@@ -427,80 +426,79 @@ SUBROUTINE solver_triple(n_profile, n_layer, n_cloud_top                &
 ! provisionally, the downward fluxes just below the top of the
 ! layer, then calculate the upward fluxes at the bottom and
 ! finally the downward fluxes at the bottom of the layer.
-  IF (n_cloud_top <= n_layer) THEN
-!   If there are no clouds n_cloud_top may be out-of-bounds for
-!   these arrays so an if test is required.
-    i=n_cloud_top
-    DO l=1, n_profile
-      flux_down_1(l, i)=v11(l, i-1)*flux_total(l, 2*i)
-      flux_down_2(l, i)=v21(l, i-1)*flux_total(l, 2*i)
-      flux_down_3(l, i)=v31(l, i-1)*flux_total(l, 2*i)
-      flux_up_1(l, i)=(gamma11(l, i)*flux_down_1(l, i)                  &
-        +gamma12(l, i)*flux_down_2(l, i)                                &
-        +gamma13(l, i)*flux_down_3(l, i)                                &
-        +h1(l, i))*beta11_inv(l, i)
-      flux_up_2(l, i)=(gamma21(l, i)*flux_down_1(l, i)                  &
-        +gamma22(l, i)*flux_down_2(l, i)                                &
-        +gamma23(l, i)*flux_down_3(l, i)+h2(l, i)                       &
-        -beta21(l, i)*flux_up_1(l, i))*beta22_inv(l, i)
-      flux_up_3(l, i)=(gamma31(l, i)*flux_down_1(l, i)                  &
-        +gamma32(l, i)*flux_down_2(l, i)                                &
-        +gamma33(l, i)*flux_down_3(l, i)+h3(l, i)                       &
-        -beta31(l, i)*flux_up_1(l, i)-beta32(l, i)*flux_up_2(l, i))     &
-        *beta33_inv(l, i)
-      flux_down_1(l, i)=t(l, i)*flux_down_1(l, i)                       &
-        +r(l, i)*flux_up_1(l, i)+s_down(l, i)
-      flux_down_2(l, i)=t_strat(l, i)*flux_down_2(l, i)                 &
-        +r_strat(l, i)*flux_up_2(l, i)+s_down_strat(l, i)
-      flux_down_3(l, i)=t_conv(l, i)*flux_down_3(l, i)                  &
-        +r_conv(l, i)*flux_up_3(l, i)+s_down_conv(l, i)
-    END DO
-  END IF
 
 ! The main loop of back-substitution. the provisional use of the
 ! downward fluxes is as above.
-  DO i=n_cloud_top+1, n_layer
-    DO l=1, n_profile
-      flux_down_1(l, i)=v11(l, i-1)*flux_down_1(l, i-1)                 &
-        +v12(l, i-1)*flux_down_2(l, i-1)                                &
-        +v13(l, i-1)*flux_down_3(l, i-1)
-      flux_down_2(l, i)=v21(l, i-1)*flux_down_1(l, i-1)                 &
-        +v22(l, i-1)*flux_down_2(l, i-1)                                &
-        +v23(l, i-1)*flux_down_3(l, i-1)
-      flux_down_3(l, i)=v31(l, i-1)*flux_down_1(l, i-1)                 &
-        +v32(l, i-1)*flux_down_2(l, i-1)                                &
-        +v33(l, i-1)*flux_down_3(l, i-1)
-      flux_up_1(l, i)=(gamma11(l, i)*flux_down_1(l, i)                  &
-        +gamma12(l, i)*flux_down_2(l, i)                                &
-        +gamma13(l, i)*flux_down_3(l, i)                                &
-        +h1(l, i))*beta11_inv(l, i)
-      flux_up_2(l, i)=(gamma21(l, i)*flux_down_1(l, i)                  &
-        +gamma22(l, i)*flux_down_2(l, i)                                &
-        +gamma23(l, i)*flux_down_3(l, i)+h2(l, i)                       &
-        -beta21(l, i)*flux_up_1(l, i))*beta22_inv(l, i)
-      flux_up_3(l, i)=(gamma31(l, i)*flux_down_1(l, i)                  &
-        +gamma32(l, i)*flux_down_2(l, i)                                &
-        +gamma33(l, i)*flux_down_3(l, i)+h3(l, i)                       &
-        -beta31(l, i)*flux_up_1(l, i)                                   &
-        -beta32(l, i)*flux_up_2(l, i))                                  &
-        *beta33_inv(l, i)
-      flux_down_1(l, i)=t(l, i)*flux_down_1(l, i)                       &
-        +r(l, i)*flux_up_1(l, i)+s_down(l, i)
-      flux_down_2(l, i)=t_strat(l, i)*flux_down_2(l, i)                 &
-        +r_strat(l, i)*flux_up_2(l, i)+s_down_strat(l, i)
-      flux_down_3(l, i)=t_conv(l, i)*flux_down_3(l, i)                  &
-        +r_conv(l, i)*flux_up_3(l, i)+s_down_conv(l, i)
-    END DO
-  END DO
-
-
-! Calculate the overall flux.
   DO i=n_cloud_top, n_layer
+
+    IF ( i > n_cloud_top ) THEN
+      DO l=1, n_profile
+        dum1 = flux_down_1(l)
+        dum2 = flux_down_2(l)
+        dum3 = flux_down_3(l)
+        flux_down_1(l)=v11(l, i-1)*dum1 + v12(l, i-1)*dum2              &
+                      +v13(l, i-1)*dum3                   
+        flux_down_2(l)=v21(l, i-1)*dum1 + v22(l, i-1)*dum2              &
+                      +v23(l, i-1)*dum3                   
+        flux_down_3(l)=v31(l, i-1)*dum1 + v32(l, i-1)*dum2              &
+                      +v33(l, i-1)*dum3
+        flux_up_1(l)=(gamma11(l, i)*flux_down_1(l)                      &
+          +gamma12(l, i)*flux_down_2(l)                                 &
+          +gamma13(l, i)*flux_down_3(l) + h1(l, i))*beta11_inv(l, i)
+        flux_up_2(l)=(gamma21(l, i)*flux_down_1(l)                      &
+          +gamma22(l, i)*flux_down_2(l)                                 &
+          +gamma23(l, i)*flux_down_3(l)+h2(l, i)                        &
+          -beta21(l, i)*flux_up_1(l))*beta22_inv(l, i)
+        flux_up_3(l)=(gamma31(l, i)*flux_down_1(l)                      &
+          +gamma32(l, i)*flux_down_2(l)                                 &
+          +gamma33(l, i)*flux_down_3(l)+h3(l, i)                        &
+          -beta31(l, i)*flux_up_1(l)                                    &
+          -beta32(l, i)*flux_up_2(l))                                   &
+          *beta33_inv(l, i)
+        flux_down_1(l)=t(l, i)*flux_down_1(l)                           &
+          +r(l, i)*flux_up_1(l)+s_down(l, i)
+        flux_down_2(l)=t_strat(l, i)*flux_down_2(l)                     &
+          +r_strat(l, i)*flux_up_2(l)+s_down_strat(l, i)
+        flux_down_3(l)=t_conv(l, i)*flux_down_3(l)                      &
+          +r_conv(l, i)*flux_up_3(l)+s_down_conv(l, i)
+      END DO
+
+    ELSE
+
+!     If there are no clouds n_cloud_top may be out-of-bounds for
+!     these arrays so an if test is required.
+      DO l=1, n_profile
+        flux_down_1(l)=v11(l, i-1)*flux_total(l, 2*i)
+        flux_down_2(l)=v21(l, i-1)*flux_total(l, 2*i)
+        flux_down_3(l)=v31(l, i-1)*flux_total(l, 2*i)
+        flux_up_1(l)=(gamma11(l, i)*flux_down_1(l)                      &
+          +gamma12(l, i)*flux_down_2(l)                                 &
+          +gamma13(l, i)*flux_down_3(l)                                 &
+          +h1(l, i))*beta11_inv(l, i)
+        flux_up_2(l)=(gamma21(l, i)*flux_down_1(l)                      &
+          +gamma22(l, i)*flux_down_2(l)                                 &
+          +gamma23(l, i)*flux_down_3(l)+h2(l, i)                        &
+          -beta21(l, i)*flux_up_1(l))*beta22_inv(l, i)
+        flux_up_3(l)=(gamma31(l, i)*flux_down_1(l)                      &
+          +gamma32(l, i)*flux_down_2(l)                                 &
+          +gamma33(l, i)*flux_down_3(l)+h3(l, i)                        &
+          -beta31(l, i)*flux_up_1(l)-beta32(l, i)*flux_up_2(l))         &
+          *beta33_inv(l, i)
+        flux_down_1(l)=t(l, i)*flux_down_1(l)                           &
+          +r(l, i)*flux_up_1(l)+s_down(l, i)
+        flux_down_2(l)=t_strat(l, i)*flux_down_2(l)                     &
+          +r_strat(l, i)*flux_up_2(l)+s_down_strat(l, i)
+        flux_down_3(l)=t_conv(l, i)*flux_down_3(l)                      &
+          +r_conv(l, i)*flux_up_3(l)+s_down_conv(l, i)
+      END DO
+    END IF
+
+!   Calculate the overall flux.
     DO l=1, n_profile
-      flux_total(l, 2*i+1)=flux_up_1(l, i)+flux_up_2(l, i)              &
-        +flux_up_3(l, i)
-      flux_total(l, 2*i+2)=flux_down_1(l, i)+flux_down_2(l, i)          &
-        +flux_down_3(l, i)
+      flux_total(l, 2*i+1)=flux_up_1(l)+flux_up_2(l)                    &
+        +flux_up_3(l)
+      flux_total(l, 2*i+2)=flux_down_1(l)+flux_down_2(l)                &
+        +flux_down_3(l)
     END DO
   END DO
 

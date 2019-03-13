@@ -67,7 +67,7 @@ SUBROUTINE solver_homogen_direct(n_profile, n_layer                     &
 !       Loop variable
 
   REAL (RealK) ::                                                       &
-      alpha(nd_profile, nd_layer+1)                                     &
+      alpha(nd_profile)                                                 &
 !       Combined albedo of lower layers
     , beta(nd_profile, nd_layer)                                        &
 !       Working array
@@ -75,7 +75,7 @@ SUBROUTINE solver_homogen_direct(n_profile, n_layer                     &
 !       Working array
     , h(nd_profile, nd_layer)                                           &
 !       Working array
-    , s_up_prime(nd_profile, nd_layer+1)
+    , s_up_prime(nd_profile)
 !       Modified upward source function
 
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
@@ -87,42 +87,44 @@ SUBROUTINE solver_homogen_direct(n_profile, n_layer                     &
 
   IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
-! Initialization at the bottom for upward elimination:
-  DO l=1, n_profile
-    alpha(l, n_layer+1)=diffuse_albedo(l)
-    s_up_prime(l, n_layer+1)=source_ground(l)
-  END DO
-
 ! Eliminating loop:
-  DO i=n_layer, 1, -1
-    DO l=1, n_profile
-      beta(l, i)=1.0e+00_RealK                                          &
-        /(1.0e+00_RealK-alpha(l, i+1)*reflect(l, i))
-      gamma(l, i)=alpha(l, i+1)*trans(l, i)
-      h(l, i)=s_up_prime(l, i+1)+alpha(l, i+1)*s_down(l, i)
-      alpha(l, i)=reflect(l, i)                                         &
-        +beta(l, i)*gamma(l, i)*trans(l, i)
-      s_up_prime(l, i)=s_up(l, i)+beta(l, i)*trans(l, i)*h(l, i)
-    END DO
-  END DO
-
-! Initialize for backward substitution.
-  DO l=1, n_profile
-    flux_total(l, 2)=flux_inc_down(l)
-    flux_total(l, 1)=alpha(l, 1)*flux_total(l, 2)+s_up_prime(l, 1)
+  DO i=n_layer+1, 1, -1
+    IF ( i < n_layer+1 ) THEN
+      DO l=1, n_profile
+        beta(l, i)=1.0e+00_RealK/(1.0e+00_RealK-alpha(l)*reflect(l, i))
+        gamma(l, i)=alpha(l)*trans(l, i)
+        h(l, i)=s_up_prime(l)+alpha(l)*s_down(l, i)
+        alpha(l)=reflect(l, i)+beta(l, i)*gamma(l, i)*trans(l, i)
+        s_up_prime(l)=s_up(l, i)+beta(l, i)*trans(l, i)*h(l, i)
+      END DO
+    ELSE
+!     Initialization at the bottom for upward elimination:
+      DO l=1, n_profile
+        alpha(l)=diffuse_albedo(l)
+        s_up_prime(l)=source_ground(l)
+      END DO
+    END IF
   END DO
 
 ! Backward substitution:
-  DO i=1, n_layer
-    DO l=1, n_profile
-!     Upward flux
-      flux_total(l, 2*i+1)                                              &
-        =beta(l, i)*(h(l, i)+gamma(l, i)*flux_total(l, 2*i))
-!     Downward flux
-      flux_total(l, 2*i+2)=s_down(l, i)                                 &
-        +trans(l, i)*flux_total(l, 2*i)                                 &
-        +reflect(l, i)*flux_total(l, 2*i+1)
-    END DO
+  DO i=0, n_layer
+    IF ( i > 0 ) THEN
+      DO l=1, n_profile
+!       Upward flux
+        flux_total(l, 2*i+1)                                              &
+          =beta(l, i)*(h(l, i)+gamma(l, i)*flux_total(l, 2*i))
+!       Downward flux
+        flux_total(l, 2*i+2)=s_down(l, i)                                 &
+          +trans(l, i)*flux_total(l, 2*i)                                 &
+          +reflect(l, i)*flux_total(l, 2*i+1)
+      END DO
+    ELSE
+!     Initialize for backward substitution.
+      DO l=1, n_profile
+        flux_total(l, 2)=flux_inc_down(l)
+        flux_total(l, 1)=alpha(l)*flux_total(l, 2)+s_up_prime(l)
+      END DO
+    END IF
   END DO
 
 

@@ -4,7 +4,7 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to solve for mixed fluxes scattering without a matrix.
+! Subroutine to solve for mixed fluxes scattering without a matrix.
 !
 ! Method:
 !   Gaussian elimination in an upward direction is employed to
@@ -14,9 +14,6 @@
 !
 !   This version has been modified by Robin Hogan to allow
 !   shadowing, as documented in Shonk & Hogan, 2007, J. Climate.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE solver_mix_direct_hogan(n_profile, n_layer, n_cloud_top      &
@@ -112,10 +109,10 @@ SUBROUTINE solver_mix_direct_hogan(n_profile, n_layer, n_cloud_top      &
 
 ! Effective coupling albedos and source functions:
   REAL (RealK) ::                                                       &
-      alpha11(nd_profile, nd_layer+1)                                   &
-    , alpha22(nd_profile, nd_layer+1)                                   &
-    , g1(nd_profile, nd_layer+1)                                        &
-    , g2(nd_profile, nd_layer+1)
+      alpha11(nd_profile)                                               &
+    , alpha22(nd_profile)                                               &
+    , g1(nd_profile)                                                    &
+    , g2(nd_profile)
 ! Terms for downward propagation:
   REAL (RealK) ::                                                       &
       gamma11(nd_profile, nd_layer)                                     &
@@ -131,17 +128,19 @@ SUBROUTINE solver_mix_direct_hogan(n_profile, n_layer, n_cloud_top      &
     , theta22                                                           &
     , lambda1                                                           &
     , lambda2                                                           &
-    , lambda
+    , lambda                                                            &
+    , dum1                                                              &
+    , dum2
 
 ! Temporary fluxes
   REAL (RealK) ::                                                       &
-      flux_down_1(nd_profile, 0: nd_layer)                              &
+      flux_down_1(nd_profile)                                           &
 !       Downward fluxes outside clouds just below I'th level
-    , flux_down_2(nd_profile, 0: nd_layer)                              &
+    , flux_down_2(nd_profile)                                           &
 !       Downward fluxes inside clouds just below I'th level
-    , flux_up_1(nd_profile, 0: nd_layer)                                &
+    , flux_up_1(nd_profile)                                             &
 !       Upward fluxes outside clouds just above I'th level
-    , flux_up_2(nd_profile, 0: nd_layer)
+    , flux_up_2(nd_profile)
 !       Upward fluxes inside clouds just above I'th level
 
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
@@ -153,85 +152,89 @@ SUBROUTINE solver_mix_direct_hogan(n_profile, n_layer, n_cloud_top      &
 
   IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
-! Initialize at the bottom of the column for upward elimination.
-  DO l=1, n_profile
-    alpha11(l, n_layer+1)=albedo_surface_diff(l)
-    alpha22(l, n_layer+1)=albedo_surface_diff(l)
-    g1(l, n_layer+1)=source_ground_free(l)
-    g2(l, n_layer+1)=source_ground_cloud(l)
-  END DO
-
 ! Upward elimination through the cloudy layers.
-  DO i=n_layer, n_cloud_top, -1
-    DO l=1, n_profile
+  DO i=n_layer+1, 1, -1
 
-      theta11=alpha11(l, i+1)*v11(l, i)+alpha22(l, i+1)*v21(l, i)
-      theta22=alpha11(l, i+1)*v12(l, i)+alpha22(l, i+1)*v22(l, i)
+    IF ( i < n_layer+1 .AND. i >= n_cloud_top ) THEN
 
-      beta11_inv(l, i)=1.0_RealK/(1.0_RealK-theta11*r(l, i))
-      gamma11(l, i)=theta11*t(l, i)
-      h1(l, i)=g1(l, i+1)+theta11*s_down(l, i)
+      DO l=1, n_profile
 
-      beta22_inv(l, i)=1.0_RealK/(1.0_RealK-theta22*r_cloud(l, i))
-      gamma22(l, i)=theta22*t_cloud(l, i)
-      h2(l, i)=g2(l, i+1)+theta22*s_down_cloud(l, i)
+        theta11 = alpha11(l)*v11(l, i)+alpha22(l)*v21(l, i)
+        theta22 = alpha11(l)*v12(l, i)+alpha22(l)*v22(l, i)
 
-      lambda1 = s_up(l, i)+h1(l, i)*t(l, i)*beta11_inv(l, i)
-      lambda2 = s_up_cloud(l, i)+h2(l, i)*t_cloud(l, i)*beta22_inv(l, i)
+        beta11_inv(l, i)=1.0_RealK/(1.0_RealK-theta11*r(l, i))
+        gamma11(l, i)=theta11*t(l, i)
+        h1(l, i)=g1(l)+theta11*s_down(l, i)
 
-      alpha11(l, i)=r(l, i)                                             &
-           + theta11*t(l, i)*t(l, i)*beta11_inv(l, i)
-      g1(l, i)=u11(l, i-1)*lambda1 + u12(l, i-1)*lambda2
+        beta22_inv(l, i)=1.0_RealK/(1.0_RealK-theta22*r_cloud(l, i))
+        gamma22(l, i)=theta22*t_cloud(l, i)
+        h2(l, i)=g2(l)+theta22*s_down_cloud(l, i)
 
-      alpha22(l, i)=r_cloud(l, i)                                       &
-           + theta22*t_cloud(l, i)*t_cloud(l, i)*beta22_inv(l, i)
-      g2(l, i)=u21(l, i-1)*lambda1 + u22(l, i-1)*lambda2
+        lambda1 = s_up(l, i)+h1(l, i)*t(l, i)*beta11_inv(l, i)
+        lambda2 = s_up_cloud(l, i)+h2(l, i)*t_cloud(l, i)               &
+             * beta22_inv(l, i)
 
-    END DO
-  END DO
+        alpha11(l)=r(l, i)                                              &
+             + theta11*t(l, i)*t(l, i)*beta11_inv(l, i)
+        g1(l)=u11(l, i-1)*lambda1 + u12(l, i-1)*lambda2
 
-! The layer above the cloud: only one set of alphas is now needed.
-! This will not be presented if there is cloud in the top layer.
+        alpha22(l)=r_cloud(l, i)                                        &
+             + theta22*t_cloud(l, i)*t_cloud(l, i)*beta22_inv(l, i)
+        g2(l)=u21(l, i-1)*lambda1 + u22(l, i-1)*lambda2
 
-  IF (n_cloud_top > 1) THEN
+      END DO
 
-    i=n_cloud_top-1
-    DO l=1, n_profile
+    ELSE IF ( i < n_cloud_top-1 ) THEN
 
-      IF (n_cloud_top < n_layer) THEN
-!       If there is no cloud in the column the V's will not be
-!       assigned so an if test is required.
-        theta11=alpha11(l, i+1)*v11(l, i)+alpha22(l, i+1)*v21(l, i)
-      ELSE
-        theta11=alpha11(l, i+1)
-      END IF
+      DO l=1, n_profile
 
-      beta11_inv(l, i)=1.0e+00_RealK/(1.0e+00_RealK-theta11*r(l, i))
-      gamma11(l, i)=theta11*t(l, i)
-      h1(l, i)=g1(l, i+1)+theta11*s_down(l, i)
+        beta11_inv(l, i)=1.0e+00_RealK                                  &
+          /(1.0e+00_RealK-alpha11(l)*r(l, i))
+        gamma11(l, i)=alpha11(l)*t(l, i)
+        h1(l, i)=g1(l)+alpha11(l)*s_down(l, i)
 
-      lambda=t(l, i)*beta11_inv(l, i)
-      alpha11(l, i)=r(l, i)+lambda*gamma11(l, i)
-      g1(l, i)=s_up(l, i)+lambda*h1(l, i)
+        lambda=t(l, i)*beta11_inv(l, i)
+        alpha11(l)=r(l, i)+lambda*gamma11(l, i)
+        g1(l)=s_up(l, i)+lambda*h1(l, i)
 
-    END DO
+      END DO
 
-  END IF
+    ELSE IF ( i == n_cloud_top-1 ) THEN
 
+!     The layer above the cloud: only one set of alphas is now needed.
+!     This will not be presented if there is cloud in the top layer.
+      DO l=1, n_profile
 
-  DO i=n_cloud_top-2, 1, -1
-    DO l=1, n_profile
+        IF (n_cloud_top < n_layer) THEN
+!         If there is no cloud in the column the V's will not be
+!         assigned so an if test is required.
+          theta11=alpha11(l)*v11(l, i)+alpha22(l)*v21(l, i)
+        ELSE
+          theta11=alpha11(l)
+        END IF
 
-      beta11_inv(l, i)=1.0e+00_RealK                                    &
-        /(1.0e+00_RealK-alpha11(l, i+1)*r(l, i))
-      gamma11(l, i)=alpha11(l, i+1)*t(l, i)
-      h1(l, i)=g1(l, i+1)+alpha11(l, i+1)*s_down(l, i)
+        beta11_inv(l, i)=1.0e+00_RealK/(1.0e+00_RealK-theta11*r(l, i))
+        gamma11(l, i)=theta11*t(l, i)
+        h1(l, i)=g1(l)+theta11*s_down(l, i)
 
-      lambda=t(l, i)*beta11_inv(l, i)
-      alpha11(l, i)=r(l, i)+lambda*gamma11(l, i)
-      g1(l, i)=s_up(l, i)+lambda*h1(l, i)
+        lambda=t(l, i)*beta11_inv(l, i)
+        alpha11(l)=r(l, i)+lambda*gamma11(l, i)
+        g1(l)=s_up(l, i)+lambda*h1(l, i)
 
-    END DO
+      END DO
+
+    ELSE IF ( I == n_layer+1 ) THEN
+
+!     Initialize at the bottom of the column for upward elimination.
+      DO l=1, n_profile
+        alpha11(l)=albedo_surface_diff(l)
+        alpha22(l)=albedo_surface_diff(l)
+        g1(l)=source_ground_free(l)
+        g2(l)=source_ground_cloud(l)
+      END DO
+
+    END IF
+
   END DO
 
 
@@ -241,12 +244,12 @@ SUBROUTINE solver_mix_direct_hogan(n_profile, n_layer, n_cloud_top      &
   END DO
   IF (n_cloud_top > 1) THEN
     DO l=1, n_profile
-      flux_total(l, 1)=alpha11(l, 1)*flux_total(l, 2)+g1(l, 1)
+      flux_total(l, 1)=alpha11(l)*flux_total(l, 2)+g1(l)
     END DO
   ELSE
     DO l=1, n_profile
-      flux_total(l, 1)=g1(l, 1)+flux_inc_down(l)                        &
-        *(v11(l, 0)*alpha11(l, 1)+v21(l, 0)*alpha22(l, 1))
+      flux_total(l, 1)=g1(l)+flux_inc_down(l)                           &
+        *(v11(l, 0)*alpha11(l)+v21(l, 0)*alpha22(l))
     END DO
   END IF
 
@@ -265,50 +268,48 @@ SUBROUTINE solver_mix_direct_hogan(n_profile, n_layer, n_cloud_top      &
 ! provisionally, the downward fluxes just below the top of the
 ! layer, then calculate the upward fluxes at the bottom and
 ! finally the downward fluxes at the bottom of the layer.
-  IF (n_cloud_top <= n_layer) THEN
-!   If there are no clouds n_cloud_top may be out-of-bounds for
-!   these arrays so an if test is required.
-    i=n_cloud_top
-    DO l=1, n_profile
-       flux_down_1(l, i)=v11(l, i-1)*flux_total(l, 2*i)
-       flux_down_2(l, i)=v21(l, i-1)*flux_total(l, 2*i)
-       flux_up_1(l, i)=(gamma11(l, i)*flux_down_1(l, i)                 &
-          +h1(l, i))*beta11_inv(l, i)
-       flux_up_2(l, i)=(gamma22(l, i)*flux_down_2(l, i)                 &
-            +h2(l, i))*beta22_inv(l, i)
-       flux_down_1(l, i)=t(l, i)*flux_down_1(l, i)                      &
-          +r(l, i)*flux_up_1(l, i)+s_down(l, i)
-       flux_down_2(l, i)=t_cloud(l, i)*flux_down_2(l, i)                &
-          +r_cloud(l, i)*flux_up_2(l, i)+s_down_cloud(l, i)
-    END DO
-  END IF
 
 ! The main loop of back-substitution. The provisional use of the
 ! downward fluxes is as above.
-  DO i=n_cloud_top+1, n_layer
-    DO l=1, n_profile
-        flux_down_1(l, i)=v11(l, i-1)*flux_down_1(l, i-1)               &
-           +v12(l, i-1)*flux_down_2(l, i-1)
-        flux_down_2(l, i)=v21(l, i-1)*flux_down_1(l, i-1)               &
-           +v22(l, i-1)*flux_down_2(l, i-1)
-        flux_up_1(l, i)=(gamma11(l, i)*flux_down_1(l, i)                &
-           +h1(l, i))*beta11_inv(l, i)
-        flux_up_2(l, i)=(gamma22(l, i)*flux_down_2(l, i)                &
-           +h2(l, i))*beta22_inv(l, i)
-        flux_down_1(l, i)=t(l, i)*flux_down_1(l, i)                     &
-           +r(l, i)*flux_up_1(l, i)+s_down(l, i)
-        flux_down_2(l, i)=t_cloud(l, i)*flux_down_2(l, i)               &
-           +r_cloud(l, i)*flux_up_2(l, i)+s_down_cloud(l, i)
-    END DO
-  END DO
-
-
-! Calculate the overall flux.
   DO i=n_cloud_top, n_layer
+
+    IF ( i > n_cloud_top ) THEN
+      DO l=1, n_profile
+        dum1 = flux_down_1(l)
+        dum2 = flux_down_2(l)
+        flux_down_1(l)=v11(l, i-1)*dum1+v12(l, i-1)*dum2
+        flux_down_2(l)=v21(l, i-1)*dum1+v22(l, i-1)*dum2
+        flux_up_1(l)=(gamma11(l, i)*flux_down_1(l)                      &
+           +h1(l, i))*beta11_inv(l, i)
+        flux_up_2(l)=(gamma22(l, i)*flux_down_2(l)                      &
+           +h2(l, i))*beta22_inv(l, i)
+        flux_down_1(l)=t(l, i)*flux_down_1(l)                           &
+           +r(l, i)*flux_up_1(l)+s_down(l, i)
+        flux_down_2(l)=t_cloud(l, i)*flux_down_2(l)                     &
+           +r_cloud(l, i)*flux_up_2(l)+s_down_cloud(l, i)
+      END DO
+    ELSE
+      DO l=1, n_profile
+        flux_down_1(l)=v11(l, i-1)*flux_total(l, 2*i)
+        flux_down_2(l)=v21(l, i-1)*flux_total(l, 2*i)
+        flux_up_1(l)=(gamma11(l, i)*flux_down_1(l)                      &
+           +h1(l, i))*beta11_inv(l, i)
+        flux_up_2(l)=(gamma22(l, i)*flux_down_2(l)                      &
+             +h2(l, i))*beta22_inv(l, i)
+        flux_down_1(l)=t(l, i)*flux_down_1(l)                           &
+           +r(l, i)*flux_up_1(l)+s_down(l, i)
+        flux_down_2(l)=t_cloud(l, i)*flux_down_2(l)                     &
+           +r_cloud(l, i)*flux_up_2(l)+s_down_cloud(l, i)
+      END DO
+    END IF
+
+
+!   Calculate the overall flux.
     DO l=1, n_profile
-      flux_total(l, 2*i+1)=flux_up_1(l, i)+flux_up_2(l, i)
-      flux_total(l, 2*i+2)=flux_down_1(l, i)+flux_down_2(l, i)
+      flux_total(l, 2*i+1)=flux_up_1(l)+flux_up_2(l)
+      flux_total(l, 2*i+2)=flux_down_1(l)+flux_down_2(l)
     END DO
+
   END DO
 
 
