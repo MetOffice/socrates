@@ -85,7 +85,7 @@ def ncout_tl(basename):
     nc.ncout3d(basename + '.tl', lon, lat, pl, tlev, 
                longname = 'Temperature on levels', units = 'K')
     
-    print 'ncout_tl - file: ',basename + '.tl'
+    print('ncout_tl - file: ',basename + '.tl')
     
 if __name__ == '__main__':
     if (len(sys.argv) > 1):

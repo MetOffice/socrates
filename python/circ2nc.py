@@ -46,12 +46,12 @@ tstar = float(contents[6])
 szen = float(contents[7])
 stoa = float(contents[8])
 
-print 'Number of levels: ', nlevs
-print 'Surface temperature: ', tstar
-print 'Solar zenith angle: ', szen
-print 'Solar irradiance: ', stoa
+print('Number of levels: ', nlevs)
+print('Surface temperature: ', tstar)
+print('Solar zenith angle: ', szen)
+print('Solar irradiance: ', stoa)
 stoa=stoa/math.cos(szen*math.pi/180.)
-print 'Solar irradiance (corrected): ', stoa
+print('Solar irradiance (corrected): ', stoa)
 
 with open(aerosol_input, 'r') as file:
     contents = file.readlines()
@@ -226,9 +226,9 @@ for i in range(nspfs):
 
         kext= np.sum((1.0e4 / wvl[sel])**(-alpha)) / sel[0].size
         if (i == 0):
-            print band + 1, ' Tau: ', kext*aerosol[0, 1], kext*aerosol[1, 1],  
-            print kext*aerosol[2, 1], kext*aerosol[3, 1], kext*aerosol[4, 1], 
-            print kext*aerosol[5, 1]
+            print(band + 1, ' Tau: ', kext*aerosol[0, 1], kext*aerosol[1, 1], end=' ')  
+            print(kext*aerosol[2, 1], kext*aerosol[3, 1], kext*aerosol[4, 1], end=' ') 
+            print(kext*aerosol[5, 1])
         kscat[band]= omega*kext
         kabs[band]= kext - kscat[band]
         absp[band, :]= ammr*kabs[band]
@@ -237,8 +237,8 @@ for i in range(nspfs):
     nc.ncout_spectral_surf(basename + '.surfsw_' + sp_file, lon, lat, bands, swalb)  
 #    nc.ncout_spectral_surf(basename + '.surfwsw_' + sp_file, lon, lat, bands, wswalb  )
     nc.ncout_spectral_surf(basename + '.surfw2sw_' + sp_file, lon, lat, bands, w2swalb)
-    print 'bands=', bands
-    print 'absp=', absp
+    print('bands=', bands)
+    print('absp=', absp)
     nc.ncout_opt_prop(basename + '.op_soot_' + sp_file, lon, lat, p, bands, absp, scat, asym)
 
 # Spectrally constant albedos:

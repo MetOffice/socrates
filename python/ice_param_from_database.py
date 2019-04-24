@@ -136,12 +136,12 @@ def get_filename(filetype):
     '''
     while True:
         try:
-            filename = expandvars(raw_input("Enter file containing " + filetype + " data\n"))
-            print "You entered '" + filename + "'"
+            filename = expandvars(input("Enter file containing " + filetype + " data\n"))
+            print("You entered '" + filename + "'")
             f = open(filename, "r")
             break
         except IOError:
-            print "Unable to open '" + filename + "'. Please try again"
+            print("Unable to open '" + filename + "'. Please try again")
         else:
             f.close()
     return filename   
@@ -320,7 +320,7 @@ def plot_opt_prop(wavelength, qi, opt_prop, opt_prop_name, comb_fit):
     plt.ylabel('Parametrization')
     ax.locator_params(axis='both', nbins=5) 
     plt.savefig('ice_'+opt_prop_name[0:2]+'_'+opt_prop_name[3:]+'.png')
-    print 'Figure saved to "ice_'+opt_prop_name[0:2]+'_'+opt_prop_name[3:]+'.png"'
+    print('Figure saved to "ice_'+opt_prop_name[0:2]+'_'+opt_prop_name[3:]+'.png"')
     plt.show()
 
 
@@ -382,13 +382,13 @@ def rescale(SW_params, LW_params):
     '''
     success = False
     while success == False:
-        rescale = raw_input("Do you wish to rescale the extinction to represent a different distribution of ice crystal shapes? (Y/N)\n")
-        print "You entered '" + rescale + "'"
+        rescale = input("Do you wish to rescale the extinction to represent a different distribution of ice crystal shapes? (Y/N)\n")
+        print("You entered '" + rescale + "'")
         success = rescale in ['y', 'Y', 'yes', 'n', 'N', 'no']
     if rescale in ['y', 'Y', 'yes']:
         while True:
             try:
-                factor = raw_input("Enter the scaling factor\n")
+                factor = input("Enter the scaling factor\n")
                 factor = float(factor)
                 SW_params.kext = factor * SW_params.kext
                 SW_params.ksca = factor * SW_params.ksca
@@ -396,7 +396,7 @@ def rescale(SW_params, LW_params):
                 LW_params.ksca = factor * LW_params.ksca
                 break
             except ValueError:
-                print "'" + factor + "' is not a valid number."
+                print("'" + factor + "' is not a valid number.")
     return SW_params, LW_params
 
 if __name__ == "__main__":
