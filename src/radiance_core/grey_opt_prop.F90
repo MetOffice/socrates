@@ -4,7 +4,7 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to calculate grey optical properties.
+! Subroutine to calculate grey optical properties.
 !
 ! Method:
 !   For each activated optical process, excluding gaseous
@@ -14,9 +14,6 @@
 !   cloudy regions. These increments are summed, and the grey
 !   total and scattering extinctions and the asymmetry and forward
 !   scattering factors are thus calculated.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE grey_opt_prop(ierr, control, radout, i_band                  &
@@ -58,7 +55,9 @@ SUBROUTINE grey_opt_prop(ierr, control, radout, i_band                  &
     , nd_continuum, nd_species                                          &
     , nd_aerosol_species, nd_aerosol_mixratio                           &
     , nd_humidities, nd_cloud_parameter, nd_cloud_component             &
-    , nd_cloud_type, nd_phase_term, nd_max_order, nd_direction          &
+    , nd_cloud_type, nd_phase_term                                      &
+    , nd_phf_term_aerosol_prsc, nd_phf_term_cloud_prsc                  &
+    , nd_max_order, nd_direction                                        &
     , nd_ukca_mode, nd_profile_aerosol_prsc, nd_profile_cloud_prsc      &
     , nd_opt_level_aerosol_prsc, nd_opt_level_cloud_prsc                &
     )
@@ -110,6 +109,10 @@ SUBROUTINE grey_opt_prop(ierr, control, radout, i_band                  &
 !       Size allocated for continua
     , nd_phase_term                                                     &
 !       Size allocated for terms in the phase function
+    , nd_phf_term_aerosol_prsc                                          &
+!       Size allocated for terms in the prescribed aerosol phase function
+    , nd_phf_term_cloud_prsc                                            &
+!       Size allocated for terms in the prescribed cloud phase function
     , nd_max_order                                                      &
 !       Size allocated for the order of the calculation
     , nd_cloud_parameter                                                &
@@ -280,7 +283,7 @@ SUBROUTINE grey_opt_prop(ierr, control, radout, i_band                  &
 !       Prescribed scattering by aerosols
     , aerosol_phase_fnc_prsc(nd_profile_aerosol_prsc                    &
         , nd_opt_level_aerosol_prsc                                     &
-        , nd_phase_term, nd_aerosol_species)
+        , nd_phf_term_aerosol_prsc, nd_aerosol_species)
 !       Prescribed phase functions of aerosols
 
 
@@ -350,7 +353,7 @@ SUBROUTINE grey_opt_prop(ierr, control, radout, i_band                  &
         , nd_opt_level_cloud_prsc)                                      &
 !       Prescribed scattering by droplets
     , drop_phase_fnc_prsc(nd_profile_cloud_prsc                         &
-        , nd_opt_level_cloud_prsc, nd_phase_term)                       &
+        , nd_opt_level_cloud_prsc, nd_phf_term_cloud_prsc)              &
 !       Prescribed phase function of droplets
     , ice_pressure_prsc(nd_profile_cloud_prsc                           &
         , nd_opt_level_cloud_prsc)                                      &
@@ -363,7 +366,7 @@ SUBROUTINE grey_opt_prop(ierr, control, radout, i_band                  &
         , nd_opt_level_cloud_prsc)                                      &
 !       Prescribed scattering by ice crystals
     , ice_phase_fnc_prsc(nd_profile_cloud_prsc                          &
-        , nd_opt_level_cloud_prsc, nd_phase_term)
+        , nd_opt_level_cloud_prsc, nd_phf_term_cloud_prsc)
 !       Prescribed phase functions of ice crystals
 
   REAL (RealK), INTENT(IN) ::                                           &
@@ -669,6 +672,7 @@ SUBROUTINE grey_opt_prop(ierr, control, radout, i_band                  &
       , nd_aerosol_species, nd_aerosol_mixratio, nd_humidities          &
       , nd_phase_term, nd_max_order, nd_direction                       &
       , nd_profile_aerosol_prsc, nd_opt_level_aerosol_prsc              &
+      , nd_phf_term_aerosol_prsc                                        &
       )
 !   Within clouds:
     CALL opt_prop_aerosol(ierr                                          &
@@ -698,6 +702,7 @@ SUBROUTINE grey_opt_prop(ierr, control, radout, i_band                  &
       , nd_aerosol_species, nd_aerosol_mixratio, nd_humidities          &
       , nd_phase_term, nd_max_order, nd_direction                       &
       , nd_profile_aerosol_prsc, nd_opt_level_aerosol_prsc              &
+      , nd_phf_term_aerosol_prsc                                        &
       )
   END IF
 
@@ -1125,7 +1130,7 @@ SUBROUTINE grey_opt_prop(ierr, control, radout, i_band                  &
           , ss_prop%forward_solar_cloud_comp(:, :, k)                   &
           , ss_prop%phase_fnc_solar_cloud_comp(:, :, :, k)              &
           , nd_profile, nd_radiance_profile, nd_layer, id_ct            &
-          , nd_direction, nd_phase_term, nd_max_order                   &
+          , nd_direction, nd_phf_term_cloud_prsc, nd_max_order          &
           , nd_cloud_parameter                                          &
           , nd_profile_cloud_prsc, nd_opt_level_cloud_prsc              &
           )
@@ -1158,7 +1163,7 @@ SUBROUTINE grey_opt_prop(ierr, control, radout, i_band                  &
           , ss_prop%phase_fnc_solar_cloud_comp(:, :, :, k)              &
           , nd_profile, nd_radiance_profile, nd_layer, id_ct            &
           , nd_direction                                                &
-          , nd_phase_term, nd_max_order, nd_cloud_parameter             &
+          , nd_phf_term_cloud_prsc, nd_max_order, nd_cloud_parameter    &
           , nd_profile_cloud_prsc, nd_opt_level_cloud_prsc              &
           )
 

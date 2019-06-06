@@ -29,6 +29,7 @@ PROGRAM l_run_cdf
   USE dimensions_field_cdf_ucf
   USE dimensions_cdf_ucf
   USE dimensions_fixed_pcf
+  USE dimensions_spec_ucf, ONLY: npd_phase_term
   USE def_std_io_icf
   USE rad_pcf
   USE gas_list_pcf
@@ -143,6 +144,8 @@ PROGRAM l_run_cdf
 ! Controlling variables:
   INTEGER :: i, j, l, ic, ll
 !       Loop variables
+  INTEGER :: n_term
+!       Number of phase terms
   INTEGER :: b1
 !       First band read in
   INTEGER :: b2
@@ -173,6 +176,9 @@ PROGRAM l_run_cdf
 
 ! Extended array to hold heights of layers, surface and top-of-atmosphere
   REAL (RealK), ALLOCATABLE :: r_layer(:,:)
+
+! Temporary array for resizing
+  REAL (RealK), ALLOCATABLE :: phase_fnc_prsc(:,:,:,:,:)
 
 ! External functions:
   LOGICAL, EXTERNAL :: set_interactive
@@ -718,16 +724,19 @@ PROGRAM l_run_cdf
     READ(iu_stdin, '(a)') char_yn
     IF ( (char_yn == 'Y').OR.(char_yn == 'y') ) THEN
       l_opt_overlay=.true.
-      dimen%nd_profile_aerosol_prsc = dimen%nd_profile
+      dimen%nd_profile_aerosol_prsc   = dimen%nd_profile
+      dimen%nd_phf_term_aerosol_prsc  = npd_phase_term
     ELSE
       l_opt_overlay=.false.
       dimen%nd_profile_aerosol_prsc   = 1
       dimen%nd_opt_level_aerosol_prsc = 1
+      dimen%nd_phf_term_aerosol_prsc  = 1
     ENDIF
     aer%mr_source = ip_aersrc_classic_ron
   ELSE
     dimen%nd_profile_aerosol_prsc   = 1
     dimen%nd_opt_level_aerosol_prsc = 1
+    dimen%nd_phf_term_aerosol_prsc  = 1
     aer%mr_source = ip_aersrc_classic_roff
   ENDIF
 
@@ -751,10 +760,32 @@ PROGRAM l_run_cdf
       aer%scattering_prsc, aer%phase_fnc_prsc,                          &
       dimen%nd_profile, npd_latitude, npd_longitude, dimen%nd_layer,    &
       Spectrum%Dim%nd_band, Spectrum%Dim%nd_aerosol_species,            &
-      Spectrum%Dim%nd_phase_term,                                       &
+      dimen%nd_phf_term_aerosol_prsc,                                   &
       dimen%nd_profile_aerosol_prsc, dimen%nd_opt_level_aerosol_prsc,   &
       npd_cdl_dimen, npd_cdl_dimen_size, npd_cdl_data, npd_cdl_var )
     IF (ierr /= i_normal) STOP
+    IF (l_opt_overlay) THEN
+      n_term = MAX( 1, &
+        MAXVAL(aer%n_phase_term_prsc(1:Spectrum%Aerosol%n_aerosol)) )
+      IF (dimen%nd_phf_term_aerosol_prsc > n_term) THEN
+        ! Resize phase function array to save memory
+        ALLOCATE(phase_fnc_prsc(dimen%nd_profile_aerosol_prsc,          &
+                                dimen%nd_opt_level_aerosol_prsc,        &
+                                n_term,                                 &
+                                spectrum%dim%nd_aerosol_species,        &
+                                spectrum%dim%nd_band))
+        phase_fnc_prsc=aer%phase_fnc_prsc(:,:,1:n_term,:,:)
+        DEALLOCATE(aer%phase_fnc_prsc)
+        ALLOCATE(aer%phase_fnc_prsc(dimen%nd_profile_aerosol_prsc,      &
+                                dimen%nd_opt_level_aerosol_prsc,        &
+                                n_term,                                 &
+                                spectrum%dim%nd_aerosol_species,        &
+                                spectrum%dim%nd_band))
+        aer%phase_fnc_prsc=phase_fnc_prsc
+        DEALLOCATE(phase_fnc_prsc)
+        dimen%nd_phf_term_aerosol_prsc=n_term
+      END IF
+    END IF
   ENDIF
 
 
@@ -776,9 +807,12 @@ PROGRAM l_run_cdf
     INQUIRE(file=Trim(file_name(1:length_name+1+len_file_suffix)),      &
       exist=l_exist)
   ENDIF
-  IF (.NOT.l_exist) THEN
+  IF (l_exist) THEN
+    dimen%nd_phf_term_cloud_prsc  = npd_phase_term
+  ELSE
     dimen%nd_profile_cloud_prsc   = 1
     dimen%nd_opt_level_cloud_prsc = 1
+    dimen%nd_phf_term_cloud_prsc  = 1
   ENDIF
 
   CALL allocate_cld_prsc(cld, dimen, spectrum)
@@ -805,7 +839,7 @@ PROGRAM l_run_cdf
     cld%ice_pressure_prsc, cld%ice_absorption_prsc,                     &
     cld%ice_scattering_prsc, cld%ice_phase_fnc_prsc,                    &
     dimen%nd_profile, npd_latitude, npd_longitude, dimen%nd_layer,      &
-    Spectrum%Dim%nd_band, Spectrum%Dim%nd_phase_term,                   &
+    Spectrum%Dim%nd_band, dimen%nd_phf_term_cloud_prsc,                 &
     Spectrum%Dim%nd_drop_type, Spectrum%Dim%nd_ice_type,                &
     Spectrum%Dim%nd_cloud_parameter,                                    &
     dimen%nd_cloud_component, dimen%nd_cloud_type,                      &

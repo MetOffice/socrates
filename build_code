@@ -8,7 +8,7 @@ if [ ${host:0:4} == "dali" ]; then
   host="dali"
 fi
 
-SRC_LIST="general modules_gen aux scatter correlated_k um"
+SRC_LIST="general modules_gen aux scatter correlated_k"
 SRC_LIST=${SRC_LIST}" modules_core radiance_core radiation_control"
 SRC_LIST=${SRC_LIST}" illumination interface_core"
 
@@ -48,11 +48,27 @@ done
 
 # Build the source code in bin
 cd bin
+./mkdep
 if [ -r Mk_cmd_$host ]
   then
     cp Mk_cmd_$host Mk_cmd
+elif [ $1 = "gfortran" ]
+  then
+    . /usr/share/Modules/init/bash
+    module load scitools
+    module load gcc/8.1.0
+    diff -q Mk_cmd_gfortran Mk_cmd || \
+    cp Mk_cmd_gfortran Mk_cmd; make clean
+    shift
+elif [ $1 = "ifort" ]
+  then
+    . /usr/share/Modules/init/bash
+    module load scitools
+    module load ifort/17.0_64
+    diff -q Mk_cmd_ifort Mk_cmd || \
+    cp Mk_cmd_ifort Mk_cmd; make clean
+    shift
 fi
-./mkdep
 make $1 && echo "All compiled OK"
 cd $here
 

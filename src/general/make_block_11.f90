@@ -60,8 +60,8 @@ SUBROUTINE make_block_11(Spectrum, ierr)
 !   Absorption values of block
   REAL (RealK) :: scattering(Spectrum%Dim%nd_band)
 !   Scattering values of block
-  REAL (RealK) :: phase_fnc(Spectrum%Dim%nd_phase_term, &
-                            Spectrum%Dim%nd_band)
+  REAL (RealK), ALLOCATABLE :: phf_fnc(:, :, :, :)
+  REAL (RealK), ALLOCATABLE :: phase_fnc(:, :)
 !   Asymmetry values of block
   REAL (RealK) :: radius_eff, radius_eff_dry
 !   Effective radius
@@ -186,9 +186,28 @@ SUBROUTINE make_block_11(Spectrum, ierr)
   IF ( (i_input_type == IT_file_ave_phf_mie_humid).OR. &
        (i_input_type == IT_file_ave_phf_mie_dry) ) THEN
     READ(iu_average, '(43x, i3, //)') n_phf_term
+    IF (n_phf_term > Spectrum%Dim%nd_phase_term) THEN
+      IF (ALLOCATED(Spectrum%Aerosol%phf_fnc)) THEN
+        ALLOCATE(phf_fnc(Spectrum%Dim%nd_humidity, &
+                         Spectrum%Dim%nd_phase_term, &
+                         Spectrum%Dim%nd_aerosol_species, &
+                         Spectrum%Dim%nd_band))
+        phf_fnc = Spectrum%Aerosol%phf_fnc
+        DEALLOCATE(Spectrum%Aerosol%phf_fnc)
+        ALLOCATE(Spectrum%Aerosol%phf_fnc( &
+                         Spectrum%Dim%nd_humidity, &
+                         n_phf_term, &
+                         Spectrum%Dim%nd_aerosol_species, &
+                         Spectrum%Dim%nd_band))
+        Spectrum%Aerosol%phf_fnc(:,1:Spectrum%Dim%nd_phase_term,:,:) = phf_fnc
+        DEALLOCATE(phf_fnc)
+      END IF
+      Spectrum%Dim%nd_phase_term = n_phf_term
+    END IF
   ELSE
       n_phf_term=1
   ENDIF
+  ALLOCATE(phase_fnc(n_phf_term, Spectrum%Dim%nd_band))
   READ(iu_average, '(/)')
 
   DO i=1, Spectrum%Basic%n_band
@@ -318,6 +337,7 @@ SUBROUTINE make_block_11(Spectrum, ierr)
 !   This species now has data.
     Spectrum%Aerosol%l_aero_spec(i_species)=.TRUE.
   ENDIF
+  DEALLOCATE(phase_fnc)
   goto 2
 
 

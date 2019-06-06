@@ -895,8 +895,9 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       , spectrum%dim%nd_aerosol_species                                        &
       , spectrum%dim%nd_aerosol_mr, spectrum%dim%nd_humidity                   &
       , spectrum%dim%nd_cloud_parameter, dimen%nd_cloud_component              &
-      , dimen%nd_cloud_type, spectrum%dim%nd_phase_term, dimen%nd_max_order    &
-      , dimen%nd_direction, dimen%nd_aerosol_mode                              &
+      , dimen%nd_cloud_type, spectrum%dim%nd_phase_term                        &
+      , dimen%nd_phf_term_aerosol_prsc, dimen%nd_phf_term_cloud_prsc           &
+      , dimen%nd_max_order, dimen%nd_direction, dimen%nd_aerosol_mode          &
       , dimen%nd_profile_aerosol_prsc, dimen%nd_profile_cloud_prsc             &
       , dimen%nd_opt_level_aerosol_prsc, dimen%nd_opt_level_cloud_prsc         &
       )

@@ -144,12 +144,12 @@ of the code.
 
 The full suite has been tested with the following compilers:
 
-Intel ifort 12.0.4
-GCC gfortran 4.4.7
+Intel ifort 17.0.7
+GCC gfortran 8.1.0
 
-To use these compilers within the Met Office Mk_cmd should be a symbolic
-link to the appropriate Mk_cmd_<compiler> file.
-
+To use these compilers within the Met Office run, respectively:
+./build_code ifort
+./build_code gfortran
 
 7) Reporting bugs and receiving updates
 ---------------------------------------
@@ -166,4 +166,4 @@ your name and the email address you wish to use for the account to either
 Scientific_Partnerships@metoffice.gov.uk or james.manners@metoffice.gov.uk.
 Tutorials and package updates are provided on the repository trac pages.
 
-James Manners 19.5.17
+James Manners 6.6.19

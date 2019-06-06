@@ -135,7 +135,7 @@ nd_thermal_coeff = 1
 nd_cloud_parameter  = npd_cloud_parameter
 nd_humidity  = npd_humidities
 nd_aod_wavel = 0
-nd_phase_term = npd_phase_term
+nd_phase_term = 1
 nd_tmp = 0
 nd_pre = 0
 nd_mix = 0
@@ -577,7 +577,7 @@ IF (ios /= 0) THEN
   ierr=i_err_fatal
   RETURN
 END IF
-nd_species=Sp%Gas%n_absorb
+nd_species=MAX(Sp%Gas%n_absorb, 1)
 
 READ(iu_spc, '(27x, i5)', IOSTAT=ios, IOMSG=iomessage) Sp%Aerosol%n_aerosol
 IF (ios /= 0) THEN
@@ -637,7 +637,7 @@ DO
     nd_band=Sp%Basic%n_band
   CASE ('Total number of gaseous absorbers','nd_species')
     READ(line(desc_end+1:),*,IOSTAT=ios, IOMSG=iomessage) Sp%Gas%n_absorb
-    nd_species=Sp%Gas%n_absorb
+    nd_species=MAX(Sp%Gas%n_absorb, 1)
   CASE ('Total number of aerosols','nd_aerosol_species')
     READ(line(desc_end+1:),*,IOSTAT=ios, IOMSG=iomessage) &
                                                      Sp%Aerosol%n_aerosol
@@ -2213,7 +2213,8 @@ INTEGER :: i_species
 !   Index of species
 INTEGER :: idum
 !   Dummy reading variable
-
+REAL(RealK), ALLOCATABLE :: phf_fnc(:,:,:,:)
+!   Temporary array for adjusting size of phase function array
 
 ! Allocate space for aerosol data if entering
 ! this block for the first time.
@@ -2236,6 +2237,21 @@ IF (i_species > nd_aerosol_species) THEN
 END IF
 READ(iu_spc, '(36x, i5, //)') &
   Sp%Aerosol%n_aerosol_phf_term(i_species)
+
+IF (Sp%Aerosol%n_aerosol_phf_term(i_species) > nd_phase_term) THEN
+  IF (ALLOCATED(Sp%Aerosol%phf_fnc)) THEN
+    ALLOCATE(phf_fnc(nd_humidity, nd_phase_term, &
+      nd_aerosol_species, nd_band))
+    phf_fnc = Sp%Aerosol%phf_fnc
+    DEALLOCATE(Sp%Aerosol%phf_fnc)
+    ALLOCATE(Sp%Aerosol%phf_fnc(nd_humidity, &
+      Sp%Aerosol%n_aerosol_phf_term(i_species), &
+      nd_aerosol_species, nd_band))
+    Sp%Aerosol%phf_fnc(:,1:nd_phase_term,:,:) = phf_fnc
+    DEALLOCATE(phf_fnc)
+  END IF
+  nd_phase_term = Sp%Aerosol%n_aerosol_phf_term(i_species)
+END IF
 
 IF ( .NOT. ALLOCATED(Sp%Aerosol%abs) ) THEN
   ALLOCATE(Sp%Aerosol%abs(nd_humidity, &
@@ -2424,6 +2440,8 @@ INTEGER :: l
 !   Loop variable
 INTEGER :: i_species
 !   Index of component
+REAL(RealK), ALLOCATABLE :: phf_fnc(:,:,:,:)
+!   Temporary array for adjusting size of phase function array
 
 
 ! Allocate space for aerosol arrays.
@@ -2446,6 +2464,21 @@ IF (i_species > nd_aerosol_species) THEN
 END IF
 READ(iu_spc, '(28x, i3)') Sp%Aerosol%nhumidity(i_species)
 READ(iu_spc, '(36x, i5)') Sp%Aerosol%n_aerosol_phf_term(i_species)
+
+IF (Sp%Aerosol%n_aerosol_phf_term(i_species) > nd_phase_term) THEN
+  IF (ALLOCATED(Sp%Aerosol%phf_fnc)) THEN
+    ALLOCATE(phf_fnc(nd_humidity, nd_phase_term, &
+      nd_aerosol_species, nd_band))
+    phf_fnc = Sp%Aerosol%phf_fnc
+    DEALLOCATE(Sp%Aerosol%phf_fnc)
+    ALLOCATE(Sp%Aerosol%phf_fnc(nd_humidity, &
+      Sp%Aerosol%n_aerosol_phf_term(i_species), &
+      nd_aerosol_species, nd_band))
+    Sp%Aerosol%phf_fnc(:,1:nd_phase_term,:,:) = phf_fnc
+    DEALLOCATE(phf_fnc)
+  END IF
+  nd_phase_term = Sp%Aerosol%n_aerosol_phf_term(i_species)
+END IF
 
 IF ( .NOT. ALLOCATED(Sp%Aerosol%abs) ) THEN
   ALLOCATE(Sp%Aerosol%abs(nd_humidity, nd_aerosol_species, &

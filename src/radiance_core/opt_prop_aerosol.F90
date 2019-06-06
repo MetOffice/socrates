@@ -4,7 +4,7 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Subroutine to calculate the optical properties of aerosols.
+! Subroutine to calculate the optical properties of aerosols.
 !
 ! Method:
 !   If the optical properties come from an observational
@@ -13,9 +13,6 @@
 !   as the parametrization requires and these values are
 !   substituted into the parametrization to give the optical
 !   properties. Aerosol properties may depend on the humidity.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiance Core
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE opt_prop_aerosol(ierr                                        &
@@ -39,6 +36,7 @@ SUBROUTINE opt_prop_aerosol(ierr                                        &
     , nd_aerosol_species, nd_aerosol_mixratio, nd_humidities            &
     , nd_phase_term, nd_max_order, nd_direction                         &
     , nd_profile_prsc, nd_opt_level_prsc                                &
+    , nd_phf_term_prsc                                                  &
     )
 
 
@@ -78,8 +76,10 @@ SUBROUTINE opt_prop_aerosol(ierr                                        &
 !       Size allocated for humidities
     , nd_profile_prsc                                                   &
 !       Size allowed for profiles of prescribed properties
-    , nd_opt_level_prsc
+    , nd_opt_level_prsc                                                 &
 !       Size allowed for levels of prescribed properties
+    , nd_phf_term_prsc
+!       Size allowed for terms in phase function prescribed properties
 
 ! Dummy variables.
   INTEGER, INTENT(INOUT) ::                                             &
@@ -168,7 +168,7 @@ SUBROUTINE opt_prop_aerosol(ierr                                        &
         , nd_aerosol_species)                                           &
 !       Prescribed aerosol scattering
     , aerosol_phase_fnc_prsc(nd_profile_prsc, nd_opt_level_prsc         &
-        , nd_phase_term, nd_aerosol_species)
+        , nd_phf_term_prsc, nd_aerosol_species)
 !       Prescribed aerosol phase function
 
   REAL (RealK), INTENT(INOUT) ::                                        &
@@ -727,7 +727,7 @@ SUBROUTINE opt_prop_aerosol(ierr                                        &
          , id_lt, id_lb                                                 &
          , nd_direction                                                 &
          , nd_profile_prsc, nd_opt_level_prsc                           &
-         , nd_phase_term, nd_max_order                                  &
+         , nd_phf_term_prsc, nd_max_order                               &
          )
 
       DO i=first_layer, last_layer

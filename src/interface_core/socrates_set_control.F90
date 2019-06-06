@@ -19,8 +19,8 @@ subroutine set_control(control, spectrum, l_set_defaults, &
   l_tile, l_clear, &
   l_flux_up_band, l_flux_down_band, &
   l_flux_up_clear_band, l_flux_down_clear_band, &
-  isolir, &
-  i_cloud_representation, i_overlap, i_inhom, &
+  n_tile, n_cloud_layer, n_aer_mode, &
+  isolir, i_cloud_representation, i_overlap, i_inhom, &
   i_st_water, i_cnv_water, i_st_ice, i_cnv_ice )
 
 use def_control,  only: StrCtrl, allocate_control
@@ -58,6 +58,8 @@ logical, intent(in), optional :: l_set_defaults, &
   l_tile, l_clear, &
   l_flux_up_band, l_flux_down_band, &
   l_flux_up_clear_band, l_flux_down_clear_band
+
+integer, intent(in), optional :: n_tile, n_cloud_layer, n_aer_mode
 
 integer, intent(in), optional :: isolir, &
   i_cloud_representation, i_overlap, i_inhom, &
@@ -150,10 +152,18 @@ if (present(l_set_defaults)) then
       call set_int_default(control%n_order_forward, 2)
       call set_int_default(control%i_gas_overlap, ip_overlap_k_eqv_scl)
 
+      ! Consistent tiling options
+      if (present(n_tile)) then
+        if (n_tile < 1) control%l_tile = .false.
+      end if
+
       ! Consistent cloud options and defaults
       call set_int_default(control%i_cloud_representation, ip_cloud_off)
       call set_int_default(control%i_overlap, ip_max_rand)
       call set_int_default(control%i_inhom, ip_homogeneous)
+      if (present(n_cloud_layer)) then
+        if (n_cloud_layer < 1) control%i_cloud_representation = ip_cloud_off
+      end if
       select case(control%i_cloud_representation)
       case(ip_cloud_homogen, ip_cloud_ice_water)
         control%l_cloud = .true.
@@ -225,6 +235,11 @@ if (present(l_set_defaults)) then
           control%i_solver_clear = ip_solver_homogen_direct
         end if
       end select
+
+      ! Consistent aerosol options
+      if (present(n_aer_mode)) then
+        if (n_aer_mode < 1) control%l_aerosol_mode = .false.
+      end if
 
     case(ip_ir_gauss, ip_spherical_harmonic)
 

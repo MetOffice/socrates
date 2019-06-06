@@ -218,6 +218,7 @@
 !       ratios must be specified.
 !
         IF (l_opt_overlay) THEN
+          n_phase_term_aerosol_prsc(i)=0
 !         Determine whether a file of prescribed optical properties
 !         exists.
           file_name(1: length_name+1+len_file_suffix)
@@ -239,7 +240,8 @@
      &        , nd_profile_prsc, nd_latitude, nd_longitude
      &        , nd_band, nd_phase_term, nd_level_prsc
      &        , nd_cdl_dimen, nd_cdl_dimen_size
-     &        , nd_cdl_data*n_band*nd_phase_term, nd_cdl_var
+     &        , nd_profile_prsc*nd_level_prsc*nd_phase_term*n_band
+     &        , nd_cdl_var
      &        )
 !
 !           Transpose the local optical properties into the full arrays.

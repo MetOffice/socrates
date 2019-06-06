@@ -26,7 +26,7 @@ character(len=*), parameter, private :: ModuleName = 'SOCRATES_RUNES'
 contains
 
 subroutine runes(n_profile, n_layer, spectrum, spectrum_name, &
-  n_cloud_layer, n_aer_mode, &
+  n_cloud_layer, n_aer_mode, n_tile, &
   n_subcol_gen, n_subcol_req, &
   p_layer, t_layer, t_level, mass, density, &
   h2o, o3, &
@@ -36,7 +36,8 @@ subroutine runes(n_profile, n_layer, spectrum, spectrum_name, &
   o2_mix_ratio, so2_mix_ratio, cfc11_mix_ratio, cfc12_mix_ratio, &
   cfc113_mix_ratio, hcfc22_mix_ratio, hfc134a_mix_ratio, &
   t_ground, cos_zenith_angle, solar_irrad, orog_corr, &
-  l_grey_albedo, grey_albedo, &
+  l_grey_albedo, grey_albedo, albedo_diff, albedo_dir, &
+  l_tile, frac_tile, t_tile, albedo_diff_tile, albedo_dir_tile, &
   cloud_frac, conv_frac, &
   liq_frac, ice_frac, liq_conv_frac, ice_conv_frac, &
   liq_mmr, ice_mmr, liq_conv_mmr, ice_conv_mmr, &
@@ -51,7 +52,9 @@ subroutine runes(n_profile, n_layer, spectrum, spectrum_name, &
   l_rayleigh, l_mixing_ratio, l_aerosol_mode, &
   l_invert, l_debug, i_profile_debug, &
   flux_direct, flux_down, flux_up, heating_rate, &
-  flux_direct_1d, flux_down_1d, flux_up_1d, heating_rate_1d)
+  flux_up_tile, flux_up_blue_tile, flux_direct_blue_surf, flux_down_blue_surf, &
+  flux_direct_1d, flux_down_1d, flux_up_1d, heating_rate_1d, &
+  flux_up_tile_1d, flux_up_blue_tile_1d)
 
 use def_spectrum, only: StrSpecData
 use def_control,  only: StrCtrl,  deallocate_control
@@ -86,6 +89,8 @@ integer, intent(in) :: n_profile
 !   Number of columns to operate on
 integer, intent(in) :: n_layer
 !   Number of layers for radiation
+integer, intent(in), optional :: n_tile
+!   Number of surface tiles
 integer, intent(in), optional :: n_cloud_layer
 !   Number of potentially cloudy layers
 integer, intent(in), optional :: n_aer_mode
@@ -136,6 +141,22 @@ logical, intent(in), optional :: l_grey_albedo
 !   Set a single grey albedo / emissivity for the surface
 real(RealK), intent(in), optional :: grey_albedo
 !   Grey surface albedo
+
+real(RealK), intent(in), optional :: albedo_diff(:, :)
+!   Spectral diffuse albedo (n_profile, n_band)
+real(RealK), intent(in), optional :: albedo_dir(:, :)
+!   Spectral direct albedo (n_profile, n_band)
+
+logical, intent(in), optional :: l_tile
+!   Use tiled surface properties
+real(RealK), intent(in), optional :: frac_tile(:, :)
+!   Tile fractions (n_profile, n_tile)
+real(RealK), intent(in), optional :: albedo_diff_tile(:, :, :)
+!   Diffuse tile albedo (n_profile, n_tile, n_band)
+real(RealK), intent(in), optional :: albedo_dir_tile(:, :, :)
+!   Direct tile albedo (n_profile, n_tile, n_band)
+real(RealK), intent(in), optional :: t_tile(:, :)
+!   Tile temperatures (n_profile, n_tile)
 
 real(RealK), intent(in), dimension (n_profile, n_layer), optional :: &
   cloud_frac, conv_frac, &
@@ -191,6 +212,16 @@ real(RealK), intent(out), optional :: flux_up_1d(0:n_layer)
 real(RealK), intent(out), optional :: heating_rate(n_profile, n_layer)
 real(RealK), intent(out), optional :: heating_rate_1d(n_layer)
 !   Heating rate (Ks-1)
+real(RealK), intent(out), optional :: flux_up_tile(:, :) ! (n_profile, n_tile)
+real(RealK), intent(out), optional :: flux_up_tile_1d(:) ! (n_tile)
+!   Upwards flux on tiles (Wm-2)
+real(RealK), intent(out), optional :: flux_up_blue_tile(:, :)
+real(RealK), intent(out), optional :: flux_up_blue_tile_1d(:)
+!   Upwards blue flux on tiles (Wm-2)
+real(RealK), intent(out), optional :: flux_direct_blue_surf(n_profile)
+!   Direct blue flux at the surface
+real(RealK), intent(out), optional :: flux_down_blue_surf(n_profile)
+!   Total downward blue flux at the surface
 
 
 ! Spectral data:
@@ -252,6 +283,10 @@ call set_control(control, spec, &
   l_rayleigh             = l_rayleigh, &
   l_mixing_ratio         = l_mixing_ratio, &
   l_aerosol_mode         = l_aerosol_mode, &
+  l_tile                 = l_tile, &
+  n_tile                 = n_tile, &
+  n_cloud_layer          = n_cloud_layer, &
+  n_aer_mode             = n_aer_mode, &
   i_cloud_representation = i_cloud_representation, &
   i_overlap              = i_overlap, &
   i_inhom                = i_inhom, &
@@ -260,9 +295,10 @@ call set_control(control, spec, &
   l_set_defaults         = .true.)
 
 call set_dimen(dimen, control, n_profile, n_layer, &
+  n_tile        = n_tile, &
   n_cloud_layer = n_cloud_layer, &
-  n_aer_mode    = n_aer_mode,    &
-  n_subcol_gen  = n_subcol_gen,  &
+  n_aer_mode    = n_aer_mode, &
+  n_subcol_gen  = n_subcol_gen, &
   n_subcol_req  = n_subcol_req )
 
 call set_atm(atm, dimen, spec, n_profile, n_layer, &
@@ -295,13 +331,20 @@ call set_atm(atm, dimen, spec, n_profile, n_layer, &
   i_profile_debug   = i_profile_debug )
 
 call set_bound(bound, control, dimen, spec, n_profile, &
-  t_ground         = t_ground,         &
+  n_tile           = n_tile, &
+  t_ground         = t_ground, &
   cos_zenith_angle = cos_zenith_angle, &
-  solar_irrad      = solar_irrad,      &
-  orog_corr        = orog_corr,        &
-  l_grey_albedo    = l_grey_albedo,    &
-  grey_albedo      = grey_albedo,      &
-  l_debug          = l_debug,          &
+  solar_irrad      = solar_irrad, &
+  orog_corr        = orog_corr, &
+  l_grey_albedo    = l_grey_albedo, &
+  grey_albedo      = grey_albedo, &
+  albedo_diff      = albedo_diff, &
+  albedo_dir       = albedo_dir, &
+  frac_tile        = frac_tile, &
+  t_tile           = t_tile, &
+  albedo_diff_tile = albedo_diff_tile, &
+  albedo_dir_tile  = albedo_dir_tile, &
+  l_debug          = l_debug, &
   i_profile_debug  = i_profile_debug )
 
 call set_cld(cld, control, dimen, spec, atm, &
@@ -398,146 +441,16 @@ if (present(heating_rate).or.present(heating_rate_1d)) then
   end if
 end if
 
-if (present(flux_direct)) then
-  if (l_inv) then
-    do i=0, n_layer
-      do l=1, n_profile
-        flux_direct(l, n_layer-i) = &
-          sum(radout%flux_direct(l, i, 1:control%n_channel))
-      end do
-    end do
-  else
-    do i=0, n_layer
-      do l=1, n_profile
-        flux_direct(l, i) = &
-          sum(radout%flux_direct(l, i, 1:control%n_channel))
-      end do
-    end do
-  end if
-end if
-if (present(flux_direct_1d)) then
-  if (n_profile == 1) then
-    if (l_inv) then
-      do i=0, n_layer
-        flux_direct_1d(n_layer-i) = &
-          sum(radout%flux_direct(1, i, 1:control%n_channel))
-      end do
-    else
-      do i=0, n_layer
-        flux_direct_1d(i) = &
-          sum(radout%flux_direct(1, i, 1:control%n_channel))
-      end do
-    end if
-  else
-    if (l_inv) then
-      do i=0, n_layer
-        flux_direct_1d(n_layer-i) = &
-          sum(radout%flux_direct(1:n_profile, i, 1:control%n_channel)) &
-          / real(n_profile, RealK)
-      end do
-    else
-      do i=0, n_layer
-        flux_direct_1d(i) = &
-          sum(radout%flux_direct(1:n_profile, i, 1:control%n_channel)) &
-          / real(n_profile, RealK)
-      end do
-    end if
-  end if
-end if
-
-if (present(flux_down)) then
-  if (l_inv) then
-    do i=0, n_layer
-      do l=1, n_profile
-        flux_down(l, n_layer-i) = &
-          sum(radout%flux_down(l, i, 1:control%n_channel))
-      end do
-    end do
-  else
-    do i=0, n_layer
-      do l=1, n_profile
-        flux_down(l, i) = &
-          sum(radout%flux_down(l, i, 1:control%n_channel))
-      end do
-    end do
-  end if
-end if
-if (present(flux_down_1d)) then
-  if (n_profile == 1) then
-    if (l_inv) then
-      do i=0, n_layer
-        flux_down_1d(n_layer-i) = &
-          sum(radout%flux_down(1, i, 1:control%n_channel))
-      end do
-    else
-      do i=0, n_layer
-        flux_down_1d(i) = &
-          sum(radout%flux_down(1, i, 1:control%n_channel))
-      end do
-    end if
-  else
-    if (l_inv) then
-      do i=0, n_layer
-        flux_down_1d(n_layer-i) = &
-          sum(radout%flux_down(1:n_profile, i, 1:control%n_channel)) &
-          / real(n_profile, RealK)
-      end do
-    else
-      do i=0, n_layer
-        flux_down_1d(i) = &
-          sum(radout%flux_down(1:n_profile, i, 1:control%n_channel)) &
-          / real(n_profile, RealK)
-      end do
-    end if
-  end if
-end if
-
-if (present(flux_up)) then
-  if (l_inv) then
-    do i=0, n_layer
-      do l=1, n_profile
-        flux_up(l, n_layer-i) = &
-          sum(radout%flux_up(l, i, 1:control%n_channel))
-      end do
-    end do
-  else
-    do i=0, n_layer
-      do l=1, n_profile
-        flux_up(l, i) = &
-          sum(radout%flux_up(l, i, 1:control%n_channel))
-      end do
-    end do
-  end if
-end if
-if (present(flux_up_1d)) then
-  if (n_profile == 1) then
-    if (l_inv) then
-      do i=0, n_layer
-        flux_up_1d(n_layer-i) = &
-          sum(radout%flux_up(1, i, 1:control%n_channel))
-      end do
-    else
-      do i=0, n_layer
-        flux_up_1d(i) = &
-          sum(radout%flux_up(1, i, 1:control%n_channel))
-      end do
-    end if
-  else
-    if (l_inv) then
-      do i=0, n_layer
-        flux_up_1d(n_layer-i) = &
-          sum(radout%flux_up(1:n_profile, i, 1:control%n_channel)) &
-          / real(n_profile, RealK)
-      end do
-    else
-      do i=0, n_layer
-        flux_up_1d(i) = &
-          sum(radout%flux_up(1:n_profile, i, 1:control%n_channel)) &
-          / real(n_profile, RealK)
-      end do
-    end if
-  end if
-end if
+call sum_flux_channels(flux_direct, flux_direct_1d, radout%flux_direct)
+call sum_flux_channels(flux_down, flux_down_1d, radout%flux_down)
+call sum_flux_channels(flux_up, flux_up_1d, radout%flux_up)
+call sum_tile_channels(flux_up_tile, flux_up_tile_1d, radout%flux_up_tile)
+call sum_tile_channels(flux_up_blue_tile, flux_up_blue_tile_1d, &
+                       radout%flux_up_blue_tile)
+if (present(flux_direct_blue_surf)) &
+  flux_direct_blue_surf = radout%flux_direct_blue_surf
+if (present(flux_down_blue_surf)) &
+  flux_down_blue_surf = radout%flux_down_blue_surf
 
 call deallocate_out(radout)
 call deallocate_aer_prsc(aer)
@@ -547,6 +460,106 @@ call deallocate_cld(cld)
 call deallocate_bound(bound)
 call deallocate_atm(atm)
 call deallocate_control(control)
+
+contains
+
+  subroutine sum_flux_channels(field, field_1d, field_channels)
+  
+  implicit none
+  
+  real(RealK), intent(out), optional :: field(n_profile, 0:n_layer)
+  real(RealK), intent(out), optional :: field_1d(0:n_layer)
+  real(RealK), intent(in) :: field_channels(:, 0:, :)
+  
+  if (present(field)) then
+    if (l_inv) then
+      do i=0, n_layer
+        do l=1, n_profile
+          field(l, n_layer-i) = &
+            sum(field_channels(l, i, 1:control%n_channel))
+        end do
+      end do
+    else
+      do i=0, n_layer
+        do l=1, n_profile
+          field(l, i) = &
+            sum(field_channels(l, i, 1:control%n_channel))
+        end do
+      end do
+    end if
+  end if
+  if (present(field_1d)) then
+    if (n_profile == 1) then
+      if (l_inv) then
+        do i=0, n_layer
+          field_1d(n_layer-i) = &
+            sum(field_channels(1, i, 1:control%n_channel))
+        end do
+      else
+        do i=0, n_layer
+          field_1d(i) = &
+            sum(field_channels(1, i, 1:control%n_channel))
+        end do
+      end if
+    else
+      if (l_inv) then
+        do i=0, n_layer
+          field_1d(n_layer-i) = &
+            sum(field_channels(1:n_profile, i, 1:control%n_channel)) &
+            / real(n_profile, RealK)
+        end do
+      else
+        do i=0, n_layer
+          field_1d(i) = &
+            sum(field_channels(1:n_profile, i, 1:control%n_channel)) &
+            / real(n_profile, RealK)
+        end do
+      end if
+    end if
+  end if
+  
+  end subroutine sum_flux_channels
+  
+  
+  subroutine sum_tile_channels(field, field_1d, field_channels)
+  
+  implicit none
+  
+  real(RealK), intent(out), optional :: field(:, :)
+  real(RealK), intent(out), optional :: field_1d(:)
+  real(RealK), intent(in) :: field_channels(:, :, :)
+  
+  integer :: ll
+  
+  if (present(field)) then
+    field(:, :) = 0.0_RealK
+    if (present(n_tile).and.control%l_tile) then
+      do i=1, n_tile
+        do ll=1, bound%n_point_tile
+          l = bound%list_tile(ll)
+          field(l, i) = sum(field_channels(ll, i, 1:control%n_channel))
+        end do
+      end do
+    end if
+  end if
+  if (present(field_1d)) then
+    field_1d(:) = 0.0_RealK
+    if (present(n_tile).and.control%l_tile) then
+      if (bound%n_point_tile == 1) then
+        do i=1, n_tile
+          field_1d(i) = sum(field_channels(1, i, 1:control%n_channel))
+        end do
+      else if (bound%n_point_tile > 1) then
+        do i=1, n_tile
+          field_1d(i) = &
+            sum(field_channels(1:bound%n_point_tile, i, 1:control%n_channel)) &
+            / real(bound%n_point_tile, RealK)
+        end do
+      end if
+    end if
+  end if
+  
+  end subroutine sum_tile_channels
 
 end subroutine runes
 end module socrates_runes

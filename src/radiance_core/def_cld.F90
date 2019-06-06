@@ -177,7 +177,7 @@ IF (.NOT. ALLOCATED(cld%drop_scattering_prsc))                                 &
 IF (.NOT. ALLOCATED(cld%drop_phase_fnc_prsc))                                  &
   ALLOCATE(cld%drop_phase_fnc_prsc  ( dimen%nd_profile_cloud_prsc,             &
                                       dimen%nd_opt_level_cloud_prsc,           &
-                                      sp%dim%nd_phase_term,                    &
+                                      dimen%nd_phf_term_cloud_prsc,            &
                                       sp%dim%nd_band                         ))
 
 IF (.NOT. ALLOCATED(cld%ice_pressure_prsc))                                    &
@@ -197,7 +197,7 @@ IF (.NOT. ALLOCATED(cld%ice_scattering_prsc))                                  &
 IF (.NOT. ALLOCATED(cld%ice_phase_fnc_prsc))                                   &
   ALLOCATE(cld%ice_phase_fnc_prsc   ( dimen%nd_profile_cloud_prsc,             &
                                       dimen%nd_opt_level_cloud_prsc,           &
-                                      sp%dim%nd_phase_term,                    &
+                                      dimen%nd_phf_term_cloud_prsc,            &
                                       sp%dim%nd_band                         ))
 
 END SUBROUTINE allocate_cld_prsc

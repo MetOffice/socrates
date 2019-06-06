@@ -11,7 +11,8 @@ use def_spectrum, only: StrSpecData
 
 implicit none
 private
-public :: set_spectrum, compress_spectrum, spectrum_array_name, spectrum_array
+public :: set_spectrum, compress_spectrum, set_weight_blue, get_spectrum, &
+          spectrum_array_name, spectrum_array
 
 integer, parameter :: specnamelength = 64
 character(len=specnamelength), allocatable, save :: spectrum_array_name(:)
@@ -24,12 +25,15 @@ contains
 subroutine set_spectrum(n_instances, spectrum, spectrum_name, spectral_file, &
   l_h2o, l_co2, l_o3, l_o2, l_n2o, l_ch4, l_so2, l_cfc11, l_cfc12, &
   l_cfc113, l_cfc114, l_hcfc22, l_hfc125, l_hfc134a, l_co, l_nh3, &
-  l_tio, l_vo, l_h2, l_he, l_na, l_k, l_li, l_rb, l_cs)
+  l_tio, l_vo, l_h2, l_he, l_na, l_k, l_li, l_rb, l_cs, &
+  wavelength_blue)
 
 use filenamelength_mod, only: filenamelength
 use errormessagelength_mod, only: errormessagelength
 use ereport_mod, only: ereport
 use rad_pcf, only: i_normal, i_err_fatal
+use realtype_rd, only: RealK
+use missing_data_mod, only: rmdi
 use yomhook,  only: lhook, dr_hook
 use parkind1, only: jprb, jpim
 
@@ -49,6 +53,7 @@ logical, intent(in), optional :: &
   l_cfc113, l_cfc114, l_hcfc22, l_hfc125, l_hfc134a, l_co, l_nh3, &
   l_tio, l_vo, l_h2, l_he, l_na, l_k, l_li, l_rb, l_cs
 
+real (RealK), intent(in), optional :: wavelength_blue
 
 ! Local variables
 type(StrSpecData), pointer :: spec => null()
@@ -95,9 +100,14 @@ else if (present(spectrum)) then
   spec => spectrum
 end if
 
-if (present(spectrum_name).or.present(spectrum)) then
+if (present(spectrum_name).and.present(spectrum)) then
+  spectrum_array(id_spec) = spectrum
+else if (present(spectrum_name).or.present(spectrum)) then
   ! DEPENDS ON: read_spectrum
   call read_spectrum(spectral_file, spec)
+  if (spec%solar%weight_blue(1) == rmdi) then
+    call set_weight_blue(spec, wavelength_blue)
+  end if
   call compress_spectrum(spec, &
     l_h2o, l_co2, l_o3, l_o2, l_n2o, l_ch4, l_so2, l_cfc11, l_cfc12, &
     l_cfc113, l_cfc114, l_hcfc22, l_hfc125, l_hfc134a, l_co, l_nh3, &
@@ -190,5 +200,115 @@ contains
   end function retain_absorber
 
 end subroutine compress_spectrum
+
+
+subroutine set_weight_blue(spec, wavelength_blue)
+
+use realtype_rd, only: RealK
+
+implicit none
+
+type(StrSpecData), intent(inout) :: spec
+real (RealK), intent(in), optional :: wavelength_blue
+
+integer :: i, j, i_exclude
+real (RealK) :: total_energy_range, blue_energy_range, wl_blue
+
+if (present(wavelength_blue)) then
+  wl_blue = wavelength_blue
+else
+  wl_blue = 6.9e-07_RealK
+end if
+
+do i=1, spec%basic%n_band
+  if (spec%basic%wavelength_long(i) < wl_blue) then
+    spec%solar%weight_blue(i) = 1.0_RealK
+  else if (spec%basic%wavelength_short(i) > wl_blue) then
+    spec%solar%weight_blue(i) = 0.0_RealK
+  else
+    blue_energy_range  = 1.0_RealK / spec%basic%wavelength_short(i) &
+                       - 1.0_RealK / wl_blue
+    total_energy_range = 1.0_RealK / spec%basic%wavelength_short(i) &
+                       - 1.0_RealK / spec%basic%wavelength_long(i)
+    if (spec%basic%l_present(14)) then
+      ! Remove contributions from excluded bands.
+      do j=1, spec%basic%n_band_exclude(i)
+        i_exclude = spec%basic%index_exclude(j, i)
+        if (spec%basic%wavelength_long(i_exclude) < wl_blue) then
+          blue_energy_range = blue_energy_range &
+            - 1.0_RealK / spec%basic%wavelength_short(i_exclude) &
+            + 1.0_RealK / spec%basic%wavelength_long(i_exclude)
+        else if (spec%basic%wavelength_short(i_exclude) < wl_blue) then
+          blue_energy_range = blue_energy_range &
+            - 1.0_RealK / spec%basic%wavelength_short(i_exclude) &
+            + 1.0_RealK / wl_blue
+        end if
+        total_energy_range = total_energy_range &
+          - 1.0_RealK / spec%basic%wavelength_short(i_exclude) &
+          + 1.0_RealK / spec%basic%wavelength_long(i_exclude)
+      end do
+    end if
+    spec%solar%weight_blue(i) = blue_energy_range / total_energy_range
+  end if
+end do
+
+end subroutine set_weight_blue
+
+
+subroutine get_spectrum(spectrum_name, spectrum, &
+  n_band, wavelength_short, wavelength_long, weight_blue)
+
+use realtype_rd, only: RealK
+use errormessagelength_mod, only: errormessagelength
+use ereport_mod, only: ereport
+use rad_pcf, only: i_normal, i_err_fatal
+
+implicit none
+
+character(len=*), intent(in) :: spectrum_name
+type (StrSpecData), intent(out), optional :: spectrum
+
+integer, optional, intent(out) :: n_band
+real (RealK), allocatable, optional, intent(out) :: wavelength_short(:)
+real (RealK), allocatable, optional, intent(out) :: wavelength_long(:)
+real (RealK), allocatable, optional, intent(out) :: weight_blue(:)
+
+! Local variables
+type(StrSpecData), pointer :: spec => null()
+integer :: id_spec
+integer :: ierr = i_normal
+character(len=errormessagelength) :: cmessage
+character(len=*), parameter :: RoutineName='GET_SPECTRUM'
+
+
+do id_spec=1, size(spectrum_array)
+  if (spectrum_array_name(id_spec) == spectrum_name) exit
+  if (id_spec == size(spectrum_array)) then
+    cmessage = 'Spectrum name not found.'
+    ierr=i_err_fatal
+    call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+  end if
+end do
+spec => spectrum_array(id_spec)
+
+if (present(spectrum)) spectrum = spec
+if (present(n_band)) n_band = spec%basic%n_band
+if (present(wavelength_short)) then
+  if (allocated(wavelength_short)) deallocate(wavelength_short)
+  allocate(wavelength_short(spec%basic%n_band))
+  wavelength_short = spec%basic%wavelength_short
+end if
+if (present(wavelength_long)) then
+  if (allocated(wavelength_long)) deallocate(wavelength_long)
+  allocate(wavelength_long(spec%basic%n_band))
+  wavelength_long = spec%basic%wavelength_long
+end if
+if (present(weight_blue)) then
+  if (allocated(weight_blue)) deallocate(weight_blue)
+  allocate(weight_blue(spec%basic%n_band))
+  weight_blue = spec%solar%weight_blue
+end if
+
+end subroutine get_spectrum
 
 end module socrates_set_spectrum

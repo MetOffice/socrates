@@ -39,7 +39,6 @@ diff -q $RAD_DATA/cloud/scatter_drop_sw_type5 scatter_drop_sw_type5
 (diff -q sp_lw_ses_gfortran sp_lw_ses && echo 'Matched gfortran LW output') || \
  ierr=1
 (diff -q sp_sw_ses_ref      sp_sw_ses && echo 'Matched MetO SW output')     || \
-(diff -q sp_sw_ses_umserve  sp_sw_ses && echo 'Matched um-serve SW output')  || \
 (diff -q sp_sw_ses_gfortran sp_sw_ses && echo 'Matched gfortran SW output') || \
  ierr=1
 

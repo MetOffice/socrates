@@ -6,8 +6,8 @@
 
 
 # Default target:
-all: TARGET_GEN TARGET_CK TARGET_SCAT TARGET_AUX TARGET_UM
-cdl: TARGET_SCAT AUX_CDL TARGET_UM
+all: TARGET_GEN TARGET_CK TARGET_SCAT TARGET_AUX
+cdl: TARGET_SCAT AUX_CDL
 cdf: TARGET_GEN AUX_CDF TARGET_CK
 
 # Compilers and suffixes:
@@ -83,4 +83,3 @@ include Mk_target_gen
 include Mk_target_ck
 include Mk_target_scat
 include Mk_target_aux
-include Mk_target_um

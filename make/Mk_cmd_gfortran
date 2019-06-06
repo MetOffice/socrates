@@ -4,8 +4,8 @@
 FORTCOMP        = gfortran -O -c
 LINK            = gfortran -O
 LIBLINK         = ar rvu
-INCCDF_PATH     = /project/odb/installs/netcdf/netcdf-4.1.3-ukmo-v1/gfortran-4.4.5/include
-LIBCDF_PATH     = /project/odb/installs/netcdf/netcdf-4.1.3-ukmo-v1/gfortran-4.4.5/lib
+INCCDF_PATH     = /project/ukmo/rhel7/fortran/opt/gfortran/packages/gnu/8.1.0/netcdf/4.6.1/include
+LIBCDF_PATH     = /project/ukmo/rhel7/fortran/opt/gfortran/packages/gnu/8.1.0/netcdf/4.6.1/lib
 LIBCDF_NAME     = netcdff
 OMPARG          = -fopenmp
 

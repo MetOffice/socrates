@@ -25,8 +25,9 @@ USE realtype_rd, ONLY: RealK
 USE rad_ccf, ONLY: pi
 USE yomhook, ONLY: lhook, dr_hook
 USE parkind1, ONLY: jprb, jpim
-USE def_orbit, ONLY: StrOrbit, ip_smart, ip_mueller, &
-  ip_elements_user, ip_elements_earth_fixed, ip_elements_earth_secular_variation
+USE def_orbit, ONLY: StrOrbit, ip_smart, ip_mueller, ip_elements_user, &
+  ip_elements_earth_fixed, ip_elements_earth_secular_variation, &
+  ip_spin_user, ip_spin_earth_day, ip_spin_fixed_sun
 USE orbprm_mod, ONLY: orbprm
 
 IMPLICIT NONE
@@ -138,7 +139,12 @@ CASE (ip_elements_user)
   oblq = orbit%obliquity    + orbit%obliquity_inc    * day_number
   gamph = pi - (orbit%arg_periapsis + orbit%arg_periapsis_inc * day_number)
 
-  ha = orbit%hour_angle + orbit%hour_angle_inc * day_number_at_midnight
+  SELECT CASE (orbit%i_spin)
+  CASE (ip_spin_user)
+    ha = orbit%hour_angle + orbit%hour_angle_inc * day_number_at_midnight
+  CASE (ip_spin_earth_day)
+    ha = orbit%hour_angle + twopi * day_number_at_midnight
+  END SELECT
 
 CASE (ip_elements_earth_fixed)
 

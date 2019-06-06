@@ -27,18 +27,17 @@ use rad_pcf,     only: &
   ip_solver_mix_direct_hogan, ip_solver_triple_app_scat, ip_solver_triple, &
   ip_solver_triple_hogan, ip_two_stream, ip_spherical_harmonic, &
   ip_sph_mode_flux, ip_trunc_triangular, ip_trunc_azim_sym, &
-  i_normal, i_err_fatal, &
-  npd_tile_type
+  i_normal, i_err_fatal
 use ereport_mod, only: ereport
 use errormessagelength_mod, only: errormessagelength
 
 implicit none
 
 ! Dimensions:
-type(StrDim),  intent(out) :: dimen
+type(StrDim), intent(inout) :: dimen
 
 ! Control options:
-type(StrCtrl), intent(in)  :: control
+type(StrCtrl), intent(in) :: control
 
 integer, intent(in) :: n_profile
 integer, intent(in) :: n_layer
@@ -102,7 +101,7 @@ end if
 
 if (control%l_cloud) then
   if (present(n_cloud_layer)) then
-    dimen%id_cloud_top = dimen%nd_layer + 1 - n_cloud_layer
+    dimen%id_cloud_top = dimen%nd_layer + 1 - max(1,n_cloud_layer)
   else
     dimen%id_cloud_top = 1
   end if
@@ -145,15 +144,13 @@ end if
 
 ! Tiled surface.
 if (control%l_tile) then
-  dimen%nd_tile_type  = npd_tile_type
   dimen%nd_point_tile = max(1,n_profile)
   if (present(n_tile)) then
     dimen%nd_tile = n_tile
   else
-    dimen%nd_tile = dimen%nd_tile_type
+    dimen%nd_tile = 1
   end if
 else
-  dimen%nd_tile_type  = 1
   dimen%nd_point_tile = 1
   dimen%nd_tile       = 1
 end if

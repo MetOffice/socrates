@@ -7,6 +7,7 @@ LIBLINK         = ar rvu
 INCCDF_PATH     = /data/users/lfric/modules/packages/intel/17.0.1/netcdf/4.4.1.1/include
 LIBCDF_PATH     = /data/users/lfric/modules/packages/intel/17.0.1/netcdf/4.4.1.1/lib
 LIBCDF_NAME     = netcdff
+OMPARG          = -qopenmp
 
 LIBSUFFIX       = a
 

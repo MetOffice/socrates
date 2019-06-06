@@ -151,7 +151,7 @@ IF (.NOT. ALLOCATED(aer%scattering_prsc))                                      &
 IF (.NOT. ALLOCATED(aer%phase_fnc_prsc))                                       &
   ALLOCATE(aer%phase_fnc_prsc       ( dimen%nd_profile_aerosol_prsc,           &
                                       dimen%nd_opt_level_aerosol_prsc,         &
-                                      sp%dim%nd_phase_term,                    &
+                                      dimen%nd_phf_term_aerosol_prsc,          &
                                       sp%dim%nd_aerosol_species,               &
                                       sp%dim%nd_band                         ))
 

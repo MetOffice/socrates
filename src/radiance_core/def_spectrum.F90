@@ -31,65 +31,65 @@ INTEGER, PARAMETER :: n_log = 1
 !   Number of (non-allocatable) logicals
 
 TYPE StrSpecDim
-  INTEGER :: nd_alloc_int
+  INTEGER :: nd_alloc_int = n_int
 !   Size allocated for all integers
-  INTEGER :: nd_alloc_real
+  INTEGER :: nd_alloc_real = n_real
 !   Size allocated for all reals
-  INTEGER :: nd_alloc_log
+  INTEGER :: nd_alloc_log = n_log
 !   Size allocated for all logicals
-  INTEGER :: nd_type
+  INTEGER :: nd_type = 1
 !   Size allocated for spectral blocks
-  INTEGER :: nd_band
+  INTEGER :: nd_band = 1
 !   Size allocated for spectral bands
-  INTEGER :: nd_exclude
+  INTEGER :: nd_exclude = 1
 !   Size allocated for excluded bands
-  INTEGER :: nd_k_term
+  INTEGER :: nd_k_term = 1
 !   Size allocated for k-terms
-  INTEGER :: nd_species
+  INTEGER :: nd_species = 1
 !   Size allocated for gaseous species
-  INTEGER :: nd_scale_variable
+  INTEGER :: nd_scale_variable = 1
 !   Size allocated for scaling variables
-  INTEGER :: nd_continuum
+  INTEGER :: nd_continuum = 1
 !   Size allocated for continua
-  INTEGER :: nd_drop_type
+  INTEGER :: nd_drop_type = 1
 !   Size allocated for drop types
-  INTEGER :: nd_ice_type
+  INTEGER :: nd_ice_type = 1
 !   Size allocated for ice crystal types
-  INTEGER :: nd_aerosol_species
+  INTEGER :: nd_aerosol_species = 1
 !   Size allocated for aerosol species
-  INTEGER :: nd_aerosol_mr
+  INTEGER :: nd_aerosol_mr = 1
 !   Size allocated for aerosol mixing ratios
-  INTEGER :: nd_thermal_coeff
+  INTEGER :: nd_thermal_coeff = 1
 !   Size allocated for thermal coefficients
-  INTEGER :: nd_cloud_parameter
+  INTEGER :: nd_cloud_parameter = 1
 !   Size allocated for cloud parameters
-  INTEGER :: nd_humidity
+  INTEGER :: nd_humidity = 1
 !   Size allocated for humidities
-  INTEGER :: nd_aod_wavel
+  INTEGER :: nd_aod_wavel = 1
 !   Number of wavelengths for aerosol optical depths
-  INTEGER :: nd_phase_term
+  INTEGER :: nd_phase_term = 1
 !   Size allocated for terms in the phase function
-  INTEGER :: nd_tmp
+  INTEGER :: nd_tmp = 1
 !   Number of reference temperatures for k-terms
-  INTEGER :: nd_pre
+  INTEGER :: nd_pre = 1
 !   Number of reference pressures for k-terms
-  INTEGER :: nd_mix
+  INTEGER :: nd_mix = 1
 !   Number of eta for mixture absorbing species
-  INTEGER :: nd_band_mix_gas
+  INTEGER :: nd_band_mix_gas = 1
 !   Number of bands where mixed species exist
-  INTEGER :: nd_sub_band
+  INTEGER :: nd_sub_band = 1
 !   Size allocated for spectral sub-bands (for spectral variability)
-  INTEGER :: nd_times
+  INTEGER :: nd_times = 1
 !   Size allocated for times (for spectral variability)
-  INTEGER :: nd_cont
+  INTEGER :: nd_cont = 1
 !   Size allocated for generalised continua
-  INTEGER :: nd_t_lookup_cont
+  INTEGER :: nd_t_lookup_cont = 1
 !   Number of temperatures in generalised continuum look-up tables
-  INTEGER :: nd_k_term_cont
+  INTEGER :: nd_k_term_cont = 1
 !   Size allocated for continuum k-terms
-  INTEGER :: nd_species_sb
+  INTEGER :: nd_species_sb = 1
 !   Size allocated for gaseous species with self-broadening
-  INTEGER :: nd_gas_frac
+  INTEGER :: nd_gas_frac = 1
 !   Size allocated for gas fractions (for self-broadening)
 END TYPE StrSPecDim
 
