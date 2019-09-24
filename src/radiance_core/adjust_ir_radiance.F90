@@ -111,14 +111,14 @@ SUBROUTINE adjust_ir_radiance(control, dimen, atm, radout, &
           END DO
         END DO
       END IF
-!      IF (control%l_flux_down_clear_band) THEN
-!        DO i=0, atm%n_layer
-!          DO l=1, atm%n_profile
-!            radout%flux_down_clear_band(l, i, i_band) = &
-!              radout%flux_down_clear_band(l, i, i_band) + planck%flux(l, i)
-!          END DO
-!        END DO
-!      END IF
+      IF (control%l_flux_down_clear_band) THEN
+        DO i=0, atm%n_layer
+          DO l=1, atm%n_profile
+            radout%flux_down_clear_band(l, i, i_band) = &
+              radout%flux_down_clear_band(l, i, i_band) + planck%flux(l, i)
+          END DO
+        END DO
+      END IF
     END IF
 
   ELSE IF (control%i_angular_integration == ip_spherical_harmonic) THEN
