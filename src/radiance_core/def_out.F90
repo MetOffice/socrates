@@ -272,7 +272,11 @@ IF (control%l_flux_up_band) THEN
                                                  sp%dim%nd_band              ))
 END IF
 
-IF (control%l_flux_direct_clear_band) THEN
+IF (control%l_flux_direct_clear_band .OR.                                      &
+     (.NOT.control%l_spherical_solar .AND.                                     &
+       ( control%l_cloud_extinction .OR.                                       &
+         control%l_ls_cloud_extinction .OR.                                    &
+         control%l_cnv_cloud_extinction ) ) ) THEN
   IF (.NOT. ALLOCATED(radout%flux_direct_clear_band))                          &
     ALLOCATE(radout%flux_direct_clear_band     ( dimen%nd_2sg_profile,         &
                                                  0: dimen%nd_layer,            &
@@ -286,7 +290,11 @@ IF (control%l_flux_direct_clear_div_band) THEN
                                                  sp%dim%nd_band              ))
 END IF
 
-IF (control%l_flux_direct_clear_sph_band) THEN
+IF (control%l_flux_direct_clear_sph_band .OR.                                  &
+     (control%l_spherical_solar .AND.                                          &
+       ( control%l_cloud_extinction .OR.                                       &
+         control%l_ls_cloud_extinction .OR.                                    &
+         control%l_cnv_cloud_extinction ) ) ) THEN
   IF (.NOT. ALLOCATED(radout%flux_direct_clear_sph_band))                      &
     ALLOCATE(radout%flux_direct_clear_sph_band ( dimen%nd_flux_profile,        &
                                                  0: dimen%nd_layer+1,          &
@@ -300,7 +308,10 @@ IF (control%l_flux_down_clear_band) THEN
                                                  sp%dim%nd_band              ))
 END IF
 
-IF (control%l_flux_up_clear_band) THEN
+IF (control%l_flux_up_clear_band .OR.                                          &
+    control%l_cloud_absorptivity .OR.                                          &
+    control%l_ls_cloud_absorptivity .OR.                                       &
+    control%l_cnv_cloud_absorptivity) THEN
   IF (.NOT. ALLOCATED(radout%flux_up_clear_band))                              &
     ALLOCATE(radout%flux_up_clear_band         ( dimen%nd_2sg_profile,         &
                                                  0: dimen%nd_layer,            &

@@ -341,12 +341,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !       Absorptivity of cloud in a particular band
     , cnv_cloud_absorptivity_band(dimen%nd_profile, dimen%nd_layer)            &
 !       Absorptivity of cloud in a particular band
-    , cnv_cloud_extinction_band(dimen%nd_profile, dimen%nd_layer)              &
+    , cnv_cloud_extinction_band(dimen%nd_profile, dimen%nd_layer)
 !       Absorptivity of cloud in a particular band
-    , flux_direct_clear_prev(dimen%nd_2sg_profile, 0: dimen%nd_layer)          &
-!       Clear direct flux in a particular band
-    , flux_up_clear_prev(dimen%nd_2sg_profile, 0: dimen%nd_layer)
-!       Clear upward flux in a particular band
 
   INTEGER ::                                                                   &
       jp(dimen%nd_profile, dimen%nd_layer), jp1                                &
@@ -766,32 +762,6 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       l_initial=(control%map_channel(i_band) > control%map_channel(i_band-1))
     END IF
 
-!   Initialise fluxes to calculate band increments for diagnostics
-    IF (control%l_cloud_extinction     .OR.                                    &
-        control%l_ls_cloud_extinction  .OR.                                    &
-        control%l_cnv_cloud_extinction) THEN
-      IF (l_initial) THEN
-        flux_direct_clear_prev = 0.0
-      ELSE IF (control%l_spherical_solar) THEN
-        flux_direct_clear_prev(:, 0:atm%n_layer)                               &
-          = radout%flux_direct_clear_sph(:,                                    &
-                                         0:atm%n_layer,                        &
-                                         control%map_channel(i_band))
-      ELSE
-        flux_direct_clear_prev                                                 &
-          = radout%flux_direct_clear(:,:,control%map_channel(i_band))
-      END IF
-    END IF
-    IF (control%l_cloud_absorptivity     .OR.                                  &
-        control%l_ls_cloud_absorptivity  .OR.                                  &
-        control%l_cnv_cloud_absorptivity) THEN
-      IF (l_initial) THEN
-        flux_up_clear_prev = 0.0
-      ELSE
-        flux_up_clear_prev                                                     &
-          = radout%flux_up_clear(:,:,control%map_channel(i_band))
-      END IF
-    END IF
 
 !   Determine whether clear-sky fluxes are required for this band
     l_clear_band = control%l_clear .OR. control%l_clear_band(i_band)
@@ -1073,7 +1043,9 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
             sph%common%flux_inc_direct(l,0) = bound%solar_irrad(l)             &
               * bound%lit(l,0) * spectrum%solar%solar_flux_band(i_band)        &
               * bound%cos_zen(l,0)
-            DO i=1, atm%n_layer
+          END DO
+          DO i=1, atm%n_layer
+            DO l=1, atm%n_profile
               ! For the flux arriving at the layers we solve directly along
               ! the beam direction but scale the area normal to the beam to
               ! maintain a constant volume for the column element.
@@ -1081,7 +1053,9 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
                 * bound%lit(l,i) * spectrum%solar%solar_flux_band(i_band)      &
                 / sph%common%path_div(l,i)
             END DO
-            i=atm%n_layer+1
+          END DO
+          i=atm%n_layer+1
+          DO l=1, atm%n_profile
             sph%common%flux_inc_direct(l,i) = bound%solar_irrad(l)             &
               * bound%lit(l,i) * spectrum%solar%solar_flux_band(i_band)        &
               * bound%cos_zen(l,i)
@@ -2026,31 +2000,30 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
     END IF
 
 !   Spectral diagnostics for clouds:
-
+!     The extinction and absorptivity calculated in the band are mean values
+!     weighted with the fractions of individual types of cloud (which sum to 1).
+!     The extinction is then weighted with the clear-sky direct solar flux in
+!     the band at the top of the current layer and the total amount of cloud
+!     in the grid-box. This definition has the advantage of convenience, but
+!     there appears to be no optimal definition of an average extinction.
+!     The absorptivity is weighted with the modulus of the clear_sky
+!     differential flux in the band at the top of the current layer and the
+!     total amount of cloud in the grid-box, as the diagnostic is a measure
+!     of the effect of introducing an infinitesimal layer at the top of the
+!     current layer into a clear atmosphere on the upward flux at the top of
+!     the cloud.
     IF (control%l_cloud_extinction) THEN
-
-!     Increment the arrays of diagnostics. The extinction
-!     calculated in this band is a mean value weighted with the
-!     fractions of individual types of cloud (which sum to 1).
-!     Here it is weighted with the clear-sky direct solar
-!     flux in the band at the top of the current
-!     layer and the total amount of cloud in the grid-box.
-!     This definition has the advantage of convenience, but there
-!     appears to be no optimal definition of an average extinction.
-
       IF (control%l_spherical_solar) THEN
         DO i=n_cloud_top, atm%n_layer
 !CDIR NODEP
           DO ll=1, n_cloud_profile(i)
              l=i_cloud_profile(ll, i)
              radout%cloud_weight_extinction(l, i)                              &
-                =radout%cloud_weight_extinction(l, i) + cld%w_cloud(l, i)*ABS( &
-                 radout%flux_direct_clear_sph(l,i,control%map_channel(i_band)) &
-                -flux_direct_clear_prev(l, i-1) )
+                =radout%cloud_weight_extinction(l, i) + cld%w_cloud(l, i)      &
+                *radout%flux_direct_clear_sph_band(l, i, i_band)
              radout%cloud_extinction(l, i)                                     &
-                =radout%cloud_extinction(l, i) + cld%w_cloud(l, i)*ABS(        &
-                 radout%flux_direct_clear_sph(l,i,control%map_channel(i_band)) &
-                -flux_direct_clear_prev(l, i-1) )                              &
+                =radout%cloud_extinction(l, i) + cld%w_cloud(l, i)             &
+                *radout%flux_direct_clear_sph_band(l, i, i_band)               &
                 *cloud_extinction_band(l, i)
           END DO
         END DO
@@ -2060,76 +2033,47 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           DO ll=1, n_cloud_profile(i)
              l=i_cloud_profile(ll, i)
              radout%cloud_weight_extinction(l, i)                              &
-                =radout%cloud_weight_extinction(l, i) + cld%w_cloud(l, i)*     &
-                (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))  &
-                -flux_direct_clear_prev(l, i-1))
+                =radout%cloud_weight_extinction(l, i) + cld%w_cloud(l, i)      &
+                *radout%flux_direct_clear_band(l, i-1, i_band)
              radout%cloud_extinction(l, i)                                     &
-                =radout%cloud_extinction(l, i) + cld%w_cloud(l, i)*            &
-                (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))  &
-                -flux_direct_clear_prev(l, i-1))                               &
+                =radout%cloud_extinction(l, i) + cld%w_cloud(l, i)             &
+                *radout%flux_direct_clear_band(l, i-1, i_band)                 &
                 *cloud_extinction_band(l, i)
           END DO
         END DO
       END IF
-
     END IF
 
     IF (control%l_cloud_absorptivity) THEN
-
-!     Increment the arrays of diagnostics. The absorptivity
-!     calculated in this band is a mean value weighted with the
-!     fractions of individual types of cloud (which sum to 1).
-!     Here it is weighted with the modulus of the clear_sky
-!     differential flux in the band at the top of the current
-!     layer and the total amount of cloud in the grid-box, as the
-!     diagnostic is a measure of the effect of introducing an
-!     infinitesimal layer of layer at the top of the current
-!     layer into a clear atmosphere on the upward flux at the
-!     top of the cloud.
-
       DO i=n_cloud_top, atm%n_layer
 !CDIR NODEP
         DO ll=1, n_cloud_profile(i)
            l=i_cloud_profile(ll, i)
            radout%cloud_weight_absorptivity(l, i)                              &
-              =radout%cloud_weight_absorptivity(l, i) + cld%w_cloud(l, i)*     &
-              ABS(radout%flux_up_clear(l, i-1,control%map_channel(i_band))     &
-              -flux_up_clear_prev(l, i-1))
+              =radout%cloud_weight_absorptivity(l, i) + cld%w_cloud(l, i)      &
+              *ABS(radout%flux_up_clear_band(l, i-1, i_band))
            radout%cloud_absorptivity(l, i)                                     &
-              =radout%cloud_absorptivity(l, i) + cld%w_cloud(l, i)*            &
-              ABS(radout%flux_up_clear(l, i-1,control%map_channel(i_band))     &
-              -flux_up_clear_prev(l, i-1))                                     &
+              =radout%cloud_absorptivity(l, i) + cld%w_cloud(l, i)             &
+              *ABS(radout%flux_up_clear_band(l, i-1, i_band))                  &
               *cloud_absorptivity_band(l, i)
         END DO
       END DO
-
     END IF
+
     IF (control%l_ls_cloud_extinction) THEN
-
-!     Increment the arrays of diagnostics. The extinction
-!     calculated in this band is a mean value weighted with the
-!     fractions of individual types of cloud (which sum to 1).
-!     Here it is weighted with the clear-sky direct solar
-!     flux in the band at the top of the current
-!     layer and the total amount of cloud in the grid-box.
-!     This definition has the advantage of convenience, but there
-!     appears to be no optimal definition of an average extinction.
-
       IF (control%l_spherical_solar) THEN
         DO i=n_cloud_top, atm%n_layer
 !CDIR NODEP
           DO ll=1, n_cloud_profile(i)
              l=i_cloud_profile(ll, i)
              radout%ls_cloud_weight_extinction(l, i)                           &
-                =radout%ls_cloud_weight_extinction(l, i)+cld%w_cloud(l, i)*    &
-                (cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2))*ABS(             &
-                 radout%flux_direct_clear_sph(l,i,control%map_channel(i_band)) &
-                -flux_direct_clear_prev(l, i-1) )
+                =radout%ls_cloud_weight_extinction(l, i)+cld%w_cloud(l, i)     &
+                *(cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2))                 &
+                *radout%flux_direct_clear_sph_band(l, i, i_band)
              radout%ls_cloud_extinction(l, i)                                  &
-                =radout%ls_cloud_extinction(l, i)+cld%w_cloud(l, i)*           &
-                (cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2))*ABS(             &
-                 radout%flux_direct_clear_sph(l,i,control%map_channel(i_band)) &
-                -flux_direct_clear_prev(l, i-1) )                              &
+                =radout%ls_cloud_extinction(l, i)+cld%w_cloud(l, i)            &
+                *(cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2))                 &
+                *radout%flux_direct_clear_sph_band(l, i, i_band)               &
                 *ls_cloud_extinction_band(l, i)
           END DO
         END DO
@@ -2139,35 +2083,20 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           DO ll=1, n_cloud_profile(i)
              l=i_cloud_profile(ll, i)
              radout%ls_cloud_weight_extinction(l, i)                           &
-                =radout%ls_cloud_weight_extinction(l, i)+cld%w_cloud(l, i)*    &
-                (cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2))*                 &
-                (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))  &
-                -flux_direct_clear_prev(l, i-1))
+                =radout%ls_cloud_weight_extinction(l, i)+cld%w_cloud(l, i)     &
+                *(cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2))                 &
+                *radout%flux_direct_clear_band(l, i-1, i_band)
              radout%ls_cloud_extinction(l, i)                                  &
-                =radout%ls_cloud_extinction(l, i)+cld%w_cloud(l, i)*           &
-                (cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2))*                 &
-                (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))  &
-                -flux_direct_clear_prev(l, i-1))                               &
+                =radout%ls_cloud_extinction(l, i)+cld%w_cloud(l, i)            &
+                *(cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2))                 &
+                *radout%flux_direct_clear_band(l, i-1, i_band)                 &
                 *ls_cloud_extinction_band(l, i)
           END DO
         END DO
       END IF
-
     END IF
 
     IF (control%l_ls_cloud_absorptivity) THEN
-
-!     Increment the arrays of diagnostics. The absorptivity
-!     calculated in this band is a mean value weighted with the
-!     fractions of individual types of cloud (which sum to 1).
-!     Here it is weighted with the modulus of the clear_sky
-!     differential flux in the band at the top of the current
-!     layer and the total amount of cloud in the grid-box as the
-!     diagnostic is a measure of the effect of introducing an
-!     infinitesimal layer of layer at the top of the current
-!     layer into a clear atmosphere on the upward flux at the
-!     top of the cloud.
-
       DO i=n_cloud_top, atm%n_layer
 !CDIR NODEP
         DO ll=1, n_cloud_profile(i)
@@ -2175,44 +2104,30 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
            radout%ls_cloud_weight_absorptivity(l, i)                           &
               =radout%ls_cloud_weight_absorptivity(l, i)                       &
               +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2)) &
-              *ABS(radout%flux_up_clear(l, i-1,control%map_channel(i_band))    &
-              -flux_up_clear_prev(l, i-1))
+              *ABS(radout%flux_up_clear_band(l, i-1, i_band))
            radout%ls_cloud_absorptivity(l, i)                                  &
               =radout%ls_cloud_absorptivity(l, i)                              &
               +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,1)+cld%frac_cloud(l,i,2)) &
-              *ABS(radout%flux_up_clear(l, i-1,control%map_channel(i_band))    &
-              -flux_up_clear_prev(l, i-1))                                     &
+              *ABS(radout%flux_up_clear_band(l, i-1, i_band))                  &
               *ls_cloud_absorptivity_band(l, i)
         END DO
       END DO
-
     END IF
+
     IF (control%l_cnv_cloud_extinction) THEN
-
-!     Increment the arrays of diagnostics. The extinction
-!     calculated in this band is a mean value weighted with the
-!     fractions of individual types of cloud (which sum to 1).
-!     Here it is weighted with the clear-sky direct solar
-!     flux in the band at the top of the current
-!     layer and the total amount of cloud in the grid-box.
-!     This definition has the advantage of convenience, but there
-!     appears to be no optimal definition of an average extinction.
-
       IF (control%l_spherical_solar) THEN
         DO i=n_cloud_top, atm%n_layer
 !CDIR NODEP
           DO ll=1, n_cloud_profile(i)
              l=i_cloud_profile(ll, i)
              radout%cnv_cloud_weight_extinction(l, i)                          &
-                =radout%cnv_cloud_weight_extinction(l, i)+cld%w_cloud(l, i)*   &
-                (cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4))*ABS(             &
-                 radout%flux_direct_clear_sph(l,i,control%map_channel(i_band)) &
-                -flux_direct_clear_prev(l, i-1) )
+                =radout%cnv_cloud_weight_extinction(l, i)+cld%w_cloud(l, i)    &
+                *(cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4))                 &
+                *radout%flux_direct_clear_sph_band(l, i, i_band)
              radout%cnv_cloud_extinction(l, i)                                 &
-                =radout%cnv_cloud_extinction(l, i)+cld%w_cloud(l, i)*          &
-                (cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4))*ABS(             &
-                 radout%flux_direct_clear_sph(l,i,control%map_channel(i_band)) &
-                -flux_direct_clear_prev(l, i-1) )                              &
+                =radout%cnv_cloud_extinction(l, i)+cld%w_cloud(l, i)           &
+                *(cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4))                 &
+                *radout%flux_direct_clear_sph_band(l, i, i_band)               &
                 *cnv_cloud_extinction_band(l, i)
           END DO
         END DO
@@ -2222,35 +2137,20 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           DO ll=1, n_cloud_profile(i)
              l=i_cloud_profile(ll, i)
              radout%cnv_cloud_weight_extinction(l, i)                          &
-                =radout%cnv_cloud_weight_extinction(l, i)+cld%w_cloud(l, i)*   &
-                (cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4))*                 &
-                (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))  &
-                -flux_direct_clear_prev(l, i-1))
+                =radout%cnv_cloud_weight_extinction(l, i)+cld%w_cloud(l, i)    &
+                *(cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4))                 &
+                *radout%flux_direct_clear_band(l, i-1, i_band)
              radout%cnv_cloud_extinction(l, i)                                 &
-                =radout%cnv_cloud_extinction(l, i)+cld%w_cloud(l, i)*          &
-                (cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4))*                 &
-                (radout%flux_direct_clear(l, i-1,control%map_channel(i_band))  &
-                -flux_direct_clear_prev(l, i-1))                               &
+                =radout%cnv_cloud_extinction(l, i)+cld%w_cloud(l, i)           &
+                *(cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4))                 &
+                *radout%flux_direct_clear_band(l, i-1, i_band)                 &
                 *cnv_cloud_extinction_band(l, i)
           END DO
         END DO
       END IF
-
     END IF
 
     IF (control%l_cnv_cloud_absorptivity) THEN
-
-!     Increment the arrays of diagnostics. The absorptivity
-!     calculated in this band is a mean value weighted with the
-!     fractions of individual types of cloud (which sum to 1).
-!     Here it is weighted with the modulus of the clear_sky
-!     differential flux in the band at the top of the current
-!     layer and the total amount of cloud in the grid-box as the
-!     diagnostic is a measure of the effect of introducing an
-!     infinitesimal layer of layer at the top of the current
-!     layer into a clear atmosphere on the upward flux at the
-!     top of the cloud.
-
       DO i=n_cloud_top, atm%n_layer
 !CDIR NODEP
         DO ll=1, n_cloud_profile(i)
@@ -2258,17 +2158,14 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
            radout%cnv_cloud_weight_absorptivity(l, i)                          &
               =radout%cnv_cloud_weight_absorptivity(l, i)                      &
               +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4)) &
-              *ABS(radout%flux_up_clear(l, i-1,control%map_channel(i_band))    &
-              -flux_up_clear_prev(l, i-1))
+              *ABS(radout%flux_up_clear_band(l, i-1, i_band))
            radout%cnv_cloud_absorptivity(l, i)                                 &
               =radout%cnv_cloud_absorptivity(l, i)                             &
               +cld%w_cloud(l, i)*(cld%frac_cloud(l,i,3)+cld%frac_cloud(l,i,4)) &
-              *ABS(radout%flux_up_clear(l, i-1,control%map_channel(i_band))    &
-              -flux_up_clear_prev(l, i-1))                                     &
+              *ABS(radout%flux_up_clear_band(l, i-1, i_band))                  &
               *cnv_cloud_absorptivity_band(l, i)
         END DO
       END DO
-
     END IF
 
 !   Deallocate the single scattering propeties.
