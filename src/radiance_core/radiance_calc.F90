@@ -36,6 +36,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
   USE def_planck, ONLY: StrPlanck, allocate_planck, deallocate_planck
   USE def_spherical_geometry, ONLY: StrSphGeo, allocate_sph, deallocate_sph
   USE spherical_path_mod,     ONLY: spherical_path
+  USE diff_planck_source_mod, ONLY: diff_planck_source
   
   IMPLICIT NONE
 
@@ -1418,45 +1419,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
     IF (control%isolir == ip_infra_red) THEN
 !     Calculate the change in the thermal source function
 !     across each layer for the infra-red part of the spectrum.
-
-      IF (spectrum%planck%l_planck_tbl) THEN
-! DEPENDS ON: diff_planck_source_tbl
-        CALL diff_planck_source_tbl(atm%n_profile, atm%n_layer                 &
-          , spectrum%planck%n_deg_fit                                          &
-          , spectrum%planck%thermal_coeff(0, i_band)                           &
-          , spectrum%planck%t_ref_planck                                       &
-          , spectrum%planck%theta_planck_tbl, atm%t_level, bound%t_ground      &
-          , planck%flux, planck%diff                                           &
-          , planck%flux_ground                                                 &
-          , control%l_ir_source_quad, atm%t, planck%diff_2                     &
-          , control%i_angular_integration                                      &
-          , atm%n_viewing_level, i_rad_layer, frac_rad_layer                   &
-          , planck%radiance                                                    &
-          , control%l_tile, bound%n_point_tile, bound%n_tile, bound%list_tile  &
-          , bound%frac_tile, bound%t_tile, planck%flux_tile                    &
-          , dimen%nd_profile, dimen%nd_layer, spectrum%dim%nd_thermal_coeff    &
-          , dimen%nd_radiance_profile, dimen%nd_viewing_level                  &
-          , dimen%nd_point_tile, dimen%nd_tile                                 &
-          )
-      ELSE
-! DEPENDS ON: diff_planck_source_poly
-        CALL diff_planck_source_poly(atm%n_profile, atm%n_layer                &
-          , spectrum%planck%n_deg_fit                                          &
-          , spectrum%planck%thermal_coeff(0, i_band)                           &
-          , spectrum%planck%t_ref_planck, atm%t_level, bound%t_ground          &
-          , planck%flux, planck%diff                                           &
-          , planck%flux_ground                                                 &
-          , control%l_ir_source_quad, atm%t, planck%diff_2                     &
-          , control%i_angular_integration                                      &
-          , atm%n_viewing_level, i_rad_layer, frac_rad_layer                   &
-          , planck%radiance                                                    &
-          , control%l_tile, bound%n_point_tile, bound%n_tile, bound%list_tile  &
-          , bound%frac_tile, bound%t_tile, planck%flux_tile                    &
-          , dimen%nd_profile, dimen%nd_layer, spectrum%dim%nd_thermal_coeff    &
-          , dimen%nd_radiance_profile, dimen%nd_viewing_level                  &
-          , dimen%nd_point_tile, dimen%nd_tile                                 &
-          )
-      END IF
+      CALL diff_planck_source(control, dimen, spectrum, atm, bound,          &
+        i_band, i_rad_layer, frac_rad_layer, planck)
     END IF
 
 

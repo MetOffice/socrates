@@ -238,6 +238,8 @@ TYPE StrCtrl
 ! Miscallaneous options
   LOGICAL :: l_tile                                               = .FALSE.
 !   Allow tiling of the surface
+  LOGICAL :: l_tile_emissivity                                    = .FALSE.
+!   Use tile emissivities to calculate the ground source function
   LOGICAL :: l_extra_top                                          = .FALSE.
 !   Flag to insert an extra layer into radiation above the
 !   top of the model (this is sometimes desirable to ensure
