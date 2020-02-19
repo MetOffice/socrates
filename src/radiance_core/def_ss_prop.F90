@@ -27,7 +27,7 @@
 !- ---------------------------------------------------------------------
 MODULE def_ss_prop
 
-  USE realtype_rd
+  USE realtype_rd, ONLY : RealK
 
   IMPLICIT NONE
 
@@ -114,7 +114,7 @@ CONTAINS
 
     TYPE (str_ss_prop), INTENT(INOUT) :: ss_prop
     TYPE (StrDim),      INTENT(IN)    :: dimen
-    
+
     ALLOCATE(ss_prop%k_grey_tot_clr                                            &
       (dimen%nd_profile, dimen%nd_layer_clr))
     ALLOCATE(ss_prop%k_ext_scat_clr                                            &
@@ -229,7 +229,7 @@ CONTAINS
 
     DEALLOCATE(ss_prop%omega_clr)
     DEALLOCATE(ss_prop%tau_clr)
-    DEALLOCATE(ss_prop%tau_clr_dir)   
+    DEALLOCATE(ss_prop%tau_clr_dir)
 
     DEALLOCATE(ss_prop%forward_solar_clr)
     DEALLOCATE(ss_prop%phase_fnc_solar_clr)

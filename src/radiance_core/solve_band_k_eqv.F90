@@ -314,7 +314,7 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
 
   TYPE(StrSphGeo), INTENT(INOUT) :: sph
 !   Spherical geometry fields
-  
+
 !                   Surface properties
   INTEGER, INTENT(IN) ::                                                &
       ls_brdf_trunc                                                     &
@@ -469,8 +469,6 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
 !       Index of main gas
     , i_gas_band                                                        &
 !       Index of active gas
-    , i_gas_pointer(nd_species)                                         &
-!       Pointer array for monochromatic ESFTs
     , iex                                                               &
 !       Index of ESFT term
     , i_scatter_method
@@ -563,7 +561,7 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
 
   LOGICAL :: l_initial_band
 !       Flag to initialise band-by-band diagnostics
-  
+
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
@@ -940,7 +938,7 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
 
 ! The ESFT terms for the major gas in the band are used with
 ! appropriate weighted terms for the minor gases.
-  i_gas_pointer(1)=i_gas
+
   DO iex=1, i_band_esft(i_band, i_gas)
 
     IF (i_scatter_method_band == ip_scatter_hybrid) THEN
@@ -1224,7 +1222,7 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
         ELSE
           DO l=1, n_profile
             flux_direct_ground_part(l) = flux_direct_part(l, n_layer)
-          END DO          
+          END DO
         END IF
       END IF
 ! DEPENDS ON: augment_tiled_radiance

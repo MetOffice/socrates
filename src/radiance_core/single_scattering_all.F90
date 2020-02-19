@@ -26,7 +26,7 @@ SUBROUTINE single_scattering_all(i_scatter_method_band                  &
 
 
   USE realtype_rd, ONLY: RealK
-  USE def_ss_prop
+  USE def_ss_prop, ONLY: STR_ss_prop
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
 

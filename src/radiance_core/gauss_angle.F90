@@ -92,8 +92,6 @@ SUBROUTINE gauss_angle(n_profile, n_layer                               &
 !       Secant of angle with vertical
     , diff_planck_rad(nd_profile, nd_layer)                             &
 !       Difference in pi*Planckian function
-    , diff_planck_rad_2(nd_profile, nd_layer)                           &
-!         2x2nd differences of Planckian
     , source_ground_rad(nd_profile)                                     &
 !       Ground source function
     , radiance_inc(nd_profile)                                          &
@@ -125,13 +123,6 @@ SUBROUTINE gauss_angle(n_profile, n_layer                               &
       flux_diffuse(l, i)=0.0
     END DO
   END DO
-  IF (l_ir_source_quad) THEN
-    DO i=1, n_layer
-      DO l=1, n_profile
-        diff_planck_rad_2(l, i)=diff_planck_2(l, i)/pi
-      END DO
-    END DO
-  END IF
 
 ! Calculate the fluxes with a number of diffusivity factors
 ! and sum the results.
