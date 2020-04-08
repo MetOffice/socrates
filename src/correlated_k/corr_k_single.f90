@@ -1032,15 +1032,22 @@ SUBROUTINE corr_k_single &
 !             The continuum absorption coefficient is pressure independent,
 !             i.e. we can calculate the pressure at which the optical depth = 1
 !             directly
-              kabs_rank2(i) = max_p_calc/SQRT(max_path*kabs_all(i,ipt))
+              IF (kabs_all(i,ipt) < TINY(kabs_all(i,ipt))) THEN
+                kabs_rank2(i) = -1.0_RealK
+              ELSE
+                kabs_rank2(i) = max_p_calc/SQRT(max_path*kabs_all(i,ipt))
+              END IF
 
             ELSE
 !             Calculate pressure at which the optical depth = 1
               kabs_rank2(i)=kabs_all(i,ipt)*p_calc(ipt)
               IF (kabs_rank2(i) > max_p_calc/max_path .OR. &
                   n_p == 1) THEN
-                kabs_rank2(i) = &
-                  max_p_calc / (max_path*kabs_all(i,ipt))
+                IF (kabs_all(i,ipt) < TINY(kabs_all(i,ipt))) THEN
+                  kabs_rank2(i) = -1.0_RealK
+                ELSE
+                  kabs_rank2(i) = max_p_calc / (max_path*kabs_all(i,ipt))
+                END IF
               ELSE
                 DO ip=2,n_p
                   ipt=index_pt_ref(ip)
@@ -1048,9 +1055,13 @@ SUBROUTINE corr_k_single &
                     *(p_calc(ipt)-p_calc(index_pt_ref(ip-1)))
                   IF (rank_work > max_p_calc/max_path .OR. &
                       ip == n_p) THEN
-                    kabs_rank2(i) = (max_p_calc/max_path &
-                      - kabs_rank2(i)) / kabs_all(i,ipt) &
-                      + p_calc(index_pt_ref(ip-1))
+                    IF (kabs_all(i,ipt) < TINY(kabs_all(i,ipt))) THEN
+                      kabs_rank2(i) = -1.0_RealK
+                    ELSE
+                      kabs_rank2(i) = (max_p_calc/max_path &
+                        - kabs_rank2(i)) / kabs_all(i,ipt) &
+                        + p_calc(index_pt_ref(ip-1))
+                    END IF
                     EXIT
                   ELSE
                     kabs_rank2(i) = rank_work
@@ -1066,9 +1077,17 @@ SUBROUTINE corr_k_single &
 !           Set absorption coefficients for this bin using an
 !           effective value for optical depth = 1
             IF (l_fit_cont_data) THEN
-              kabs = max_p_calc**2/(max_path*kabs_rank2**2)
+              WHERE (kabs_rank2 < TINY(kabs_rank2))
+                kabs = 0.0_RealK
+              ELSEWHERE
+                kabs = max_p_calc**2/(max_path*kabs_rank2**2)
+              END WHERE
             ELSE
-              kabs = max_p_calc/(max_path*kabs_rank2)
+              WHERE (kabs_rank2 < TINY(kabs_rank2))
+                kabs = 0.0_RealK
+              ELSEWHERE
+                kabs = max_p_calc/(max_path*kabs_rank2)
+              END WHERE
             END IF
           
 !           Read mapping, g-points and reference k-term weights
@@ -1133,9 +1152,17 @@ SUBROUTINE corr_k_single &
 !           Set absorption coefficients for this bin using an
 !           effective value for optical depth = 1
             IF (l_fit_cont_data) THEN
-              kabs = max_p_calc**2/(max_path*kabs_rank2**2)
+              WHERE (kabs_rank2 < TINY(kabs_rank2))
+                kabs = 0.0_RealK
+              ELSEWHERE
+                kabs = max_p_calc**2/(max_path*kabs_rank2**2)
+              END WHERE
             ELSE
-              kabs = max_p_calc/(max_path*kabs_rank2)
+              WHERE (kabs_rank2 < TINY(kabs_rank2))
+                kabs = 0.0_RealK
+              ELSEWHERE
+                kabs = max_p_calc/(max_path*kabs_rank2)
+              END WHERE
             END IF
 
             DO ipb=1,n_pre
@@ -1167,8 +1194,12 @@ SUBROUTINE corr_k_single &
           END DO
 
           DO i=1,n_nu
-            ipoint=MINLOC( ABS( &
-              ln_p_calc(index_pt_ref) - LOG(kabs_rank2(i)) ), 1 )
+            IF (kabs_rank2(i) < TINY(kabs_rank2(i))) THEN
+              ipoint = n_p
+            ELSE
+              ipoint=MINLOC( ABS( &
+                ln_p_calc(index_pt_ref) - LOG(kabs_rank2(i)) ), 1 )
+            END IF
             CALL rad_weight_90(i_weight, nu_wgt(i:i), SolarSpec, &
               t_calc(index_pt_ref(ipoint)), wgt(i:i))
             wgt(i) = wgt(i)/wgt_sum(ipoint)
@@ -1557,7 +1588,11 @@ CONTAINS
           num_lines_in_band = num_lines_in_band + 1
           xsc(num_lines_in_band)%head = single_header
           ALLOCATE(xsc(num_lines_in_band)%data(single_header%no_pts))
-          xsc(num_lines_in_band)%data = xsc_data
+          WHERE (xsc_data < 0.0_RealK)
+            xsc(num_lines_in_band)%data = 0.0_RealK
+          ELSEWHERE
+            xsc(num_lines_in_band)%data = xsc_data
+          END WHERE
         END IF
         DEALLOCATE(xsc_data)
       END DO
@@ -1618,7 +1653,11 @@ CONTAINS
           ALLOCATE(cia(num_cia_lines_in_band)%wavenumber(single_header%no_pts))
           ALLOCATE(cia(num_cia_lines_in_band)%data(single_header%no_pts))
           cia(num_cia_lines_in_band)%wavenumber = cia_wavenumber
-          cia(num_cia_lines_in_band)%data = cia_data
+          WHERE (cia_data < 0.0_RealK)
+            cia(num_cia_lines_in_band)%data = 0.0_RealK
+          ELSEWHERE
+            cia(num_cia_lines_in_band)%data = cia_data
+          END WHERE
         END IF
         DEALLOCATE(cia_wavenumber)
         DEALLOCATE(cia_data)

@@ -229,6 +229,7 @@ SUBROUTINE make_block_5(Spectrum, ierr)
       DEALLOCATE(Spectrum%Gas%i_scat)
       ALLOCATE(Spectrum%Gas%i_scat(nd_k_term, nd_band, nd_species))
       Spectrum%Gas%i_scat(1:nd_k_term_alloc,:,:) = arr_tmp_int_3d
+      Spectrum%Gas%i_scat(nd_k_term_alloc+1:,:,:) = 0
       DEALLOCATE(arr_tmp_int_3d)
 
       ALLOCATE(arr_tmp_real_3d(nd_k_term_alloc, nd_band, nd_species))   
