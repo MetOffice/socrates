@@ -785,13 +785,19 @@ CONTAINS
 !
 !
   SUBROUTINE rescale_parm(parm)
-!
-!
-!
-    REAL  (RealK), Dimension(:) :: parm
-!
-!
-!
+
+    USE PolynomialRoots, ONLY: CubicRoots, QuadraticRoots
+
+    IMPLICIT NONE
+
+    INTEGER, PARAMETER           :: dp=KIND(1.0D0)
+    INTEGER                      :: i_root
+    REAL (RealK), Dimension(:)   :: parm
+    REAL (dp),    Dimension(0:3) :: poly
+    COMPLEX (dp), Dimension(3)   :: roots
+!     Variables used in the calculation of cubic and quadratic roots
+
+
     SELECT CASE(fit_species)
 !
       CASE ("Water")
@@ -839,18 +845,58 @@ CONTAINS
                 parm(4) = parm(4) * scaling_d
                 parm(5) = parm(5) * scaling_d * scaling_d
                 parm(6) = parm(6) * scaling_d * scaling_d * scaling_d
+                ! Check these parameters will not produce NaNs
+                poly(0)   = REAL(1.0, dp)
+                poly(1:3) = REAL(parm(4:6), dp)
+                CALL CubicRoots(poly, roots)
+                DO i_root = 1, 3
+                  IF (ABS(AIMAG(roots(i_root))) < TINY(1.0d0)) THEN
+                    IF (DBLE(roots(i_root)) > MINVAL(d(1:n_data)) .AND. &
+                        DBLE(roots(i_root)) < MAXVAL(d(1:n_data))) THEN
+                      WRITE(iu_err, '(a,i0,a,e12.5)') &
+                        'Warning: Extinction will be NaN for band ',i_b, &
+                        ' with effective radius of',DBLE(roots(i_root))
+                    END IF
+                  END IF
+                END DO
               CASE("Coalbedo  ")
                 parm(1) = parm(1) / scaling
                 parm(2) = parm(2) * scaling_d / scaling
                 parm(3) = parm(3) * scaling_d * scaling_d / scaling
                 parm(4) = parm(4) * scaling_d
                 parm(5) = parm(5) * scaling_d * scaling_d
+                poly(0)   = REAL(1.0, dp)
+                poly(1:2) = REAL(parm(4:5), dp)
+                CALL QuadraticRoots(poly, roots)
+                DO i_root = 1, 2
+                  IF (ABS(AIMAG(roots(i_root))) < TINY(1.0d0)) THEN
+                    IF (DBLE(roots(i_root)) > MINVAL(d(1:n_data)) .AND. &
+                        DBLE(roots(i_root)) < MAXVAL(d(1:n_data))) THEN
+                      WRITE(iu_err, '(a,i0,a,e12.5)') &
+                        'Warning: Coalbedo will be NaN for band ',i_b, &
+                        ' with effective radius of',DBLE(roots(i_root))
+                    END IF
+                  END IF
+                END DO
               CASE("Asymmetry ")
                 parm(1) = parm(1) / scaling
                 parm(2) = parm(2) * scaling_d / scaling
                 parm(3) = parm(3) * scaling_d * scaling_d / scaling
                 parm(4) = parm(4) * scaling_d
                 parm(5) = parm(5) * scaling_d * scaling_d
+                poly(0)   = REAL(1.0, dp)
+                poly(1:2) = REAL(parm(4:5), dp)
+                CALL QuadraticRoots(poly, roots)
+                DO i_root = 1, 2
+                  IF (ABS(AIMAG(roots(i_root))) < TINY(1.0d0)) THEN
+                    IF (DBLE(roots(i_root)) > MINVAL(d(1:n_data)) .AND. &
+                        DBLE(roots(i_root)) < MAXVAL(d(1:n_data))) THEN
+                      WRITE(iu_err, '(a,i0,a,e12.5)') &
+                        'Warning: Asymmetry will be NaN for band ',i_b, &
+                        ' with effective radius of',DBLE(roots(i_root))
+                    END IF
+                  END IF
+                END DO
             END SELECT
 !    
           CASE (IP_Slingo_Schr_PHF)

@@ -33,6 +33,22 @@ cp 7460_28.surfsw2 7460_28.surf
 $RAD_SCRIPT/Cl_run_cdf -B 7460_28 -s $RAD_DIR/data/spectra/hadgem1/sp_sw_hadgem1_3 -R 1 6 -S -t 2 +R -v 11 -g 2 -r -C 2 -K 1 -d 3 -i 3 -ds 0
 fmove 7460_28 sw2_ds0_avg
 
+# Test SW GA9 vs GA7 spectral files
+cp 7460_28.surfsw2 7460_28.surf
+Cl_run_cdf -B 7460_28 -s $RAD_DIR/data/spectra/ga7/sp_sw_ga7 -R 1 6 -S +R -g 4 -c -r -C 2 -K 1 -d 5 -i 8
+fmove 7460_28 sw_ga7_avg
+Cl_run_cdf -B 7460_28 -s $RAD_DIR/data/spectra/ga9/sp_sw_ga9 -R 1 6 -S +R -g 4 -c -r -C 2 -K 1 -d 5 -i 8
+fmove 7460_28 sw_ga9_avg
+Cl_run_cdf -B 7460_28 -s $RAD_DIR/data/spectra/ga9_ref/sp_sw_260_jm3 -R 1 260 -S +R -g 4 -c -r -C 2 -K 1 -d 5 -i 8
+fmove 7460_28 sw_260_avg
+
+# Test LW GA9 spectral files
+cp 7460_28.surflw 7460_28.surf
+Cl_run_cdf -B 7460_28 -s $RAD_DIR/data/spectra/ga9/sp_lw_ga9 -R 1 9 -I +R -g 4 -c -C 2 -K 1 -d 5 -i 8
+fmove 7460_28 lw_ga9_avg
+Cl_run_cdf -B 7460_28 -s $RAD_DIR/data/spectra/ga9_ref/sp_lw_300_jm3 -R 1 300 -I +R -g 4 -c -C 2 -K 1 -d 5 -i 8
+fmove 7460_28 lw_300_avg
+
 # Test for full array of columns
 cd ipa0
 
@@ -115,6 +131,20 @@ diff -q ref_sw2_ds0.vflx cdl_sw2_ds0_avg.vflx || ierr=1
 diff -q ref_sw2_ds0.dflx cdl_sw2_ds0_avg.dflx || ierr=1
 resrm sw2_ds0_avg
 
+rm cdl_sw_ga9_avg* cdl_lw_ga9_avg* cdl_sw_260_avg* cdl_lw_300_avg* 2> /dev/null
+Ccdf2cdl -a sw_ga9_avg > /dev/null
+Ccdf2cdl -a lw_ga9_avg > /dev/null
+Ccdf2cdl -a sw_260_avg > /dev/null
+Ccdf2cdl -a lw_300_avg > /dev/null
+diff -q ref_sw_ga9_avg.nflx cdl_sw_ga9_avg.nflx || ierr=1
+diff -q ref_lw_ga9_avg.nflx cdl_lw_ga9_avg.nflx || ierr=1
+diff -q ref_sw_260_avg.nflx cdl_sw_260_avg.nflx || ierr=1
+diff -q ref_lw_300_avg.nflx cdl_lw_300_avg.nflx || ierr=1
+resrm sw_ga9_avg
+resrm lw_ga9_avg
+resrm sw_260_avg
+resrm lw_300_avg
+
 if [ $ierr -gt 0 ] ; then
   exit 1
 else
@@ -124,6 +154,10 @@ else
   resrm cdl_sw2_ds0_avg
   resrm cdl_sw_ds0_avg
   resrm cdl_sw_ds2_avg
+  resrm cdl_sw_ga9_avg
+  resrm cdl_lw_ga9_avg
+  resrm cdl_sw_260_avg
+  resrm cdl_lw_300_avg
   echo OK
   exit 0
 fi

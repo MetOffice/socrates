@@ -1,0 +1,182 @@
+#!/bin/bash
+
+# This script creates the 260 band SW spectral file sp_sw_260_jm3
+# using the same data as the GA9 broadband file.
+# GA9 bands  ->  260 bands:
+#         1  ->  1/6 -  29
+#         2  ->   30 -  66
+#         3  ->   67 - 103
+#         4  ->  104 - 154
+#         5  ->  155 - 214
+#         6  ->  215 - 260
+
+if [ $RAD_BIN ] ; then
+  echo "Using code compiled in "$RAD_BIN
+else
+  echo "Path to code not set."
+  exit 1
+fi
+
+cp $RAD_DATA/spectra/ga7_ref/sp_sw_260_jm2 .
+cp $RAD_DATA/spectra/ga7_ref/sp_sw_260_jm2_k .
+specfile="sp_sw_260_jm2"
+solspec=$RAD_DATA/solar/lean_12
+
+
+# Aerosols
+rm -f *.avg
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a soluble_260.avg $RAD_DATA/aerosol/soluble.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a dustlike_260.avg $RAD_DATA/aerosol/dustlike.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a oceanic_260.avg $RAD_DATA/aerosol/oceanic.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a soot_260.avg $RAD_DATA/aerosol/soot.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a sulphuric_260.avg $RAD_DATA/aerosol/sulphuric.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a accumsulp_260.avg $RAD_DATA/aerosol/accumsulp.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a aitkensulp_260.avg $RAD_DATA/aerosol/aitkensulp.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a freshsoot_bond_260.avg $RAD_DATA/aerosol/freshsoot_bond.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a agedsoot_bond_260.avg $RAD_DATA/aerosol/agedsoot_bond.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a seasaltfilm_260.avg $RAD_DATA/aerosol/seasaltfilm.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a seasaltjet_260.avg $RAD_DATA/aerosol/seasaltjet.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a dust_div1_260.avg $RAD_DATA/aerosol/dust_div1.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a dust_div2_260.avg $RAD_DATA/aerosol/dust_div2.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a dust_div3_260.avg $RAD_DATA/aerosol/dust_div3.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a dust_div4_260.avg $RAD_DATA/aerosol/dust_div4.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a dust_div5_260.avg $RAD_DATA/aerosol/dust_div5.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a dust_div6_260.avg $RAD_DATA/aerosol/dust_div6.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a freshbiomass_bond_260.avg $RAD_DATA/aerosol/freshbiomass_bond.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a agedbiomass_bond_260.avg $RAD_DATA/aerosol/agedbiomass_bond.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a biogenic_260.avg $RAD_DATA/aerosol/biogenic.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a freshocff_260.avg $RAD_DATA/aerosol/freshocff.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a agedocff_260.avg $RAD_DATA/aerosol/agedocff.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a nitrate_260.avg $RAD_DATA/aerosol/nitrate.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a twobindust_1_260.avg $RAD_DATA/aerosol/twobindust_1.mon
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
+  -a twobindust_2_260.avg $RAD_DATA/aerosol/twobindust_2.mon
+
+
+# Cloud
+rm -f fit_sw_drop5_260 mon_sw_drop5_260
+Cscatter_average -s $specfile -P 1 -t -S $solspec \
+  -f 5 fit_sw_drop5_260 mon_sw_drop5_260 1.e3 \
+  $RAD_DATA/cloud/scatter_drop_type5
+
+
+# Construct spectral file
+mv sp_sw_260_jm3 sp_sw_260_jm3_old 2> /dev/null
+mv sp_sw_260_jm3_k sp_sw_260_jm3_old_k 2> /dev/null
+prep_spec << EOF
+sp_sw_260_jm2
+n
+sp_sw_260_jm3
+10
+5
+y
+fit_sw_drop5_260
+1.50000E-06 5.00000E-05
+11
+soluble_260.avg
+y
+11
+dustlike_260.avg
+y
+11
+oceanic_260.avg
+y
+11
+soot_260.avg
+y
+11
+sulphuric_260.avg
+y
+11
+accumsulp_260.avg
+y
+11
+aitkensulp_260.avg
+y
+11
+freshsoot_bond_260.avg
+y
+11
+agedsoot_bond_260.avg
+y
+11
+seasaltfilm_260.avg
+y
+11
+seasaltjet_260.avg
+y
+11
+dust_div1_260.avg
+y
+11
+dust_div2_260.avg
+y
+11
+dust_div3_260.avg
+y
+11
+dust_div4_260.avg
+y
+11
+dust_div5_260.avg
+y
+11
+dust_div6_260.avg
+y
+11
+freshbiomass_bond_260.avg
+y
+11
+agedbiomass_bond_260.avg
+y
+11
+biogenic_260.avg
+y
+11
+freshocff_260.avg
+y
+11
+agedocff_260.avg
+y
+11
+nitrate_260.avg
+y
+11
+twobindust_1_260.avg
+y
+11
+twobindust_2_260.avg
+y
+-1
+EOF
+
+rm *.avg
+rm sp_sw_260_jm2
+rm sp_sw_260_jm2_k
+rm -f fit_sw_drop5_260 mon_sw_drop5_260
+
+exit 0

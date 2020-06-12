@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# Initialise error status (to test for output differences)
+ierr=0
+
+# Create GA9 SW & LW spectral files
+echo 'Creating sp_sw_ga9...'
+./mk_sp_sw_ga9 > mk_sp_sw_ga9_log
+echo 'Creating sp_lw_ga9...'
+./mk_sp_lw_ga9 > mk_sp_lw_ga9_log
+
+# Create mcica_data file for GA9 spectral files
+echo 'Creating mcica_data_ga9'
+rm -f mcica_data
+assign_subcols > assign_subcols_ga9_log << EOF
+sp_sw_ga9
+10
+sp_lw_ga9
+6
+../../data/spectra/ga7/mcica_data
+64
+EOF
+mv mcica_data mcica_data_ga9
+
+# Create GA9 reference SW & LW spectral files
+echo 'Creating sp_sw_260_jm3...'
+./mk_sp_sw_260_jm3 > mk_sp_sw_260_jm3_log
+echo 'Creating sp_lw_300_jm3...'
+./mk_sp_lw_300_jm3 > mk_sp_lw_300_jm3_log
+
+# Create mcica_data file for reference spectral files
+echo 'Creating mcica_data_ga9_ref'
+assign_subcols > assign_subcols_ga9_ref_log << EOF
+sp_sw_260_jm3
+1000
+sp_lw_300_jm3
+1000
+../../data/spectra/ga7/mcica_data
+-2
+EOF
+mv mcica_data mcica_data_ga9_ref
+
+echo 'Testing output...'
+intel=0
+(diff -q sp_sw_ga9 ../../data/spectra/ga9/sp_sw_ga9 && \
+ echo 'Matched ifort GA9 SW output' && intel=1) || \
+(diff -q sp_sw_ga9 sp_sw_ga9_gfortran && \
+ echo 'Matched gfortran GA9 SW output') || ierr=1
+diff -q sp_lw_ga9 ../../data/spectra/ga9/sp_lw_ga9 || ierr=1
+diff -q mcica_data_ga9 ../../data/spectra/ga9/mcica_data || ierr=1
+
+if [ $intel -gt 0 ] ; then
+    # Only test hi-res output for ifort as results differ with gfortran
+    diff -q sp_sw_260_jm3 ../../data/spectra/ga9_ref/sp_sw_260_jm3 || ierr=1
+    diff -q sp_lw_300_jm3 ../../data/spectra/ga9_ref/sp_lw_300_jm3 || ierr=1
+    diff -q mcica_data_ga9_ref ../../data/spectra/ga9_ref/mcica_data || ierr=1
+fi
+
+if [ $ierr -gt 0 ] ; then
+    exit 1
+else
+    rm -f sp_sw_ga9 sp_sw_ga9_k sp_lw_ga9 sp_lw_ga9_k
+    rm -f sp_sw_260_jm3 sp_sw_260_jm3_k
+    rm -f sp_lw_300_jm3 sp_lw_300_jm3_k
+    rm -f mcica_data_ga9 mcica_data_ga9_ref
+    rm -f mk_sp_sw_ga9_log mk_sp_lw_ga9_log assign_subcols_ga9_log
+    rm -f mk_sp_sw_260_jm3_log mk_sp_lw_300_jm3_log assign_subcols_ga9_ref_log
+    echo OK
+    exit 0
+fi

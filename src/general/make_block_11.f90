@@ -232,7 +232,7 @@ SUBROUTINE make_block_11(Spectrum, ierr)
 !     We are trying to overwrite a dry aerosol. This should
 !     never be done automatically, so stop the program or 
 !     ask the user what to do.
-      WRITE(iu_err, '(a, /a, i5, 1x, a1, a20, a1, 1x, a15)') &
+      WRITE(iu_stdout, '(a, /a, i5, 1x, a1, a20, a1, 1x, a15)') &
         '+++ Warning: ', 'Data for (dry) aerosol component ', &
         i_component, '(', name_aerosol_component(i_component), ')', &
         'already exist.'
@@ -253,7 +253,7 @@ SUBROUTINE make_block_11(Spectrum, ierr)
         Spectrum%Aerosol%nhumidity(i_species), i_species) ) THEN
              char_yn = 'y'
       ELSE
-        WRITE(iu_err, '(/a, i5, 1x, a1, a20, a1, /, a28, 1x, a48)') &
+        WRITE(iu_stdout, '(/a, i5, 1x, a1, a20, a1, /, a28, 1x, a48)') &
           '+++ Warning: Data for (moist) aerosol component ', &
           i_component, '(', name_aerosol_component(i_component), &
           ')', 'are not in ascending order of ', &

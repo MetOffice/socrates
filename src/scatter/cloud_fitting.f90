@@ -89,7 +89,7 @@ CONTAINS
     USE realtype_rd
     USE rad_pcf
     USE def_std_io_icf
-!
+    USE polynomialroots, ONLY: CubicRoots, QuadraticRoots
 !
     IMPLICIT NONE
 !
@@ -117,9 +117,14 @@ CONTAINS
 !     Loop variable
     INTEGER, Allocatable, Dimension(:) :: offset
 !     Offset
-!
-!
-!
+
+    INTEGER, PARAMETER           :: dp=KIND(1.0D0)
+    INTEGER                      :: i_root
+    REAL (dp),    Dimension(0:3) :: poly
+    COMPLEX (dp), Dimension(3)   :: roots
+!     Variables used in the calculation of cubic and quadratic roots
+
+
     IceWater: SELECT CASE(species)
 !
       CASE("Water")
@@ -156,12 +161,56 @@ CONTAINS
                 fit = (parm(1) + d * (parm(2) + d * parm(3)) ) / &
                   (1.0_RealK + d * (parm(4) + d * (parm(5) + &
                   d * parm(6))))
+                ! Check to see if the fit would give NaNs for any intermediate
+                ! values of d between the fitted values. This will happen if
+                ! the cubic equation in the denominator has roots in the fitted
+                ! range of d.
+                poly(0)   = REAL(1.0, dp)
+                poly(1:3) = REAL(parm(4:6), dp)
+                CALL CubicRoots(poly, roots)
+                DO i_root = 1, 3
+                  IF (ABS(AIMAG(roots(i_root))) < TINY(1.0d0)) THEN
+                    IF (DBLE(roots(i_root)) > MINVAL(d) .AND. &
+                        DBLE(roots(i_root)) < MAXVAL(d)) THEN
+                      ! If this fit would produce NaNs then artificially
+                      ! increase the value of the fit for the point closest
+                      ! to the root. This will then give a large residual and
+                      ! the fit should not converge to these values.
+                      fit(MINLOC(ABS(d-roots(i_root)))) = &
+                        fit(MINLOC(ABS(d-roots(i_root)))) / EPSILON(1.0_RealK)
+                    END IF
+                  END IF 
+                END DO
               CASE ("Coalbedo  ")
                 fit = (parm(1) + d * (parm(2) + d * parm(3)) ) / &
                   (1.0_RealK + d * (parm(4) + d * parm(5)))
+                poly(0)   = REAL(1.0, dp)
+                poly(1:2) = REAL(parm(4:5), dp)
+                CALL QuadraticRoots(poly, roots)
+                DO i_root = 1, 2
+                  IF (ABS(AIMAG(roots(i_root))) < TINY(1.0d0)) THEN
+                    IF (DBLE(roots(i_root)) > MINVAL(d) .AND. &
+                        DBLE(roots(i_root)) < MAXVAL(d)) THEN
+                      fit(MINLOC(ABS(d-roots(i_root)))) = &
+                        fit(MINLOC(ABS(d-roots(i_root)))) / EPSILON(1.0_RealK)
+                    END IF
+                  END IF 
+                END DO
               CASE ("Asymmetry ", "Moment    ")
                 fit = (parm(1) + d * (parm(2) + d * parm(3)) ) / &
                   (1.0_RealK + d * (parm(4) + d * parm(5)))
+                poly(0)   = REAL(1.0, dp)
+                poly(1:2) = REAL(parm(4:5), dp)
+                CALL QuadraticRoots(poly, roots)
+                DO i_root = 1, 2
+                  IF (ABS(AIMAG(roots(i_root))) < TINY(1.0d0)) THEN
+                    IF (DBLE(roots(i_root)) > MINVAL(d) .AND. &
+                        DBLE(roots(i_root)) < MAXVAL(d)) THEN
+                      fit(MINLOC(ABS(d-roots(i_root)))) = &
+                        fit(MINLOC(ABS(d-roots(i_root)))) / EPSILON(1.0_RealK)
+                    END IF
+                  END IF 
+                END DO
             END SELECT
 !
           CASE (IP_Slingo_Schr_PHF)

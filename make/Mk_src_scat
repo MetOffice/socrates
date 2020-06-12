@@ -29,6 +29,7 @@ SOURCE90_SCAT =	adt_mitchell96.f90 \
 		open_average_90.f90 \
 		parm_integ_acf.f90 \
 		particle_size_90.f90 \
+                polynomialroots.f90 \
 		prec_integral_tcf.f90 \
 		proj_area_particle.f90 \
 		read_scatter_block_90.f90 \

@@ -84,12 +84,21 @@ SUBROUTINE make_block_10(Spectrum, ierr)
   ENDIF
 
   IF (Spectrum%Drop%l_drop_type(i_drop)) THEN
-    WRITE(iu_err, '(/a)') 'Information for this type ' &
+    WRITE(iu_stdout, '(/a)') 'Information for this type ' &
       //'of droplet is already present.'
-    WRITE(iu_stdout, '(a)') 'Do you wish to overwrite? (y/n)'
+    WRITE(iu_stdout, '(a)') 'Do you wish to overwrite (y/n), or remove? (r)'
 2   read(iu_stdin, '(a)') char_yn
     IF ( (char_yn == 'N').OR.(char_yn == 'n') ) THEN
       WRITE(iu_stdout, '(a)') 'Enter a new number.'
+      RETURN
+    ELSE IF ( (char_yn == 'R').OR.(char_yn == 'r') ) THEN
+      Spectrum%Drop%l_drop_type(i_drop)=.FALSE.
+      ! Set the presence flag for the data.
+      Spectrum%Basic%l_present(10)=.FALSE.
+      DO i=1, Spectrum%Dim%nd_drop_type
+        Spectrum%Basic%l_present(10) = Spectrum%Basic%l_present(10) &
+          .OR. Spectrum%Drop%l_drop_type(i)
+      ENDDO
       RETURN
     ELSE IF ( (char_yn /= 'Y').AND.(char_yn /= 'y') ) THEN
       WRITE(iu_err, '(a)') '+++ Unrecognized response: '

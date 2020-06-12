@@ -87,10 +87,19 @@ SUBROUTINE make_block_12(Spectrum, ierr)
   IF (Spectrum%Ice%l_ice_type(i_ice)) THEN
     WRITE(iu_stdout, '(/a)') 'Information for this type ' &
       //'of ice crystal is already present.'
-    WRITE(iu_stdout, '(a)') 'Do you wish to overwrite? (y/n)'
+    WRITE(iu_stdout, '(a)') 'Do you wish to overwrite (y/n), or remove? (r)'
 2   read(iu_stdin, '(a)') char_yn
     IF ( (char_yn == 'N').OR.(char_yn == 'n') ) THEN
       WRITE(iu_stdout, '(a)') 'Enter a new number.'
+      RETURN
+    ELSE IF ( (char_yn == 'R').OR.(char_yn == 'r') ) THEN
+      Spectrum%Ice%l_ice_type(i_ice)=.FALSE.
+      ! Set the presence flag for the data.
+      Spectrum%Basic%l_present(12)=.FALSE.
+      DO i=1, Spectrum%Dim%nd_ice_type
+        Spectrum%Basic%l_present(12) = Spectrum%Basic%l_present(12) &
+          .OR. Spectrum%Ice%l_ice_type(i)
+      END DO
       RETURN
     ELSE IF ( (char_yn /= 'Y').AND.(char_yn /= 'y') ) THEN
       WRITE(iu_err, '(a)') '+++ Unrecognized response: '
