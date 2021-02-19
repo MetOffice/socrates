@@ -72,6 +72,8 @@ SUBROUTINE diff_planck_source(control, dimen, spectrum, atm, bound, &
 !     Loop variables
   REAL (RealK) :: recip_r_base_sq
 !     Reciprocal of the radius at the grid base squared
+  REAL (RealK), PARAMETER :: frac_tile_tol = TINY(1.0_RealK)
+!     Tolerance for tile fraction when setting Planckian to zero
 
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
@@ -132,8 +134,12 @@ SUBROUTINE diff_planck_source(control, dimen, spectrum, atm, bound, &
 
     DO k=1, bound%n_tile
       DO l=1, bound%n_point_tile
-        planck%flux_tile(l, k) &
-          = planck_flux_band(spectrum, i_band, bound%t_tile(l, k))
+        IF (bound%frac_tile(l, k) > frac_tile_tol) THEN
+          planck%flux_tile(l, k) &
+            = planck_flux_band(spectrum, i_band, bound%t_tile(l, k))
+        ELSE
+          planck%flux_tile(l, k) = 0.0_RealK
+        END IF
       END DO
     END DO
 

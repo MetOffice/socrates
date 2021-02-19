@@ -32,7 +32,7 @@ character(len=*), parameter, private :: ModuleName = 'SOCRATES_RUNES'
 contains
 
 subroutine runes(n_profile, n_layer, spectrum, spectrum_name, mcica_data, &
-  n_cloud_layer, n_aer_mode, n_tile, &
+  n_cloud_layer, n_aer_mode, n_aer_layer, n_tile, &
   p_layer, t_layer, t_level, mass, density, &
   h2o, o3, &
   p_layer_1d, t_layer_1d, t_level_1d, mass_1d, density_1d, &
@@ -42,7 +42,9 @@ subroutine runes(n_profile, n_layer, spectrum, spectrum_name, mcica_data, &
   cfc113_mix_ratio, hcfc22_mix_ratio, hfc134a_mix_ratio, &
   t_ground, cos_zenith_angle, solar_irrad, orog_corr, &
   l_grey_albedo, grey_albedo, albedo_diff, albedo_dir, &
+  albedo_diff_1d, albedo_dir_1d, &
   l_tile, frac_tile, t_tile, albedo_diff_tile, albedo_dir_tile, &
+  frac_tile_1d, t_tile_1d, albedo_diff_tile_1d, albedo_dir_tile_1d, &
   cloud_frac, conv_frac, &
   liq_frac, ice_frac, liq_conv_frac, ice_conv_frac, &
   liq_mmr, ice_mmr, liq_conv_mmr, ice_conv_mmr, &
@@ -62,6 +64,40 @@ subroutine runes(n_profile, n_layer, spectrum, spectrum_name, mcica_data, &
   i_mcica_sampling, i_st_water, i_cnv_water, i_st_ice, i_cnv_ice, i_drop_re, &
   rand_seed, &
   l_rayleigh, l_mixing_ratio, l_aerosol_mode, &
+  aer_mix_ratio, aer_absorption, aer_scattering, aer_asymmetry, &
+  aer_mix_ratio_1d, aer_absorption_1d, aer_scattering_1d, aer_asymmetry_1d, &
+  mean_rel_humidity, mean_rel_humidity_1d, &
+  l_water_soluble, water_soluble, water_soluble_1d, &
+  l_dust_like, dust_like, dust_like_1d, &
+  l_oceanic, oceanic, oceanic_1d, &
+  l_soot, soot, soot_1d, &
+  l_ash, ash, ash_1d, &
+  l_sulphuric, sulphuric, sulphuric_1d, &
+  l_ammonium_sulphate, ammonium_sulphate, ammonium_sulphate_1d, &
+  l_saharan_dust, saharan_dust, saharan_dust_1d, &
+  l_accum_sulphate, accum_sulphate, accum_sulphate_1d, &
+  l_aitken_sulphate, aitken_sulphate, aitken_sulphate_1d, &
+  l_fresh_soot, fresh_soot, fresh_soot_1d, &
+  l_aged_soot, aged_soot, aged_soot_1d, &
+  l_sodium_chloride, sodium_chloride, sodium_chloride_1d, &
+  l_seasalt_film, seasalt_film, seasalt_film_1d, &
+  l_seasalt_jet, seasalt_jet, seasalt_jet_1d, &
+  l_dust_div1, dust_div1, dust_div1_1d, &
+  l_dust_div2, dust_div2, dust_div2_1d, &
+  l_dust_div3, dust_div3, dust_div3_1d, &
+  l_dust_div4, dust_div4, dust_div4_1d, &
+  l_dust_div5, dust_div5, dust_div5_1d, &
+  l_dust_div6, dust_div6, dust_div6_1d, &
+  l_biomass_1, biomass_1, biomass_1_1d, &
+  l_biomass_2, biomass_2, biomass_2_1d, &
+  l_biogenic, biogenic, biogenic_1d, &
+  l_ocff_fresh, ocff_fresh, ocff_fresh_1d, &
+  l_ocff_aged, ocff_aged, ocff_aged_1d, &
+  l_delta, delta, delta_1d, &
+  l_murk, murk, murk_1d, &
+  l_nitrate, nitrate, nitrate_1d, &
+  l_twobindust_1, twobindust_1, twobindust_1_1d, &
+  l_twobindust_2, twobindust_2, twobindust_2_1d, &
   l_invert, l_debug, i_profile_debug, &
   flux_direct, flux_down, flux_up, heating_rate, &
   flux_up_tile, flux_up_blue_tile, flux_direct_blue_surf, flux_down_blue_surf, &
@@ -130,6 +166,8 @@ integer, intent(in), optional :: n_cloud_layer
 !   Number of potentially cloudy layers
 integer, intent(in), optional :: n_aer_mode
 !   Number of aerosol modes
+integer, intent(in), optional :: n_aer_layer
+!   Number of aerosol layers in 1d arrays
 
 real(RealK), intent(in), optional :: p_layer(n_profile, n_layer)
 real(RealK), intent(in), optional :: p_layer_1d(n_layer)
@@ -177,17 +215,29 @@ real(RealK), intent(in), optional :: albedo_diff(:, :)
 !   Spectral diffuse albedo (n_profile, n_band)
 real(RealK), intent(in), optional :: albedo_dir(:, :)
 !   Spectral direct albedo (n_profile, n_band)
+real(RealK), intent(in), optional :: albedo_diff_1d(:)
+!   1d spectral diffuse albedo (n_band)
+real(RealK), intent(in), optional :: albedo_dir_1d(:)
+!   1d spectral direct albedo (n_band)
 
 logical, intent(in), optional :: l_tile
 !   Use tiled surface properties
 real(RealK), intent(in), optional :: frac_tile(:, :)
 !   Tile fractions (n_profile, n_tile)
+real(RealK), intent(in), optional :: t_tile(:, :)
+!   Tile temperatures (n_profile, n_tile)
 real(RealK), intent(in), optional :: albedo_diff_tile(:, :, :)
 !   Diffuse tile albedo (n_profile, n_tile, n_band)
 real(RealK), intent(in), optional :: albedo_dir_tile(:, :, :)
 !   Direct tile albedo (n_profile, n_tile, n_band)
-real(RealK), intent(in), optional :: t_tile(:, :)
-!   Tile temperatures (n_profile, n_tile)
+real(RealK), intent(in), optional :: frac_tile_1d(:)
+!   1d tile fractions (n_tile)
+real(RealK), intent(in), optional :: t_tile_1d(:)
+!   1d tile temperatures (n_tile)
+real(RealK), intent(in), optional :: albedo_diff_tile_1d(:)
+!   1d diffuse tile albedo (n_tile*n_band)
+real(RealK), intent(in), optional :: albedo_dir_tile_1d(:)
+!   1d direct tile albedo (n_tile*n_band)
 
 real(RealK), intent(in), dimension (n_profile, n_layer), optional :: &
   cloud_frac, conv_frac, &
@@ -229,10 +279,78 @@ integer, intent(in), optional :: rand_seed(n_profile)
 
 logical, intent(in), optional :: l_rayleigh
 !   Include Rayleigh scattering
+
 logical, intent(in), optional :: l_mixing_ratio
 !   Assume mass mixing ratios are with respect to dry mass
+
 logical, intent(in), optional :: l_aerosol_mode
 !   Include aerosol optical properties specified by mode
+
+real(RealK), intent(in), optional :: aer_mix_ratio(:, :, :)
+!   MODE aerosol mass-mixing ratio (n_profile, n_layer, n_mode)
+
+real(RealK), intent(in), optional :: aer_mix_ratio_1d(:)
+!   1d MODE aerosol mass-mixing ratio (n_aer_layer*n_mode)
+
+real(RealK), intent(in), dimension(:, :, :, :), optional :: &
+  aer_absorption, aer_scattering, aer_asymmetry
+!   MODE aerosol optical properties (n_profile, n_layer, n_mode, n_band)
+
+real(RealK), intent(in), dimension(:), optional :: &
+  aer_absorption_1d, aer_scattering_1d, aer_asymmetry_1d
+!   1d MODE aerosol optical properties (n_aer_layer*n_mode*n_band)
+
+real(RealK), intent(in), optional :: mean_rel_humidity(n_profile, n_layer)
+real(RealK), intent(in), optional :: mean_rel_humidity_1d(n_layer)
+!   Mean relative humidity applicable for CLASSIC aerosols (clear-sky)
+
+logical, intent(in), optional :: &
+  l_water_soluble, l_dust_like, l_oceanic, l_soot, l_ash, l_sulphuric, &
+  l_ammonium_sulphate, l_saharan_dust, &
+  l_accum_sulphate, l_aitken_sulphate, &
+  l_fresh_soot, l_aged_soot, &
+  l_sodium_chloride, l_seasalt_film, l_seasalt_jet, &
+  l_dust_div1, l_dust_div2, l_dust_div3, &
+  l_dust_div4, l_dust_div5, l_dust_div6, &
+  l_biomass_1, l_biomass_2, &
+  l_biogenic, &
+  l_ocff_fresh, l_ocff_aged, &
+  l_delta, l_murk, &
+  l_nitrate, &
+  l_twobindust_1, l_twobindust_2
+! Flags to include CLASSIC aerosols
+
+real(RealK), intent(in), dimension(n_profile, n_layer), optional :: &
+  water_soluble, dust_like, oceanic, soot, ash, sulphuric, &
+  ammonium_sulphate, saharan_dust, &
+  accum_sulphate, aitken_sulphate, &
+  fresh_soot, aged_soot, &
+  sodium_chloride, seasalt_film, seasalt_jet, &
+  dust_div1, dust_div2, dust_div3, &
+  dust_div4, dust_div5, dust_div6, &
+  biomass_1, biomass_2, &
+  biogenic, &
+  ocff_fresh, ocff_aged, &
+  delta, murk, &
+  nitrate, &
+  twobindust_1, twobindust_2
+! CLASSIC aerosol mass mixing ratios
+
+real(RealK), intent(in), dimension(n_layer), optional :: &
+  water_soluble_1d, dust_like_1d, oceanic_1d, soot_1d, ash_1d, sulphuric_1d, &
+  ammonium_sulphate_1d, saharan_dust_1d, &
+  accum_sulphate_1d, aitken_sulphate_1d, &
+  fresh_soot_1d, aged_soot_1d, &
+  sodium_chloride_1d, seasalt_film_1d, seasalt_jet_1d, &
+  dust_div1_1d, dust_div2_1d, dust_div3_1d, &
+  dust_div4_1d, dust_div5_1d, dust_div6_1d, &
+  biomass_1_1d, biomass_2_1d, &
+  biogenic_1d, &
+  ocff_fresh_1d, ocff_aged_1d, &
+  delta_1d, murk_1d, &
+  nitrate_1d, &
+  twobindust_1_1d, twobindust_2_1d
+! 1d CLASSIC aerosol mass mixing ratios
 
 logical, intent(in), optional :: l_invert
 !   Flag to invert fields in the vertical
@@ -441,21 +559,27 @@ call set_atm(atm, dimen, spec, n_profile, n_layer, &
   i_profile_debug   = i_profile_debug )
 
 call set_bound(bound, control, dimen, spec, n_profile, &
-  n_tile           = n_tile, &
-  t_ground         = t_ground, &
-  cos_zenith_angle = cos_zenith_angle, &
-  solar_irrad      = solar_irrad, &
-  orog_corr        = orog_corr, &
-  l_grey_albedo    = l_grey_albedo, &
-  grey_albedo      = grey_albedo, &
-  albedo_diff      = albedo_diff, &
-  albedo_dir       = albedo_dir, &
-  frac_tile        = frac_tile, &
-  t_tile           = t_tile, &
-  albedo_diff_tile = albedo_diff_tile, &
-  albedo_dir_tile  = albedo_dir_tile, &
-  l_debug          = l_debug, &
-  i_profile_debug  = i_profile_debug )
+  n_tile              = n_tile, &
+  t_ground            = t_ground, &
+  cos_zenith_angle    = cos_zenith_angle, &
+  solar_irrad         = solar_irrad, &
+  orog_corr           = orog_corr, &
+  l_grey_albedo       = l_grey_albedo, &
+  grey_albedo         = grey_albedo, &
+  albedo_diff         = albedo_diff, &
+  albedo_dir          = albedo_dir, &
+  albedo_diff_1d      = albedo_diff_1d, &
+  albedo_dir_1d       = albedo_dir_1d, &
+  frac_tile           = frac_tile, &
+  t_tile              = t_tile, &
+  albedo_diff_tile    = albedo_diff_tile, &
+  albedo_dir_tile     = albedo_dir_tile, &
+  frac_tile_1d        = frac_tile_1d, &
+  t_tile_1d           = t_tile_1d, &
+  albedo_diff_tile_1d = albedo_diff_tile_1d, &
+  albedo_dir_tile_1d  = albedo_dir_tile_1d, &
+  l_debug             = l_debug, &
+  i_profile_debug     = i_profile_debug )
 
 call set_cld(cld, control, dimen, spec, atm, &
   cloud_frac            = cloud_frac, &
@@ -513,7 +637,43 @@ call set_cld_dim(cld, control, dimen, spec, atm, &
 call set_cld_mcica(cld, mcica, control, dimen, spec, atm, &
   rand_seed = rand_seed)
 
-call set_aer(aer, control, dimen, spec, n_profile, n_layer)
+call set_aer(aer, control, dimen, spec, &
+  n_profile, n_layer, n_aer_mode, n_aer_layer, &
+  aer_mix_ratio, aer_absorption, aer_scattering, aer_asymmetry, &
+  aer_mix_ratio_1d, aer_absorption_1d, aer_scattering_1d, aer_asymmetry_1d, &
+  mean_rel_humidity, mean_rel_humidity_1d, &
+  l_water_soluble, water_soluble, water_soluble_1d, &
+  l_dust_like, dust_like, dust_like_1d, &
+  l_oceanic, oceanic, oceanic_1d, &
+  l_soot, soot, soot_1d, &
+  l_ash, ash, ash_1d, &
+  l_sulphuric, sulphuric, sulphuric_1d, &
+  l_ammonium_sulphate, ammonium_sulphate, ammonium_sulphate_1d, &
+  l_saharan_dust, saharan_dust, saharan_dust_1d, &
+  l_accum_sulphate, accum_sulphate, accum_sulphate_1d, &
+  l_aitken_sulphate, aitken_sulphate, aitken_sulphate_1d, &
+  l_fresh_soot, fresh_soot, fresh_soot_1d, &
+  l_aged_soot, aged_soot, aged_soot_1d, &
+  l_sodium_chloride, sodium_chloride, sodium_chloride_1d, &
+  l_seasalt_film, seasalt_film, seasalt_film_1d, &
+  l_seasalt_jet, seasalt_jet, seasalt_jet_1d, &
+  l_dust_div1, dust_div1, dust_div1_1d, &
+  l_dust_div2, dust_div2, dust_div2_1d, &
+  l_dust_div3, dust_div3, dust_div3_1d, &
+  l_dust_div4, dust_div4, dust_div4_1d, &
+  l_dust_div5, dust_div5, dust_div5_1d, &
+  l_dust_div6, dust_div6, dust_div6_1d, &
+  l_biomass_1, biomass_1, biomass_1_1d, &
+  l_biomass_2, biomass_2, biomass_2_1d, &
+  l_biogenic, biogenic, biogenic_1d, &
+  l_ocff_fresh, ocff_fresh, ocff_fresh_1d, &
+  l_ocff_aged, ocff_aged, ocff_aged_1d, &
+  l_delta, delta, delta_1d, &
+  l_murk, murk, murk_1d, &
+  l_nitrate, nitrate, nitrate_1d, &
+  l_twobindust_1, twobindust_1, twobindust_1_1d, &
+  l_twobindust_2, twobindust_2, twobindust_2_1d, &
+  l_invert)
 
 ! DEPENDS ON: radiance_calc
 call radiance_calc(control, dimen, spec, atm, cld, aer, bound, radout)

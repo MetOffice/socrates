@@ -289,39 +289,40 @@ if (present(ice_inconv_mmr_diag_1d))  ice_inconv_mmr_diag_1d  = 0.0_RealK
 if (present(ice_conv_frac_diag_1d))   ice_conv_frac_diag_1d   = 0.0_RealK
 
 ! Update diagnostics where components are present
-do k=1, cld%n_condensed
-  select case (cld%type_condensed(k))
-  case (ip_clcmp_st_water)
-    call set_cloud_diag(liq_dim_diag, liq_dim_diag_1d, &
-                        cld%condensed_dim_char(:, :, k))
-    call set_cloud_diag(liq_incloud_mmr_diag, liq_incloud_mmr_diag_1d, &
-                        cld%condensed_mix_ratio(:, :, k))
-    call set_cloud_diag(liq_frac_diag, liq_frac_diag_1d, &
-                        cld%w_cloud*cld%frac_cloud(:, :, cld%i_cloud_type(k)))
-  case (ip_clcmp_st_ice)
-    call set_cloud_diag(ice_dim_diag, ice_dim_diag_1d, &
-                        cld%condensed_dim_char(:, :, k))
-    call set_cloud_diag(ice_incloud_mmr_diag, ice_incloud_mmr_diag_1d, &
-                        cld%condensed_mix_ratio(:, :, k))
-    call set_cloud_diag(ice_frac_diag, ice_frac_diag_1d, &
-                        cld%w_cloud*cld%frac_cloud(:, :, cld%i_cloud_type(k)))
-  case (ip_clcmp_cnv_water)
-    call set_cloud_diag(liq_conv_dim_diag, liq_conv_dim_diag_1d, &
-                        cld%condensed_dim_char(:, :, k))
-    call set_cloud_diag(liq_inconv_mmr_diag, liq_inconv_mmr_diag_1d, &
-                        cld%condensed_mix_ratio(:, :, k))
-    call set_cloud_diag(liq_conv_frac_diag, liq_conv_frac_diag_1d, &
-                        cld%w_cloud*cld%frac_cloud(:, :, cld%i_cloud_type(k)))
-  case (ip_clcmp_cnv_ice)
-    call set_cloud_diag(ice_conv_dim_diag, ice_conv_dim_diag_1d, &
-                        cld%condensed_dim_char(:, :, k))
-    call set_cloud_diag(ice_inconv_mmr_diag, ice_inconv_mmr_diag_1d, &
-                        cld%condensed_mix_ratio(:, :, k))
-    call set_cloud_diag(ice_conv_frac_diag, ice_conv_frac_diag_1d, &
-                        cld%w_cloud*cld%frac_cloud(:, :, cld%i_cloud_type(k)))
-  end select
-end do
-
+if (control%i_cloud_representation /= ip_cloud_off) then
+  do k=1, cld%n_condensed
+    select case (cld%type_condensed(k))
+    case (ip_clcmp_st_water)
+      call set_cloud_diag(liq_dim_diag, liq_dim_diag_1d, &
+                          cld%condensed_dim_char(:, :, k))
+      call set_cloud_diag(liq_incloud_mmr_diag, liq_incloud_mmr_diag_1d, &
+                          cld%condensed_mix_ratio(:, :, k))
+      call set_cloud_diag(liq_frac_diag, liq_frac_diag_1d, &
+                          cld%w_cloud*cld%frac_cloud(:, :, cld%i_cloud_type(k)))
+    case (ip_clcmp_st_ice)
+      call set_cloud_diag(ice_dim_diag, ice_dim_diag_1d, &
+                          cld%condensed_dim_char(:, :, k))
+      call set_cloud_diag(ice_incloud_mmr_diag, ice_incloud_mmr_diag_1d, &
+                          cld%condensed_mix_ratio(:, :, k))
+      call set_cloud_diag(ice_frac_diag, ice_frac_diag_1d, &
+                          cld%w_cloud*cld%frac_cloud(:, :, cld%i_cloud_type(k)))
+    case (ip_clcmp_cnv_water)
+      call set_cloud_diag(liq_conv_dim_diag, liq_conv_dim_diag_1d, &
+                          cld%condensed_dim_char(:, :, k))
+      call set_cloud_diag(liq_inconv_mmr_diag, liq_inconv_mmr_diag_1d, &
+                          cld%condensed_mix_ratio(:, :, k))
+      call set_cloud_diag(liq_conv_frac_diag, liq_conv_frac_diag_1d, &
+                          cld%w_cloud*cld%frac_cloud(:, :, cld%i_cloud_type(k)))
+    case (ip_clcmp_cnv_ice)
+      call set_cloud_diag(ice_conv_dim_diag, ice_conv_dim_diag_1d, &
+                          cld%condensed_dim_char(:, :, k))
+      call set_cloud_diag(ice_inconv_mmr_diag, ice_inconv_mmr_diag_1d, &
+                          cld%condensed_mix_ratio(:, :, k))
+      call set_cloud_diag(ice_conv_frac_diag, ice_conv_frac_diag_1d, &
+                          cld%w_cloud*cld%frac_cloud(:, :, cld%i_cloud_type(k)))
+    end select
+  end do
+end if
 
 contains
 

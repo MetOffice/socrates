@@ -152,6 +152,8 @@ if (present(l_set_defaults)) then
       if (.not.present(l_gas)) control%l_gas = .true.
       if (.not.present(l_continuum)) control%l_continuum = .true.
       if (.not.present(l_cont_gen)) control%l_cont_gen = .true.
+      if (.not.present(l_aerosol)) control%l_aerosol = .true.
+      if (.not.present(l_aerosol_mode)) control%l_aerosol_mode = .true.
       call set_int_default(control%first_band, 1)
       if (present(spectrum)) then
         call set_int_default(control%last_band, spectrum%basic%n_band)
@@ -251,6 +253,8 @@ if (present(l_set_defaults)) then
       ! Consistent aerosol options
       if (present(n_aer_mode)) then
         if (n_aer_mode < 1) control%l_aerosol_mode = .false.
+      else
+        control%l_aerosol_mode = .false.
       end if
 
     case(ip_ir_gauss, ip_spherical_harmonic)

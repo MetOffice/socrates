@@ -18,7 +18,9 @@ contains
 
 subroutine bones(n_profile, n_layer, n_tile, &
   l_cos_zen_correction, cos_zen_rts, lit_frac_rts, cos_zen_mts, lit_frac_mts, &
+  l_trans_zen_correction, flux_direct_toa_rts, l_orog_corr_rts, orog_corr_rts, &
   l_grey_emis_correction, grey_albedo_tile, t_tile, &
+  grey_albedo_tile_1d, t_tile_1d, &
   l_debug, i_profile_debug, &
   flux_direct_rts, flux_down_rts, flux_up_rts, heating_rate_rts, &
   flux_up_tile_rts, flux_up_blue_tile_rts, &
@@ -56,12 +58,25 @@ real(RealK), intent(in), optional :: cos_zen_mts(n_profile)
 real(RealK), intent(in), optional :: lit_frac_mts(n_profile)
 !   Lit fraction of model timestep
 
+logical, intent(in), optional :: l_trans_zen_correction
+!   Apply transmission based solar zenith angle correction, DOI 10.1002/qj.385
+real(RealK), intent(in), optional :: flux_direct_toa_rts(n_profile)
+!   Direct flux at top-of-atmosphere over radiation timestep
+logical, intent(in), optional :: l_orog_corr_rts
+!   Orographic correction applied for the radiation timestep
+real(RealK), intent(in), optional :: orog_corr_rts(n_profile)
+!   Orographic correction factor for the radiation timestep, DOI 10.1002/qj.956
+
 logical, intent(in), optional :: l_grey_emis_correction
 !   Apply surface temperature correction with grey emissivity per tile
 real(RealK), intent(in), optional :: grey_albedo_tile(:, :)
 !   Grey albedo of tiles (n_profile, n_tile)
 real(RealK), intent(in), optional :: t_tile(:, :)
 !   Tile temperatures (n_profile, n_tile)
+real(RealK), intent(in), optional :: grey_albedo_tile_1d(:)
+!   1d grey albedo of tiles (n_tile)
+real(RealK), intent(in), optional :: t_tile_1d(:)
+!   1d tile temperatures (n_tile)
 
 logical, intent(in), optional :: l_debug
 integer, intent(in), optional :: i_profile_debug
@@ -125,30 +140,77 @@ real(RealK), intent(out), optional :: flux_down_blue_surf_mts(n_profile)
 
 ! Local variables
 integer :: l, i
+real(RealK) :: trans_zen_correction(n_profile)
+real(RealK) :: orog_corr(n_profile)
 real(RealK) :: scaling(n_profile)
+real(RealK) :: eps = epsilon(1.0_RealK)
+
+
+if (present(l_orog_corr_rts)) then
+  if (l_orog_corr_rts) then
+    ! If the orographic correction has been applied to the surface fluxes
+    ! this needs to be accounted for in the transmission-based solar zenith
+    ! angle correction.
+    orog_corr = orog_corr_rts
+  else
+    orog_corr = 1.0_RealK
+  end if
+else
+  orog_corr = 1.0_RealK
+end if
+
+
+trans_zen_correction = 1.0_RealK
+if (present(l_trans_zen_correction)) then
+if (l_trans_zen_correction) then
+  ! Transmission-based solar zenith angle correction for surface fluxes
+  ! as described in Manners et al 2009, section 3.3 (DOI: 10.1002/qj.385).
+  where (cos_zen_rts > eps .and. cos_zen_mts > eps .and. &
+         flux_direct_surf_rts > eps .and. &
+         orog_corr*flux_direct_toa_rts > flux_direct_surf_rts .and. &
+         orog_corr > sqrt(eps))
+    trans_zen_correction = 1.0_RealK &
+      + (orog_corr - 0.5_RealK) * (flux_direct_toa_rts &
+      * (flux_direct_surf_rts/(orog_corr*flux_direct_toa_rts)) &
+      **(cos_zen_rts/cos_zen_mts) &
+      - flux_direct_surf_rts/orog_corr) / flux_down_surf_rts
+  end where
+end if
+end if
 
 
 if (present(l_cos_zen_correction)) then
 if (l_cos_zen_correction) then
   ! A simple solar zenith angle correction that scales the fluxes and
   ! heating rates by the change in the cosine of the solar zenith angle.
-  where (cos_zen_rts*lit_frac_rts > epsilon(1.0_RealK))
+  where (cos_zen_rts*lit_frac_rts > eps)
     scaling = cos_zen_mts*lit_frac_mts / (cos_zen_rts*lit_frac_rts)
   elsewhere
     scaling = 0.0_RealK
   end where
 
-  call scale_field( flux_direct_rts,       flux_direct_mts       )
-  call scale_field( flux_down_rts,         flux_down_mts         )
-  call scale_field( flux_up_rts,           flux_up_mts           )
-  call scale_field( heating_rate_rts,      heating_rate_mts      )
+  call scale_field( flux_direct_rts,  flux_direct_mts  )
+  call scale_field( flux_down_rts,    flux_down_mts    )
+  call scale_field( flux_up_rts,      flux_up_mts      )
+  call scale_field( heating_rate_rts, heating_rate_mts )
+
+  call scale_field_1d( flux_direct_1d_rts,  flux_direct_1d_mts  )
+  call scale_field_1d( flux_down_1d_rts,    flux_down_1d_mts    )
+  call scale_field_1d( flux_up_1d_rts,      flux_up_1d_mts      )
+  call scale_field_1d( heating_rate_1d_rts, heating_rate_1d_mts )
+
+
+  ! Surface fields may also be adjusted for the transmission-based solar
+  ! zenith angle correction. Note: we apply the same correction to the
+  ! total and direct fluxes here to maintain the ratio of direct to diffuse
+  ! flux over the radiation timestep. Using the separate correction to the
+  ! direct flux as outlined in Manners et al 2009 can in some cases reduce
+  ! the accuracy of this ratio.
+  scaling = scaling * trans_zen_correction
+
   call scale_field( flux_up_tile_rts,      flux_up_tile_mts      )
   call scale_field( flux_up_blue_tile_rts, flux_up_blue_tile_mts )
 
-  call scale_field_1d( flux_direct_1d_rts,       flux_direct_1d_mts       )
-  call scale_field_1d( flux_down_1d_rts,         flux_down_1d_mts         )
-  call scale_field_1d( flux_up_1d_rts,           flux_up_1d_mts           )
-  call scale_field_1d( heating_rate_1d_rts,      heating_rate_1d_mts      )
   call scale_field_1d( flux_up_tile_1d_rts,      flux_up_tile_1d_mts      )
   call scale_field_1d( flux_up_blue_tile_1d_rts, flux_up_blue_tile_1d_mts )
 
@@ -186,31 +248,32 @@ if (l_grey_emis_correction) then
 
   call scale_field_surf( flux_down_surf_rts, flux_down_surf_mts )
 
-  if (present(flux_up_tile_mts)) then
-    do i=1, size(flux_up_tile_mts, 2)
+  if (present(flux_up_tile_mts) .and. present(n_tile) .and. &
+      present(grey_albedo_tile) .and. present(t_tile)) then
+    do i=1, n_tile
       flux_up_tile_mts(1:n_profile, i) &
         = flux_down_surf_rts(:) * grey_albedo_tile(1:n_profile, i) &
         + (1.0_RealK - grey_albedo_tile(1:n_profile, i)) &
         * stefan_boltzmann * t_tile(1:n_profile, i)**4
     end do
   end if
-  if (present(flux_up_tile_1d_mts)) then
-    if (n_profile == 1) then
-      do i=1, size(flux_up_tile_1d_mts)
-        flux_up_tile_1d_mts(i) &
-          = flux_down_surf_rts(1) * grey_albedo_tile(1, i) &
-          + (1.0_RealK - grey_albedo_tile(1, i)) &
-          * stefan_boltzmann * t_tile(1, i)**4
-      end do
-    else
-      do i=1, size(flux_up_tile_1d_mts)
-        flux_up_tile_1d_mts(i) &
-          = sum ( flux_down_surf_rts(:) * grey_albedo_tile(1:n_profile, i) &
-          + (1.0_RealK - grey_albedo_tile(1:n_profile, i)) &
-          * stefan_boltzmann * t_tile(1:n_profile, i)**4 ) &
-          / real(n_profile, RealK)
-      end do
-    end if
+  if (present(flux_up_tile_1d_mts) .and. present(n_tile) .and. &
+      present(grey_albedo_tile_1d) .and. present(t_tile_1d)) then
+    do i=1, n_tile
+      flux_up_tile_1d_mts(i) &
+        = flux_down_surf_rts(1) * grey_albedo_tile_1d(i) &
+        + (1.0_RealK - grey_albedo_tile_1d(i)) &
+        * stefan_boltzmann * t_tile_1d(i)**4
+    end do
+  end if
+  if (present(flux_up_tile_1d_mts) .and. present(n_tile) .and. &
+      present(grey_albedo_tile) .and. present(t_tile)) then
+    do i=1, n_tile
+      flux_up_tile_1d_mts(i) &
+        = flux_down_surf_rts(1) * grey_albedo_tile(1, i) &
+        + (1.0_RealK - grey_albedo_tile(1, i)) &
+        * stefan_boltzmann * t_tile(1, i)**4
+    end do
   end if
 end if
 end if

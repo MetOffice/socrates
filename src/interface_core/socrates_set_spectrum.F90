@@ -269,7 +269,8 @@ end subroutine set_weight_blue
 
 
 subroutine get_spectrum(spectrum_name, spectrum, &
-  n_band, wavelength_short, wavelength_long, weight_blue)
+  n_band, n_band_exclude, index_exclude, &
+  wavelength_short, wavelength_long, weight_blue)
 
 use realtype_rd, only: RealK
 use errormessagelength_mod, only: errormessagelength
@@ -282,6 +283,8 @@ character(len=*), intent(in) :: spectrum_name
 type (StrSpecData), intent(out), optional :: spectrum
 
 integer, optional, intent(out) :: n_band
+integer, allocatable, optional, intent(out) :: n_band_exclude(:)
+integer, allocatable, optional, intent(out) :: index_exclude(:, :)
 real (RealK), allocatable, optional, intent(out) :: wavelength_short(:)
 real (RealK), allocatable, optional, intent(out) :: wavelength_long(:)
 real (RealK), allocatable, optional, intent(out) :: weight_blue(:)
@@ -306,19 +309,29 @@ spec => spectrum_array(id_spec)
 
 if (present(spectrum)) spectrum = spec
 if (present(n_band)) n_band = spec%basic%n_band
+if (present(n_band_exclude)) then
+  if (allocated(n_band_exclude)) deallocate(n_band_exclude)
+  allocate(n_band_exclude(spec%dim%nd_band))
+  n_band_exclude = spec%basic%n_band_exclude
+end if
+if (present(index_exclude)) then
+  if (allocated(index_exclude)) deallocate(index_exclude)
+  allocate(index_exclude(spec%dim%nd_exclude, spec%dim%nd_band))
+  index_exclude = spec%basic%index_exclude
+end if
 if (present(wavelength_short)) then
   if (allocated(wavelength_short)) deallocate(wavelength_short)
-  allocate(wavelength_short(spec%basic%n_band))
+  allocate(wavelength_short(spec%dim%nd_band))
   wavelength_short = spec%basic%wavelength_short
 end if
 if (present(wavelength_long)) then
   if (allocated(wavelength_long)) deallocate(wavelength_long)
-  allocate(wavelength_long(spec%basic%n_band))
+  allocate(wavelength_long(spec%dim%nd_band))
   wavelength_long = spec%basic%wavelength_long
 end if
 if (present(weight_blue)) then
   if (allocated(weight_blue)) deallocate(weight_blue)
-  allocate(weight_blue(spec%basic%n_band))
+  allocate(weight_blue(spec%dim%nd_band))
   weight_blue = spec%solar%weight_blue
 end if
 
