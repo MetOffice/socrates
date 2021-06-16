@@ -316,7 +316,7 @@ TYPE StrCtrl
   LOGICAL :: l_aerosol_absorption_band                            = .FALSE.
 !   Calculate total aerosol absorption per band
   LOGICAL :: l_aerosol_scattering_band                            = .FALSE.
-!   Calculate total aerosol absorption per band
+!   Calculate total aerosol scattering per band
   LOGICAL :: l_aerosol_asymmetry_band                             = .FALSE.
 !   Calculate total aerosol asymmetry (weighted by scattering) per band
   LOGICAL :: l_spherical_path_diag                                = .FALSE.

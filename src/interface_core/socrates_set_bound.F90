@@ -351,9 +351,9 @@ end if
 ! Incident solar flux
 if (present(cos_zenith_angle) .and. present(solar_irrad)) then
   do l=1, n_profile
-    if (cos_zenith_angle(l) > 0.0) then
+    if (cos_zenith_angle(l) > 0.0_RealK) then
       bound%solar_irrad(l)=solar_irrad(l)
-      bound%zen_0(l)=1.0/cos_zenith_angle(l)
+      bound%zen_0(l)=1.0_RealK/cos_zenith_angle(l)
     else
       bound%solar_irrad(l)=0.0_RealK
       bound%zen_0(l)=1.0_RealK

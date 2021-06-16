@@ -28,7 +28,7 @@
      &  , n_latitude, latitude, n_longitude, longitude, n_profile
      &  , l_vert_coord, name_vert_coord, n_layer, p
      &  , condensed_mix_ratio, condensed_dim_char
-     &  , w_cloud, n_cloud_type, frac_cloud
+     &  , w_cloud, n_cloud_type, i_cloud_type, frac_cloud
      &  , n_opt_level_drop_prsc, n_phase_term_drop_prsc
      &  , drop_pressure_prsc, drop_absorption_prsc
      &  , drop_scattering_prsc, drop_phase_fnc_prsc
@@ -194,6 +194,8 @@
 !           Number of condensed phases in clouds
      &  , n_cloud_type
 !           Number of types of clouds
+     &  , i_cloud_type(nd_cloud_component)
+!           Cloud type for each component
      &  , type_condensed(nd_cloud_component)
 !           Types of condensed phases in clouds
      &  , i_condensed_param(nd_cloud_component)
@@ -312,7 +314,7 @@
 !     Functions called:
       INTEGER
      &    set_n_cloud_parameter
-!           Function to find the number of clou parameters
+!           Function to find the number of cloud parameters
       EXTERNAL
      &    set_n_cloud_parameter
 !
@@ -650,22 +652,75 @@
 !
         IF (i_cloud_representation == IP_cloud_homogen) THEN
           n_cloud_type=1
+          DO i=1, n_condensed
+            i_cloud_type(i) = ip_cloud_type_homogen
+          END DO
           suffix_cl(1)(1:len_file_suffix)
      &      =phys_suffix(IP_cloud_fraction)(1:len_file_suffix)
         ELSE IF (i_cloud_representation == IP_cloud_ice_water) THEN
           n_cloud_type=2
+          DO i = 1, n_condensed
+            SELECT CASE (type_condensed(i))
+            CASE (ip_clcmp_st_water)
+              i_cloud_type(i) = ip_cloud_type_water
+            CASE (ip_clcmp_st_ice)
+              i_cloud_type(i) = ip_cloud_type_ice
+            CASE DEFAULT
+              WRITE(iu_err, '(a)')
+     &          '*** Error in input_cloud_cdl: type_condensed '
+     &          //'incorrectly set for ip_cloud_ice_water'
+              ierr=i_err_fatal
+              RETURN
+            END SELECT
+          END DO
           suffix_cl(1)(1:len_file_suffix)
      &      =phys_suffix(IP_cloud_fraction_w)(1:len_file_suffix)
           suffix_cl(2)(1:len_file_suffix)
      &      =phys_suffix(IP_cloud_fraction_i)(1:len_file_suffix)
         ELSE IF (i_cloud_representation == IP_cloud_conv_strat) THEN
           n_cloud_type=2
+          DO i = 1, n_condensed
+            SELECT CASE (type_condensed(i))
+            CASE (ip_clcmp_st_water)
+              i_cloud_type(i) = ip_cloud_type_strat
+            CASE (ip_clcmp_st_ice)
+              i_cloud_type(i) = ip_cloud_type_strat
+            CASE (ip_clcmp_cnv_water)
+              i_cloud_type(i) = ip_cloud_type_conv
+            CASE (ip_clcmp_cnv_ice)
+              i_cloud_type(i) = ip_cloud_type_conv
+            CASE DEFAULT
+              WRITE(iu_err, '(a)')
+     &          '*** Error in input_cloud_cdl: type_condensed '
+     &          //'incorrectly set for ip_cloud_conv_strat'
+              ierr=i_err_fatal
+              RETURN
+            END SELECT
+          END DO
           suffix_cl(1)(1:len_file_suffix)
      &      =phys_suffix(IP_cloud_fraction)(1:len_file_suffix)
           suffix_cl(2)(1:len_file_suffix)
      &      =phys_suffix(IP_cloud_fraction_cv)(1:len_file_suffix)
         ELSE IF (i_cloud_representation == IP_cloud_csiw) THEN
           n_cloud_type=4
+          DO i = 1, n_condensed
+            SELECT CASE (type_condensed(i))
+            CASE (ip_clcmp_st_water)
+              i_cloud_type(i) = ip_cloud_type_sw
+            CASE (ip_clcmp_st_ice)
+              i_cloud_type(i) = ip_cloud_type_si
+            CASE (ip_clcmp_cnv_water)
+              i_cloud_type(i) = ip_cloud_type_cw
+            CASE (ip_clcmp_cnv_ice)
+              i_cloud_type(i) = ip_cloud_type_ci
+            CASE DEFAULT
+              WRITE(iu_err, '(a)')
+     &          '*** Error in input_cloud_cdl: type_condensed '
+     &          //'incorrectly set for ip_cloud_csiw'
+              ierr=i_err_fatal
+              RETURN
+            END SELECT
+          END DO
           suffix_cl(1)(1:len_file_suffix)
      &      =phys_suffix(IP_cloud_fraction_w)(1:len_file_suffix)
           suffix_cl(2)(1:len_file_suffix)

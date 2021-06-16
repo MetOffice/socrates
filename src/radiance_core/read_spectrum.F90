@@ -184,7 +184,7 @@ IF (ios /= 0) THEN
 END IF
 
 ! Check existence of extended file of k-term data and open.
-i=INDEX(file_spectral, ' ') - 1
+i=LEN_TRIM(file_spectral)
 spectral_k = file_spectral(1:i) // '_k'
 INQUIRE(FILE=spectral_k, EXIST=l_exist_k)
 IF (l_exist_k) THEN
@@ -3115,7 +3115,7 @@ DO
       RETURN
     END IF
 
-    i=INDEX(file_spectral, ' ') - 1
+    i=LEN_TRIM(file_spectral)
     spectral_var = file_spectral(1:i) // '_var'
 
     ! Get a unit to read the spectral variability file.

@@ -10,7 +10,7 @@ echo -n "Calculating zenith angles: "
 for szen in {75..89}
 do
     echo -n " $szen"
-    python2.7 create_szen.py $szen > /dev/null
+    python create_szen.py $szen > /dev/null
     Cl_run_cdf -B case6 -s $RAD_DATA/spectra/ga7/sp_sw_ga7 -R 1 6 -S +R -g 4 -c -r -a +A -C 5 -sg
     fmove case6 "case6_sw_sg_ga7_$szen"
     Cl_run_cdf -B case6 -s $RAD_DATA/spectra/ga7/sp_sw_ga7 -R 1 6 -S +R -g 4 -c -r -a +A -C 5
@@ -19,7 +19,7 @@ done
 for szen in {90..98}
 do
     echo -n " $szen"
-    python2.7 create_szen.py $szen > /dev/null
+    python create_szen.py $szen > /dev/null
     Cl_run_cdf -B case6 -s $RAD_DATA/spectra/ga7/sp_sw_ga7 -R 1 6 -S +R -g 4 -c -r -a +A -C 5 -sg
     fmove case6 "case6_sw_sg_ga7_$szen"
 done
@@ -30,7 +30,7 @@ Ccdf2cdl -a case6_sw_sg_ga7_90 > /dev/null
 diff cdl_case6_sw_sg_ga7_90.hrts cdl_case6_90_ref.hrts || ierr=1
 
 # Uncomment this line to plot results
-# python2.7 plot_szen.py
+# python plot_szen.py
 
 if [ $ierr -gt 0 ] ; then
     exit 1

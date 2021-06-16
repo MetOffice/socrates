@@ -12,7 +12,7 @@ implicit none
 character(len=*), parameter, private :: ModuleName = 'SOCRATES_SET_CONTROL'
 contains
 
-subroutine set_control(control, spectrum, l_set_defaults, &
+subroutine set_control(control, diag, spectrum, l_set_defaults, &
   l_rayleigh, l_gas, l_continuum, l_cont_gen, l_orog, l_solvar, &
   l_rescale, l_ir_source_quad, l_mixing_ratio, &
   l_aerosol, l_aerosol_mode, l_aerosol_ccn, &
@@ -24,10 +24,11 @@ subroutine set_control(control, spectrum, l_set_defaults, &
   isolir, i_cloud_representation, i_overlap, i_inhom, i_mcica_sampling, &
   i_st_water, i_cnv_water, i_st_ice, i_cnv_ice, i_drop_re )
 
-use def_control,  only: StrCtrl, allocate_control
+use def_control, only: StrCtrl, allocate_control
+use socrates_def_diag, only: StrDiag
 use def_spectrum, only: StrSpecData
-use realtype_rd,  only: RealK
-use ereport_mod,  only: ereport
+use realtype_rd, only: RealK
+use ereport_mod, only: ereport
 use errormessagelength_mod, only: errormessagelength
 use missing_data_mod, only: imdi
 use rad_pcf, only: &
@@ -51,6 +52,9 @@ implicit none
 
 ! Control options:
 type(StrCtrl), intent(inout) :: control
+
+! Diagnostic fields
+type(StrDiag), intent(in) :: diag
 
 ! Spectral data:
 type(StrSpecData), intent(in), optional :: spectrum
@@ -121,6 +125,22 @@ control%l_clear = control%l_clear &
              .or. control%l_flux_up_clear_band &
              .or. control%l_flux_down_clear_band
 
+if (associated(diag%flux_up_blue_tile)     .or. &
+    associated(diag%flux_direct_blue_surf) .or. &
+    associated(diag%flux_down_blue_surf) ) then
+  control%l_blue_flux_surf = .true.
+end if
+if (associated(diag%aerosol_optical_depth)) then
+  control%l_aerosol_absorption_band = .true.
+  control%l_aerosol_scattering_band = .true.
+end if
+if (associated(diag%aerosol_scat_optical_depth)) then
+  control%l_aerosol_scattering_band = .true.
+end if
+if (associated(diag%aerosol_asymmetry_scat)) then
+  control%l_aerosol_asymmetry_band = .true.
+end if
+
 
 ! Defaults and checking
 if (present(l_set_defaults)) then
@@ -153,7 +173,6 @@ if (present(l_set_defaults)) then
       if (.not.present(l_continuum)) control%l_continuum = .true.
       if (.not.present(l_cont_gen)) control%l_cont_gen = .true.
       if (.not.present(l_aerosol)) control%l_aerosol = .true.
-      if (.not.present(l_aerosol_mode)) control%l_aerosol_mode = .true.
       call set_int_default(control%first_band, 1)
       if (present(spectrum)) then
         call set_int_default(control%last_band, spectrum%basic%n_band)
@@ -163,8 +182,11 @@ if (present(l_set_defaults)) then
       call set_int_default(control%i_gas_overlap, ip_overlap_k_eqv_scl)
 
       ! Consistent tiling options
+      if (.not.present(l_tile)) control%l_tile = .true.
       if (present(n_tile)) then
         if (n_tile < 1) control%l_tile = .false.
+      else
+        control%l_tile = .false.
       end if
 
       ! Consistent cloud options and defaults
@@ -251,6 +273,7 @@ if (present(l_set_defaults)) then
       end select
 
       ! Consistent aerosol options
+      if (.not.present(l_aerosol_mode)) control%l_aerosol_mode = .true.
       if (present(n_aer_mode)) then
         if (n_aer_mode < 1) control%l_aerosol_mode = .false.
       else

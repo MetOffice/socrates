@@ -768,7 +768,7 @@ PROGRAM l_run_cdl
     n_latitude, atm%lat, n_longitude, atm%lon, atm%n_profile,           &
     l_vert_coord, name_vert_coord, atm%n_layer, atm%p,                  &
     cld%condensed_mix_ratio, cld%condensed_dim_char,                    &
-    cld%w_cloud, cld%n_cloud_type, cld%frac_cloud,                      &
+    cld%w_cloud, cld%n_cloud_type, cld%i_cloud_type, cld%frac_cloud,    &
     cld%n_opt_level_drop_prsc, cld%n_phase_term_drop_prsc,              &
     cld%drop_pressure_prsc, cld%drop_absorption_prsc,                   &
     cld%drop_scattering_prsc, cld%drop_phase_fnc_prsc,                  &

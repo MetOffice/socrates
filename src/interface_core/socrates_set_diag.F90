@@ -12,27 +12,12 @@ implicit none
 character(len=*), parameter, private :: ModuleName = 'SOCRATES_SET_DIAG'
 contains
 
-subroutine set_diag(control, dimen, spectrum, &
+subroutine set_diag(diag, control, dimen, spectrum, &
   atm, cld, mcica_data, aer, bound, radout, &
   n_profile, n_layer, n_tile, &
-  layer_heat_capacity, layer_heat_capacity_1d, l_invert, &
-  flux_direct, flux_down, flux_up, heating_rate, &
-  flux_up_tile, flux_up_blue_tile, flux_direct_blue_surf, flux_down_blue_surf, &
-  flux_direct_1d, flux_down_1d, flux_up_1d, heating_rate_1d, &
-  flux_up_tile_1d, flux_up_blue_tile_1d, &
-  total_cloud_cover, total_cloud_fraction, total_cloud_fraction_1d, &
-  liq_frac_diag, ice_frac_diag, &
-  liq_conv_frac_diag, ice_conv_frac_diag, &
-  liq_incloud_mmr_diag, ice_incloud_mmr_diag, &
-  liq_inconv_mmr_diag, ice_inconv_mmr_diag, &
-  liq_dim_diag, ice_dim_diag, &
-  liq_conv_dim_diag, ice_conv_dim_diag, &
-  liq_frac_diag_1d, ice_frac_diag_1d, &
-  liq_conv_frac_diag_1d, ice_conv_frac_diag_1d, &
-  liq_incloud_mmr_diag_1d, ice_incloud_mmr_diag_1d, &
-  liq_inconv_mmr_diag_1d, ice_inconv_mmr_diag_1d, &
-  liq_dim_diag_1d, ice_dim_diag_1d, &
-  liq_conv_dim_diag_1d, ice_conv_dim_diag_1d)
+  layer_heat_capacity, layer_heat_capacity_1d, l_invert)
+
+use socrates_def_diag, only: StrDiag
 
 use def_control,  only: StrCtrl
 use def_dimen,    only: StrDim
@@ -53,6 +38,9 @@ use rad_pcf, only: i_normal, i_err_fatal, ip_cloud_off, ip_mcica, &
 
 implicit none
 
+! Output diagnostic fields
+type(StrDiag),   intent(inout) :: diag
+
 ! Control options:
 type(StrCtrl),      intent(in) :: control
 
@@ -69,7 +57,7 @@ type(StrAtm),       intent(in) :: atm
 type(StrCld),       intent(in) :: cld
 
 ! MCICA data:
-type(StrMcica),    intent(in) :: mcica_data
+type(StrMcica),     intent(in) :: mcica_data
 
 ! Aerosol properties:
 type(StrAer),       intent(in) :: aer
@@ -95,56 +83,10 @@ logical, intent(in), optional :: l_invert
 !   Flag to invert fields in the vertical
 
 
-! Output fields:
-real(RealK), intent(out), optional :: flux_direct(n_profile, 0:n_layer)
-real(RealK), intent(out), optional :: flux_direct_1d(0:n_layer)
-!   Direct (unscattered) downwards flux (Wm-2)
-real(RealK), intent(out), optional :: flux_down(n_profile, 0:n_layer)
-real(RealK), intent(out), optional :: flux_down_1d(0:n_layer)
-!   Downwards flux (Wm-2)
-real(RealK), intent(out), optional :: flux_up(n_profile, 0:n_layer)
-real(RealK), intent(out), optional :: flux_up_1d(0:n_layer)
-!   Upwards flux (Wm-2)
-real(RealK), intent(out), optional :: heating_rate(n_profile, n_layer)
-real(RealK), intent(out), optional :: heating_rate_1d(n_layer)
-!   Heating rate (Ks-1)
-real(RealK), intent(out), optional :: flux_up_tile(:, :) ! (n_profile, n_tile)
-real(RealK), intent(out), optional :: flux_up_tile_1d(:) ! (n_tile)
-!   Upwards flux on tiles (Wm-2)
-real(RealK), intent(out), optional :: flux_up_blue_tile(:, :)
-real(RealK), intent(out), optional :: flux_up_blue_tile_1d(:)
-!   Upwards blue flux on tiles (Wm-2)
-real(RealK), intent(out), optional :: flux_direct_blue_surf(n_profile)
-!   Direct blue flux at the surface
-real(RealK), intent(out), optional :: flux_down_blue_surf(n_profile)
-!   Total downward blue flux at the surface
-real(RealK), intent(out), optional :: total_cloud_cover(n_profile)
-!   Total cloud cover
-real(RealK), intent(out), optional :: total_cloud_fraction(n_profile, n_layer)
-real(RealK), intent(out), optional :: total_cloud_fraction_1d(n_layer)
-!   Total cloud fraction in layers
-real(RealK), intent(out), dimension(n_profile, n_layer), optional :: &
-  liq_frac_diag, ice_frac_diag, &
-  liq_conv_frac_diag, ice_conv_frac_diag, &
-  liq_incloud_mmr_diag, ice_incloud_mmr_diag, &
-  liq_inconv_mmr_diag, ice_inconv_mmr_diag, &
-  liq_dim_diag, ice_dim_diag, &
-  liq_conv_dim_diag, ice_conv_dim_diag
-real(RealK), intent(out), dimension(n_layer), optional :: &
-  liq_frac_diag_1d, ice_frac_diag_1d, &
-  liq_conv_frac_diag_1d, ice_conv_frac_diag_1d, &
-  liq_incloud_mmr_diag_1d, ice_incloud_mmr_diag_1d, &
-  liq_inconv_mmr_diag_1d, ice_inconv_mmr_diag_1d, &
-  liq_dim_diag_1d, ice_dim_diag_1d, &
-  liq_conv_dim_diag_1d, ice_conv_dim_diag_1d
-!   Liquid and ice cloud fractions, in-cloud mean mixing ratios,
-!   and effective dimension diagnostics
-
-
-integer :: l, i, k
+integer :: l, k
+integer, target :: i, ii
+integer, pointer :: i_p
 !   Loop variables
-logical :: l_inv
-!   Local logical for field inversion
 real(RealK) :: flux_divergence(n_profile, n_layer)
 !   Flux divergence across layer (Wm-2)
 
@@ -153,74 +95,43 @@ character (len=*), parameter :: RoutineName = 'SET_DIAG'
 
 
 if (present(l_invert)) then
-  l_inv = l_invert
+  if (l_invert) then
+    ! The layer is indexed using an inverted loop counter
+    i_p => ii
+  else
+    ! The layer is indexed in the standard order
+    i_p => i
+  end if
 else
-  l_inv = .false.
+  i_p => i
 end if
 
 
 !------------------------------------------------------------------------------
 ! Heating rates
 !------------------------------------------------------------------------------
-if (present(heating_rate).or.present(heating_rate_1d)) then
-  if (l_inv) then
+if (associated(diag%heating_rate)) then
+  do i=1, n_layer
+    ii = n_layer-i+1
+    do l=1, n_profile
+      flux_divergence(l, i_p) = &
+        sum(radout%flux_down(l, i-1, 1:control%n_channel)) - &
+        sum(radout%flux_down(l, i,   1:control%n_channel)) + &
+        sum(radout%flux_up(  l, i,   1:control%n_channel)) - &
+        sum(radout%flux_up(  l, i-1, 1:control%n_channel))
+    end do
+  end do
+  if (present(layer_heat_capacity)) then
+    diag%heating_rate(1:n_profile, 1:n_layer) = &
+      flux_divergence / layer_heat_capacity
+  else if (present(layer_heat_capacity_1d)) then
     do i=1, n_layer
-      do l=1, n_profile
-        flux_divergence(l, n_layer-i+1) = &
-          sum(radout%flux_down(l, i-1, 1:control%n_channel)) - &
-          sum(radout%flux_down(l, i,   1:control%n_channel)) + &
-          sum(radout%flux_up(  l, i,   1:control%n_channel)) - &
-          sum(radout%flux_up(  l, i-1, 1:control%n_channel))
-      end do
+      diag%heating_rate(1:n_profile, i) = &
+        flux_divergence(1:n_profile, i) / layer_heat_capacity_1d(i)
     end do
   else
-    do i=1, n_layer
-      do l=1, n_profile
-        flux_divergence(l, i) = &
-          sum(radout%flux_down(l, i-1, 1:control%n_channel)) - &
-          sum(radout%flux_down(l, i,   1:control%n_channel)) + &
-          sum(radout%flux_up(  l, i,   1:control%n_channel)) - &
-          sum(radout%flux_up(  l, i-1, 1:control%n_channel))
-      end do
-    end do
-  end if
-  if (present(heating_rate)) then
-    if (present(layer_heat_capacity)) then
-      heating_rate = flux_divergence / layer_heat_capacity
-    else if (present(layer_heat_capacity_1d)) then
-      do i=1, n_layer
-        heating_rate(1:n_profile, i) = &
-          flux_divergence(1:n_profile, i) / layer_heat_capacity_1d(i)
-      end do
-    else
-      ! Just return the flux_divergence if no heat capacity supplied
-      heating_rate = flux_divergence
-    end if
-  end if
-  if (present(heating_rate_1d)) then
-    if (n_profile == 1) then
-      if (present(layer_heat_capacity)) then
-        heating_rate_1d(1:n_layer) = &
-          flux_divergence(1, 1:n_layer) / layer_heat_capacity(1, 1:n_layer)
-      else if (present(layer_heat_capacity_1d)) then
-        heating_rate_1d(1:n_layer) = &
-          flux_divergence(1, 1:n_layer) / layer_heat_capacity_1d(1:n_layer)
-      else
-        heating_rate_1d(1:n_layer) = flux_divergence(1, 1:n_layer)
-      end if
-    else
-      if (present(layer_heat_capacity)) then
-        heating_rate_1d = &
-          sum(flux_divergence / layer_heat_capacity, 1) &
-          / real(n_profile, RealK)
-      else if (present(layer_heat_capacity_1d)) then
-        heating_rate_1d = &
-          (sum(flux_divergence, 1) / layer_heat_capacity_1d) &
-          / real(n_profile, RealK)
-      else
-        heating_rate_1d = sum(flux_divergence, 1) / real(n_profile, RealK)
-      end if
-    end if
+    ! Just return the flux_divergence if no heat capacity supplied
+    diag%heating_rate(1:n_profile, 1:n_layer) = flux_divergence
   end if
 end if
 
@@ -228,176 +139,188 @@ end if
 !------------------------------------------------------------------------------
 ! Fluxes
 !------------------------------------------------------------------------------
-call sum_flux_channels(flux_direct, flux_direct_1d, radout%flux_direct)
-call sum_flux_channels(flux_down, flux_down_1d, radout%flux_down)
-call sum_flux_channels(flux_up, flux_up_1d, radout%flux_up)
-call sum_tile_channels(flux_up_tile, flux_up_tile_1d, radout%flux_up_tile)
-call sum_tile_channels(flux_up_blue_tile, flux_up_blue_tile_1d, &
-                       radout%flux_up_blue_tile)
-if (present(flux_direct_blue_surf)) &
-  flux_direct_blue_surf = radout%flux_direct_blue_surf(1:n_profile)
-if (present(flux_down_blue_surf)) &
-  flux_down_blue_surf = radout%flux_down_blue_surf(1:n_profile)
+if (associated(diag%flux_direct)) then
+  do i=0, n_layer
+    ii = n_layer-i
+    do l=1, n_profile
+      diag%flux_direct(l, i_p) &
+        = sum(radout%flux_direct(l, i, 1:control%n_channel))
+    end do
+  end do
+end if
+if (associated(diag%flux_down)) then
+  do i=0, n_layer
+    ii = n_layer-i
+    do l=1, n_profile
+      diag%flux_down(l, i_p) &
+        = sum(radout%flux_down(l, i, 1:control%n_channel))
+    end do
+  end do
+end if
+if (associated(diag%flux_up)) then
+  do i=0, n_layer
+    ii = n_layer-i
+    do l=1, n_profile
+      diag%flux_up(l, i_p) &
+        = sum(radout%flux_up(l, i, 1:control%n_channel))
+    end do
+  end do
+end if
+
+call sum_tile_channels(diag%flux_up_tile, radout%flux_up_tile)
+call sum_tile_channels(diag%flux_up_blue_tile, radout%flux_up_blue_tile)
+if (associated(diag%flux_direct_blue_surf)) &
+  diag%flux_direct_blue_surf(1:n_profile) &
+    = radout%flux_direct_blue_surf(1:n_profile)
+if (associated(diag%flux_down_blue_surf)) &
+  diag%flux_down_blue_surf(1:n_profile) &
+    = radout%flux_down_blue_surf(1:n_profile)
 
 
 !------------------------------------------------------------------------------
 ! Cloud diagnostics
 !------------------------------------------------------------------------------
-if (present(total_cloud_cover)) then
+if (associated(diag%total_cloud_cover)) then
   if (control%i_cloud_representation == ip_cloud_off) then
-    total_cloud_cover = 0.0_RealK
+    diag%total_cloud_cover(1:n_profile) = 0.0_RealK
   else
     if (control%i_inhom == ip_mcica) then
-      total_cloud_cover = real(cld%n_subcol_cld(1:n_profile), RealK) &
-                        / real(mcica_data%n_subcol_gen, RealK)
+      diag%total_cloud_cover(1:n_profile) &
+        = real(cld%n_subcol_cld(1:n_profile), RealK) &
+        / real(mcica_data%n_subcol_gen, RealK)
     else
-      total_cloud_cover = radout%tot_cloud_cover(1:n_profile)
+      diag%total_cloud_cover(1:n_profile) = radout%tot_cloud_cover(1:n_profile)
     end if
   end if
 end if
 
-call set_cloud_diag(total_cloud_fraction, total_cloud_fraction_1d, cld%w_cloud)
+if (associated(diag%total_cloud_fraction)) then
+  if (control%i_cloud_representation == ip_cloud_off) then
+    diag%total_cloud_fraction(1:n_profile, 1:n_layer) = 0.0_RealK
+  else
+    do i=1, dimen%id_cloud_top-1
+      ii = n_layer+1-i
+      do l=1, n_profile
+        diag%total_cloud_fraction(l, i_p) = 0.0_RealK
+      end do
+    end do
+    do i=dimen%id_cloud_top, n_layer
+      ii = n_layer+1-i
+      do l=1, n_profile
+        diag%total_cloud_fraction(l, i_p) = cld%w_cloud(l, i)
+      end do
+    end do
+  end if
+end if
 
 ! Cloud component diagnostics
-! Initially zero each diagnostic
-if (present(liq_dim_diag))         liq_dim_diag         = 0.0_RealK
-if (present(liq_incloud_mmr_diag)) liq_incloud_mmr_diag = 0.0_RealK
-if (present(liq_frac_diag))        liq_frac_diag        = 0.0_RealK
-if (present(ice_dim_diag))         ice_dim_diag         = 0.0_RealK
-if (present(ice_incloud_mmr_diag)) ice_incloud_mmr_diag = 0.0_RealK
-if (present(ice_frac_diag))        ice_frac_diag        = 0.0_RealK
-if (present(liq_conv_dim_diag))    liq_conv_dim_diag    = 0.0_RealK
-if (present(liq_inconv_mmr_diag))  liq_inconv_mmr_diag  = 0.0_RealK
-if (present(liq_conv_frac_diag))   liq_conv_frac_diag   = 0.0_RealK
-if (present(ice_conv_dim_diag))    ice_conv_dim_diag    = 0.0_RealK
-if (present(ice_inconv_mmr_diag))  ice_inconv_mmr_diag  = 0.0_RealK
-if (present(ice_conv_frac_diag))   ice_conv_frac_diag   = 0.0_RealK
-
-if (present(liq_dim_diag_1d))         liq_dim_diag_1d         = 0.0_RealK
-if (present(liq_incloud_mmr_diag_1d)) liq_incloud_mmr_diag_1d = 0.0_RealK
-if (present(liq_frac_diag_1d))        liq_frac_diag_1d        = 0.0_RealK
-if (present(ice_dim_diag_1d))         ice_dim_diag_1d         = 0.0_RealK
-if (present(ice_incloud_mmr_diag_1d)) ice_incloud_mmr_diag_1d = 0.0_RealK
-if (present(ice_frac_diag_1d))        ice_frac_diag_1d        = 0.0_RealK
-if (present(liq_conv_dim_diag_1d))    liq_conv_dim_diag_1d    = 0.0_RealK
-if (present(liq_inconv_mmr_diag_1d))  liq_inconv_mmr_diag_1d  = 0.0_RealK
-if (present(liq_conv_frac_diag_1d))   liq_conv_frac_diag_1d   = 0.0_RealK
-if (present(ice_conv_dim_diag_1d))    ice_conv_dim_diag_1d    = 0.0_RealK
-if (present(ice_inconv_mmr_diag_1d))  ice_inconv_mmr_diag_1d  = 0.0_RealK
-if (present(ice_conv_frac_diag_1d))   ice_conv_frac_diag_1d   = 0.0_RealK
-
-! Update diagnostics where components are present
-if (control%i_cloud_representation /= ip_cloud_off) then
+if (control%i_cloud_representation == ip_cloud_off) then
+  if (associated(diag%liq_dim))         diag%liq_dim         = 0.0_RealK
+  if (associated(diag%liq_incloud_mmr)) diag%liq_incloud_mmr = 0.0_RealK
+  if (associated(diag%liq_frac))        diag%liq_frac        = 0.0_RealK
+  if (associated(diag%ice_dim))         diag%ice_dim         = 0.0_RealK
+  if (associated(diag%ice_incloud_mmr)) diag%ice_incloud_mmr = 0.0_RealK
+  if (associated(diag%ice_frac))        diag%ice_frac        = 0.0_RealK
+  if (associated(diag%liq_conv_dim))    diag%liq_conv_dim    = 0.0_RealK
+  if (associated(diag%liq_inconv_mmr))  diag%liq_inconv_mmr  = 0.0_RealK
+  if (associated(diag%liq_conv_frac))   diag%liq_conv_frac   = 0.0_RealK
+  if (associated(diag%ice_conv_dim))    diag%ice_conv_dim    = 0.0_RealK
+  if (associated(diag%ice_inconv_mmr))  diag%ice_inconv_mmr  = 0.0_RealK
+  if (associated(diag%ice_conv_frac))   diag%ice_conv_frac   = 0.0_RealK
+else
   do k=1, cld%n_condensed
     select case (cld%type_condensed(k))
     case (ip_clcmp_st_water)
-      call set_cloud_diag(liq_dim_diag, liq_dim_diag_1d, &
-                          cld%condensed_dim_char(:, :, k))
-      call set_cloud_diag(liq_incloud_mmr_diag, liq_incloud_mmr_diag_1d, &
-                          cld%condensed_mix_ratio(:, :, k))
-      call set_cloud_diag(liq_frac_diag, liq_frac_diag_1d, &
-                          cld%w_cloud*cld%frac_cloud(:, :, cld%i_cloud_type(k)))
+      call set_cloud_dim(diag%liq_dim)
+      call set_cloud_mmr(diag%liq_incloud_mmr)
+      call set_cloud_frac(diag%liq_frac)
     case (ip_clcmp_st_ice)
-      call set_cloud_diag(ice_dim_diag, ice_dim_diag_1d, &
-                          cld%condensed_dim_char(:, :, k))
-      call set_cloud_diag(ice_incloud_mmr_diag, ice_incloud_mmr_diag_1d, &
-                          cld%condensed_mix_ratio(:, :, k))
-      call set_cloud_diag(ice_frac_diag, ice_frac_diag_1d, &
-                          cld%w_cloud*cld%frac_cloud(:, :, cld%i_cloud_type(k)))
+      call set_cloud_dim(diag%ice_dim)
+      call set_cloud_mmr(diag%ice_incloud_mmr)
+      call set_cloud_frac(diag%ice_frac)
     case (ip_clcmp_cnv_water)
-      call set_cloud_diag(liq_conv_dim_diag, liq_conv_dim_diag_1d, &
-                          cld%condensed_dim_char(:, :, k))
-      call set_cloud_diag(liq_inconv_mmr_diag, liq_inconv_mmr_diag_1d, &
-                          cld%condensed_mix_ratio(:, :, k))
-      call set_cloud_diag(liq_conv_frac_diag, liq_conv_frac_diag_1d, &
-                          cld%w_cloud*cld%frac_cloud(:, :, cld%i_cloud_type(k)))
+      call set_cloud_dim(diag%liq_conv_dim)
+      call set_cloud_mmr(diag%liq_inconv_mmr)
+      call set_cloud_frac(diag%liq_conv_frac)
     case (ip_clcmp_cnv_ice)
-      call set_cloud_diag(ice_conv_dim_diag, ice_conv_dim_diag_1d, &
-                          cld%condensed_dim_char(:, :, k))
-      call set_cloud_diag(ice_inconv_mmr_diag, ice_inconv_mmr_diag_1d, &
-                          cld%condensed_mix_ratio(:, :, k))
-      call set_cloud_diag(ice_conv_frac_diag, ice_conv_frac_diag_1d, &
-                          cld%w_cloud*cld%frac_cloud(:, :, cld%i_cloud_type(k)))
+      call set_cloud_dim(diag%ice_conv_dim)
+      call set_cloud_mmr(diag%ice_inconv_mmr)
+      call set_cloud_frac(diag%ice_conv_frac)
     end select
   end do
 end if
 
+
+!------------------------------------------------------------------------------
+! Aerosol diagnostics
+!------------------------------------------------------------------------------
+if (associated(diag%aerosol_optical_depth)) then
+  if (control%l_aerosol_absorption_band .and. &
+      control%l_aerosol_scattering_band) then
+    do k=max(lbound(diag%aerosol_optical_depth,3), 1), &
+         min(ubound(diag%aerosol_optical_depth,3), spectrum%basic%n_band)
+      do i=max(lbound(diag%aerosol_optical_depth,2), 1), &
+           min(ubound(diag%aerosol_optical_depth,2), n_layer)
+        ii = n_layer+1-i
+        do l=max(lbound(diag%aerosol_optical_depth,1), 1), &
+             min(ubound(diag%aerosol_optical_depth,1), n_profile)
+          diag%aerosol_optical_depth(l, i, k) &
+            = (radout%aerosol_absorption_band(l, i_p, k) &
+             + radout%aerosol_scattering_band(l, i_p, k)) * atm%mass(l, i_p)
+        end do
+      end do
+    end do
+  end if
+end if
+if (associated(diag%aerosol_scat_optical_depth)) then
+  if (control%l_aerosol_scattering_band) then
+    do k=max(lbound(diag%aerosol_scat_optical_depth,3), 1), &
+         min(ubound(diag%aerosol_scat_optical_depth,3), spectrum%basic%n_band)
+      do i=max(lbound(diag%aerosol_scat_optical_depth,2), 1), &
+           min(ubound(diag%aerosol_scat_optical_depth,2), n_layer)
+        ii = n_layer+1-i
+        do l=max(lbound(diag%aerosol_scat_optical_depth,1), 1), &
+             min(ubound(diag%aerosol_scat_optical_depth,1), n_profile)
+          diag%aerosol_scat_optical_depth(l, i, k) &
+            = radout%aerosol_scattering_band(l, i_p, k) * atm%mass(l, i_p)
+        end do
+      end do
+    end do
+  end if
+end if
+if (associated(diag%aerosol_asymmetry_scat)) then
+  if (control%l_aerosol_asymmetry_band) then
+    do k=max(lbound(diag%aerosol_asymmetry_scat,3), 1), &
+         min(ubound(diag%aerosol_asymmetry_scat,3), spectrum%basic%n_band)
+      do i=max(lbound(diag%aerosol_asymmetry_scat,2), 1), &
+           min(ubound(diag%aerosol_asymmetry_scat,2), n_layer)
+        ii = n_layer+1-i
+        do l=max(lbound(diag%aerosol_asymmetry_scat,1), 1), &
+             min(ubound(diag%aerosol_asymmetry_scat,1), n_profile)
+          diag%aerosol_asymmetry_scat(l, i, k) &
+            = radout%aerosol_asymmetry_band(l, i_p, k) * atm%mass(l, i_p)
+        end do
+      end do
+    end do
+  end if
+end if
+
+
+!------------------------------------------------------------------------------
 contains
-
-
 !------------------------------------------------------------------------------
-subroutine sum_flux_channels(field, field_1d, field_channels)
+subroutine sum_tile_channels(field, field_channels)
   
   implicit none
   
-  real(RealK), intent(out), optional :: field(n_profile, 0:n_layer)
-  real(RealK), intent(out), optional :: field_1d(0:n_layer)
-  real(RealK), intent(in) :: field_channels(:, 0:, :)
-  
-  if (present(field)) then
-    if (l_inv) then
-      do i=0, n_layer
-        do l=1, n_profile
-          field(l, n_layer-i) = &
-            sum(field_channels(l, i, 1:control%n_channel))
-        end do
-      end do
-    else
-      do i=0, n_layer
-        do l=1, n_profile
-          field(l, i) = &
-            sum(field_channels(l, i, 1:control%n_channel))
-        end do
-      end do
-    end if
-  end if
-  if (present(field_1d)) then
-    if (n_profile == 1) then
-      if (l_inv) then
-        do i=0, n_layer
-          field_1d(n_layer-i) = &
-            sum(field_channels(1, i, 1:control%n_channel))
-        end do
-      else
-        do i=0, n_layer
-          field_1d(i) = &
-            sum(field_channels(1, i, 1:control%n_channel))
-        end do
-      end if
-    else
-      if (l_inv) then
-        do i=0, n_layer
-          field_1d(n_layer-i) = &
-            sum(field_channels(1:n_profile, i, 1:control%n_channel)) &
-            / real(n_profile, RealK)
-        end do
-      else
-        do i=0, n_layer
-          field_1d(i) = &
-            sum(field_channels(1:n_profile, i, 1:control%n_channel)) &
-            / real(n_profile, RealK)
-        end do
-      end if
-    end if
-  end if
-  
-end subroutine sum_flux_channels
-  
-  
-!------------------------------------------------------------------------------
-subroutine sum_tile_channels(field, field_1d, field_channels)
-  
-  implicit none
-  
-  real(RealK), intent(out), optional :: field(:, :)
-  real(RealK), intent(out), optional :: field_1d(:)
-  real(RealK), intent(in) :: field_channels(:, :, :)
+  real(RealK), intent(inout), pointer :: field(:, :)
+  real(RealK), intent(in), allocatable :: field_channels(:, :, :)
   
   integer :: ll
   
-  if (present(field)) then
-    field(:, :) = 0.0_RealK
-    if (present(n_tile).and.control%l_tile) then
+  if (associated(field).and.present(n_tile)) then
+    field = 0.0_RealK
+    if (control%l_tile) then
       do i=1, n_tile
         do ll=1, bound%n_point_tile
           l = bound%list_tile(ll)
@@ -406,101 +329,114 @@ subroutine sum_tile_channels(field, field_1d, field_channels)
       end do
     end if
   end if
-  if (present(field_1d)) then
-    field_1d(:) = 0.0_RealK
-    if (present(n_tile).and.control%l_tile) then
-      if (bound%n_point_tile == 1) then
-        do i=1, n_tile
-          field_1d(i) = sum(field_channels(1, i, 1:control%n_channel))
-        end do
-      else if (bound%n_point_tile > 1) then
-        do i=1, n_tile
-          field_1d(i) = &
-            sum(field_channels(1:bound%n_point_tile, i, 1:control%n_channel)) &
-            / real(bound%n_point_tile, RealK)
-        end do
-      end if
-    end if
-  end if
   
 end subroutine sum_tile_channels
 
 
 !------------------------------------------------------------------------------
-subroutine set_cloud_diag(field, field_1d, cld_field)
+subroutine set_cloud_dim(field)
 
   implicit none
 
-  real(RealK), intent(out), optional :: field(:, :)
-  real(RealK), intent(out), optional :: field_1d(:)
-  real(RealK), intent(in) :: cld_field(:, dimen%id_cloud_top:)
+  real(RealK), intent(inout), pointer :: field(:, :)
+  integer :: i_lower, i_upper
 
-  if (present(field)) then
-    if (control%i_cloud_representation == ip_cloud_off) then
-      field = 0.0_RealK
+  if (associated(field)) then
+    if (associated(i_p, ii)) then
+      ! Field output is inverted
+      i_lower = n_layer + 1 - ubound(field, 2)
+      i_upper = n_layer + 1 - lbound(field, 2)
     else
-      if (l_inv) then
-        do i=1, dimen%id_cloud_top-1
-          do l=1, n_profile
-            field(l, n_layer+1-i) = 0.0_RealK
-          end do
-        end do
-        do i=dimen%id_cloud_top, n_layer
-          do l=1, n_profile
-            field(l, n_layer+1-i) = cld_field(l, i)
-          end do
-        end do
-      else
-        do i=1, dimen%id_cloud_top-1
-          do l=1, n_profile
-            field(l, i) = 0.0_RealK
-          end do
-        end do
-        do i=dimen%id_cloud_top, n_layer
-          do l=1, n_profile
-            field(l, i) = cld_field(l, i)
-          end do
-        end do
-      end if
+      i_lower = lbound(field, 2)
+      i_upper = ubound(field, 2)
     end if
-  end if
-  if (present(field_1d)) then
-    if (control%i_cloud_representation == ip_cloud_off) then
-      field_1d = 0.0_RealK
-    else
-      if (l_inv) then
-        do i=1, dimen%id_cloud_top-1
-          field_1d(n_layer+1-i) = 0.0_RealK
-        end do
-        if (n_profile == 1) then
-          do i=dimen%id_cloud_top, n_layer
-            field_1d(n_layer+1-i) = cld_field(1, i)
-          end do
-        else
-          do i=dimen%id_cloud_top, n_layer
-            field_1d(n_layer+1-i) = sum(cld_field(1:n_profile, i)) &
-                                  / real(n_profile, RealK)
-          end do
-        end if
-      else
-        do i=1, dimen%id_cloud_top-1
-          field_1d(i) = 0.0_RealK
-        end do
-        if (n_profile == 1) then
-          do i=dimen%id_cloud_top, n_layer
-            field_1d(i) = cld_field(1, i)
-          end do
-        else
-          do i=dimen%id_cloud_top, n_layer
-            field_1d(i) = sum(cld_field(1:n_profile, i)) &
-                        / real(n_profile, RealK)
-          end do
-        end if
-      end if
-    end if
+    ! Fill diagnostic between requested layers
+    do i=max(i_lower, 1), min(i_upper, dimen%id_cloud_top-1)
+      ii = n_layer+1-i
+      do l=1, n_profile
+        field(l, i_p) = 0.0_RealK
+      end do
+    end do
+    do i=max(i_lower, dimen%id_cloud_top), min(i_upper, n_layer)
+      ii = n_layer+1-i
+      do l=1, n_profile
+        field(l, i_p) = cld%condensed_dim_char(l, i, k)
+      end do
+    end do
   end if
 
-end subroutine set_cloud_diag
+end subroutine set_cloud_dim
+
+
+!------------------------------------------------------------------------------
+subroutine set_cloud_mmr(field)
+
+  implicit none
+
+  real(RealK), intent(inout), pointer :: field(:, :)
+  integer :: i_lower, i_upper
+
+  if (associated(field)) then
+    if (associated(i_p, ii)) then
+      ! Field output is inverted
+      i_lower = n_layer + 1 - ubound(field, 2)
+      i_upper = n_layer + 1 - lbound(field, 2)
+    else
+      i_lower = lbound(field, 2)
+      i_upper = ubound(field, 2)
+    end if
+    ! Fill diagnostic between requested layers
+    do i=max(i_lower, 1), min(i_upper, dimen%id_cloud_top-1)
+      ii = n_layer+1-i
+      do l=1, n_profile
+        field(l, i_p) = 0.0_RealK
+      end do
+    end do
+    do i=max(i_lower, dimen%id_cloud_top), min(i_upper, n_layer)
+      ii = n_layer+1-i
+      do l=1, n_profile
+        field(l, i_p) = cld%condensed_mix_ratio(l, i, k)
+      end do
+    end do
+  end if
+
+end subroutine set_cloud_mmr
+
+
+!------------------------------------------------------------------------------
+subroutine set_cloud_frac(field)
+
+  implicit none
+
+  real(RealK), intent(inout), pointer :: field(:, :)
+  integer :: i_lower, i_upper
+
+  if (associated(field)) then
+    if (associated(i_p, ii)) then
+      ! Field output is inverted
+      i_lower = n_layer + 1 - ubound(field, 2)
+      i_upper = n_layer + 1 - lbound(field, 2)
+    else
+      i_lower = lbound(field, 2)
+      i_upper = ubound(field, 2)
+    end if
+    ! Fill diagnostic between requested layers
+    do i=max(i_lower, 1), min(i_upper, dimen%id_cloud_top-1)
+      ii = n_layer+1-i
+      do l=1, n_profile
+        field(l, i_p) = 0.0_RealK
+      end do
+    end do
+    do i=max(i_lower, dimen%id_cloud_top), min(i_upper, n_layer)
+      ii = n_layer+1-i
+      do l=1, n_profile
+        field(l, i_p) = cld%w_cloud(l, i) * &
+          cld%frac_cloud(l, i, cld%i_cloud_type(k))
+      end do
+    end do
+  end if
+
+end subroutine set_cloud_frac
 
 end subroutine set_diag
 end module socrates_set_diag

@@ -32,7 +32,6 @@ subroutine set_spectrum(n_instances, spectrum, spectrum_name, spectral_file, &
   l_tio, l_vo, l_h2, l_he, l_na, l_k, l_li, l_rb, l_cs, l_all_gases, &
   wavelength_blue)
 
-use filenamelength_mod, only: filenamelength
 use errormessagelength_mod, only: errormessagelength
 use ereport_mod, only: ereport
 use rad_pcf, only: i_normal, i_err_fatal
@@ -50,7 +49,7 @@ integer, intent(in), optional :: n_instances
 ! Spectral data:
 type(StrSpecData), intent(inout), target, optional :: spectrum
 character(len=*), intent(in), optional :: spectrum_name
-character(len=filenamelength), intent(in), optional :: spectral_file
+character(len=*), intent(in), optional :: spectral_file
 
 logical, intent(in), optional :: &
   l_h2o, l_co2, l_o3, l_o2, l_n2o, l_ch4, l_so2, l_cfc11, l_cfc12, &

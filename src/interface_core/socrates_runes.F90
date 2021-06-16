@@ -27,11 +27,14 @@ use rad_pcf, only: &
   ip_droplet_re_liu                         => ip_re_liu, &
   ip_droplet_re_default                     => ip_re_default
 
+use socrates_def_diag, only: StrDiag
+
 implicit none
 character(len=*), parameter, private :: ModuleName = 'SOCRATES_RUNES'
 contains
 
-subroutine runes(n_profile, n_layer, spectrum, spectrum_name, mcica_data, &
+subroutine runes(n_profile, n_layer, diag, &
+  spectrum, spectrum_name, mcica_data, &
   n_cloud_layer, n_aer_mode, n_aer_layer, n_tile, &
   p_layer, t_layer, t_level, mass, density, &
   h2o, o3, &
@@ -98,24 +101,7 @@ subroutine runes(n_profile, n_layer, spectrum, spectrum_name, mcica_data, &
   l_nitrate, nitrate, nitrate_1d, &
   l_twobindust_1, twobindust_1, twobindust_1_1d, &
   l_twobindust_2, twobindust_2, twobindust_2_1d, &
-  l_invert, l_debug, i_profile_debug, &
-  flux_direct, flux_down, flux_up, heating_rate, &
-  flux_up_tile, flux_up_blue_tile, flux_direct_blue_surf, flux_down_blue_surf, &
-  flux_direct_1d, flux_down_1d, flux_up_1d, heating_rate_1d, &
-  flux_up_tile_1d, flux_up_blue_tile_1d, &
-  total_cloud_cover, total_cloud_fraction, total_cloud_fraction_1d, &
-  liq_frac_diag, ice_frac_diag, &
-  liq_conv_frac_diag, ice_conv_frac_diag, &
-  liq_incloud_mmr_diag, ice_incloud_mmr_diag, &
-  liq_inconv_mmr_diag, ice_inconv_mmr_diag, &
-  liq_dim_diag, ice_dim_diag, &
-  liq_conv_dim_diag, ice_conv_dim_diag, &
-  liq_frac_diag_1d, ice_frac_diag_1d, &
-  liq_conv_frac_diag_1d, ice_conv_frac_diag_1d, &
-  liq_incloud_mmr_diag_1d, ice_incloud_mmr_diag_1d, &
-  liq_inconv_mmr_diag_1d, ice_inconv_mmr_diag_1d, &
-  liq_dim_diag_1d, ice_dim_diag_1d, &
-  liq_conv_dim_diag_1d, ice_conv_dim_diag_1d)
+  l_invert, l_debug, i_profile_debug)
 
 
 use def_spectrum, only: StrSpecData
@@ -143,11 +129,14 @@ use socrates_set_aer,       only: set_aer
 use socrates_set_diag,      only: set_diag
 
 use realtype_rd, only: RealK
-use ereport_mod,  only: ereport
+use ereport_mod, only: ereport
 use errormessagelength_mod, only: errormessagelength
 use rad_pcf, only: i_normal, i_err_fatal
 
 implicit none
+
+! Output diagnostic fields
+type(StrDiag), intent(inout) :: diag
 
 ! Spectral data:
 type (StrSpecData), intent(in), target, optional :: spectrum
@@ -360,51 +349,6 @@ integer, intent(in), optional :: i_profile_debug
 !   Options for outputting debugging information
 
 
-! Output fields:
-real(RealK), intent(out), optional :: flux_direct(n_profile, 0:n_layer)
-real(RealK), intent(out), optional :: flux_direct_1d(0:n_layer)
-!   Direct (unscattered) downwards flux (Wm-2)
-real(RealK), intent(out), optional :: flux_down(n_profile, 0:n_layer)
-real(RealK), intent(out), optional :: flux_down_1d(0:n_layer)
-!   Downwards flux (Wm-2)
-real(RealK), intent(out), optional :: flux_up(n_profile, 0:n_layer)
-real(RealK), intent(out), optional :: flux_up_1d(0:n_layer)
-!   Upwards flux (Wm-2)
-real(RealK), intent(out), optional :: heating_rate(n_profile, n_layer)
-real(RealK), intent(out), optional :: heating_rate_1d(n_layer)
-!   Heating rate (Ks-1)
-real(RealK), intent(out), optional :: flux_up_tile(:, :) ! (n_profile, n_tile)
-real(RealK), intent(out), optional :: flux_up_tile_1d(:) ! (n_tile)
-!   Upwards flux on tiles (Wm-2)
-real(RealK), intent(out), optional :: flux_up_blue_tile(:, :)
-real(RealK), intent(out), optional :: flux_up_blue_tile_1d(:)
-!   Upwards blue flux on tiles (Wm-2)
-real(RealK), intent(out), optional :: flux_direct_blue_surf(n_profile)
-!   Direct blue flux at the surface
-real(RealK), intent(out), optional :: flux_down_blue_surf(n_profile)
-!   Total downward blue flux at the surface
-real(RealK), intent(out), optional :: total_cloud_cover(n_profile)
-!   Total cloud cover
-real(RealK), intent(out), optional :: total_cloud_fraction(n_profile, n_layer)
-real(RealK), intent(out), optional :: total_cloud_fraction_1d(n_layer)
-!   Total cloud fraction in layers
-real(RealK), intent(out), dimension(n_profile, n_layer), optional :: &
-  liq_frac_diag, ice_frac_diag, &
-  liq_conv_frac_diag, ice_conv_frac_diag, &
-  liq_incloud_mmr_diag, ice_incloud_mmr_diag, &
-  liq_inconv_mmr_diag, ice_inconv_mmr_diag, &
-  liq_dim_diag, ice_dim_diag, &
-  liq_conv_dim_diag, ice_conv_dim_diag
-real(RealK), intent(out), dimension(n_layer), optional :: &
-  liq_frac_diag_1d, ice_frac_diag_1d, &
-  liq_conv_frac_diag_1d, ice_conv_frac_diag_1d, &
-  liq_incloud_mmr_diag_1d, ice_incloud_mmr_diag_1d, &
-  liq_inconv_mmr_diag_1d, ice_inconv_mmr_diag_1d, &
-  liq_dim_diag_1d, ice_dim_diag_1d, &
-  liq_conv_dim_diag_1d, ice_conv_dim_diag_1d
-!   Liquid and ice cloud fractions, in-cloud mean mixing ratios,
-!   and effective dimension diagnostics
-
 ! Spectral data:
 type(StrSpecData), pointer :: spec => null()
 
@@ -435,8 +379,6 @@ type(StrOut) :: radout
 
 integer :: id_spec, id_mcica
 !   Loop variables
-logical :: l_blue_flux_surf
-!   Output blue fluxes if requested
 
 integer :: ierr = i_normal
 character (len=errormessagelength) :: cmessage
@@ -453,39 +395,41 @@ if (present(spectrum_name)) then
     end if
   end do
   spec => spectrum_array(id_spec)
-  if ( (i_cloud_representation /= ip_cloud_representation_off) .and. &
-       (i_inhom == ip_inhom_mcica) ) then
-    if (allocated(mcica_data_array).and.allocated(mcica_spectrum_name)) then
-      do id_mcica=1, size(mcica_data_array)
-        if (mcica_spectrum_name(i_source, id_mcica) == spectrum_name) exit
-        if (id_mcica == size(mcica_data_array)) then
-          cmessage = 'Spectrum name not associated with MCICA data.'
-          ierr=i_err_fatal
-          call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
-        end if
-      end do
-      mcica => mcica_data_array(id_mcica)
-    else
-      cmessage = 'MCICA data has not been read in correctly.'
-      ierr=i_err_fatal
-      call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+  mcica => mcica_dummy
+  if (present(i_cloud_representation).and.present(i_inhom)) then
+    if ( (i_cloud_representation /= ip_cloud_representation_off) .and. &
+         (i_inhom == ip_inhom_mcica) ) then
+      if (allocated(mcica_data_array).and.allocated(mcica_spectrum_name)) then
+        do id_mcica=1, size(mcica_data_array)
+          if (mcica_spectrum_name(i_source, id_mcica) == spectrum_name) exit
+          if (id_mcica == size(mcica_data_array)) then
+            cmessage = 'Spectrum name not associated with MCICA data.'
+            ierr=i_err_fatal
+            call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+          end if
+        end do
+        mcica => mcica_data_array(id_mcica)
+      else
+        cmessage = 'MCICA data has not been read in correctly.'
+        ierr=i_err_fatal
+        call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+      end if
     end if
-  else
-    mcica => mcica_dummy
   end if
 else if (present(spectrum)) then
   spec => spectrum
-  if ( (i_cloud_representation /= ip_cloud_representation_off) .and. &
-       (i_inhom == ip_inhom_mcica) ) then
-    if (present(mcica_data)) then
-      mcica => mcica_data
-    else
-      cmessage = 'No mcica_data object has been passed to socrates_runes.'
-      ierr=i_err_fatal
-      call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+  mcica => mcica_dummy
+  if (present(i_cloud_representation).and.present(i_inhom)) then
+    if ( (i_cloud_representation /= ip_cloud_representation_off) .and. &
+         (i_inhom == ip_inhom_mcica) ) then
+      if (present(mcica_data)) then
+        mcica => mcica_data
+      else
+        cmessage = 'No mcica_data object has been passed to socrates_runes.'
+        ierr=i_err_fatal
+        call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+      end if
     end if
-  else
-    mcica => mcica_dummy
   end if
 else
   cmessage = 'No spectrum name or object supplied.'
@@ -493,22 +437,12 @@ else
   call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
 end if
 
-if (present(flux_up_blue_tile)     .or. &
-    present(flux_up_blue_tile_1d)  .or. &
-    present(flux_direct_blue_surf) .or. &
-    present(flux_down_blue_surf) ) then
-  l_blue_flux_surf = .true.
-else
-  l_blue_flux_surf = .false.
-end if
-
-call set_control(control, spec, &
+call set_control(control, diag, spec, &
   isolir                 = i_source, &
   l_rayleigh             = l_rayleigh, &
   l_mixing_ratio         = l_mixing_ratio, &
   l_aerosol_mode         = l_aerosol_mode, &
   l_tile                 = l_tile, &
-  l_blue_flux_surf       = l_blue_flux_surf, &
   n_tile                 = n_tile, &
   n_cloud_layer          = n_cloud_layer, &
   n_aer_mode             = n_aer_mode, &
@@ -678,53 +612,13 @@ call set_aer(aer, control, dimen, spec, &
 ! DEPENDS ON: radiance_calc
 call radiance_calc(control, dimen, spec, atm, cld, aer, bound, radout)
 
-call set_diag(control, dimen, spectrum, atm, cld, mcica, aer, bound, radout, &
+call set_diag(diag, &
+  control, dimen, spec, atm, cld, mcica, aer, bound, radout, &
   n_profile, n_layer, &
-  n_tile                  = n_tile, &
-  layer_heat_capacity     = layer_heat_capacity, &
-  layer_heat_capacity_1d  = layer_heat_capacity_1d, &
-  l_invert                = l_invert, &
-  flux_direct             = flux_direct, &
-  flux_down               = flux_down, &
-  flux_up                 = flux_up, &
-  heating_rate            = heating_rate, &
-  flux_up_tile            = flux_up_tile, &
-  flux_up_blue_tile       = flux_up_blue_tile, &
-  flux_direct_blue_surf   = flux_direct_blue_surf, &
-  flux_down_blue_surf     = flux_down_blue_surf, &
-  flux_direct_1d          = flux_direct_1d, &
-  flux_down_1d            = flux_down_1d, &
-  flux_up_1d              = flux_up_1d, &
-  heating_rate_1d         = heating_rate_1d, &
-  flux_up_tile_1d         = flux_up_tile_1d, &
-  flux_up_blue_tile_1d    = flux_up_blue_tile_1d, &
-  total_cloud_cover       = total_cloud_cover, &
-  total_cloud_fraction    = total_cloud_fraction, &
-  total_cloud_fraction_1d = total_cloud_fraction_1d, &
-  liq_frac_diag           = liq_frac_diag, &
-  ice_frac_diag           = ice_frac_diag, &
-  liq_conv_frac_diag      = liq_conv_frac_diag, &
-  ice_conv_frac_diag      = ice_conv_frac_diag, &
-  liq_incloud_mmr_diag    = liq_incloud_mmr_diag, &
-  ice_incloud_mmr_diag    = ice_incloud_mmr_diag, &
-  liq_inconv_mmr_diag     = liq_inconv_mmr_diag, &
-  ice_inconv_mmr_diag     = ice_inconv_mmr_diag, &
-  liq_dim_diag            = liq_dim_diag, &
-  ice_dim_diag            = ice_dim_diag, &
-  liq_conv_dim_diag       = liq_conv_dim_diag, &
-  ice_conv_dim_diag       = ice_conv_dim_diag, &
-  liq_frac_diag_1d        = liq_frac_diag_1d, &
-  ice_frac_diag_1d        = ice_frac_diag_1d, &
-  liq_conv_frac_diag_1d   = liq_conv_frac_diag_1d, &
-  ice_conv_frac_diag_1d   = ice_conv_frac_diag_1d, &
-  liq_incloud_mmr_diag_1d = liq_incloud_mmr_diag_1d, &
-  ice_incloud_mmr_diag_1d = ice_incloud_mmr_diag_1d, &
-  liq_inconv_mmr_diag_1d  = liq_inconv_mmr_diag_1d, &
-  ice_inconv_mmr_diag_1d  = ice_inconv_mmr_diag_1d, &
-  liq_dim_diag_1d         = liq_dim_diag_1d, &
-  ice_dim_diag_1d         = ice_dim_diag_1d, &
-  liq_conv_dim_diag_1d    = liq_conv_dim_diag_1d, &
-  ice_conv_dim_diag_1d    = ice_conv_dim_diag_1d )
+  n_tile                 = n_tile, &
+  layer_heat_capacity    = layer_heat_capacity, &
+  layer_heat_capacity_1d = layer_heat_capacity_1d, &
+  l_invert               = l_invert)
 
 call deallocate_out(radout)
 call deallocate_aer_prsc(aer)

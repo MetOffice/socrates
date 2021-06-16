@@ -4,8 +4,8 @@
 FORTCOMP        = ifort -O -c
 LINK            = ifort -O
 LIBLINK         = ar rvu
-INCCDF_PATH     = /data/users/lfric/modules/packages/intel/17.0.1/netcdf/4.4.1.1/include
-LIBCDF_PATH     = /data/users/lfric/modules/packages/intel/17.0.1/netcdf/4.4.1.1/lib
+INCCDF_PATH     = /data/users/lfric/modules/packages.rhel7/intel/17.0.1/netcdf/4.4.1.1/include
+LIBCDF_PATH     = /data/users/lfric/modules/packages.rhel7/intel/17.0.1/netcdf/4.4.1.1/lib
 LIBCDF_NAME     = netcdff
 OMPARG          = -qopenmp
 
