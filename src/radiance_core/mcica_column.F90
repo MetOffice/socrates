@@ -40,11 +40,11 @@ SUBROUTINE mcica_column(ierr                                            &
 !                   Cloud geometry
   , n_cloud_top, index_subcol                                           &
 !                   Calculated fluxes
-  , flux_direct, flux_total                                             &
+  , flux_direct, flux_total, l_actinic, actinic_flux                    &
 !                   Flags for clear-sky calculations
   , l_clear, i_solver_clear                                             &
 !                   Calculated clear-sky fluxes
-  , flux_direct_clear, flux_total_clear                                 &
+  , flux_direct_clear, flux_total_clear, actinic_flux_clear             &
 !                   Dimensions of arrays
   , nd_profile, nd_layer, nd_layer_clr, id_ct                           &
   , nd_max_order, nd_source_coeff                                       &
@@ -64,6 +64,7 @@ SUBROUTINE mcica_column(ierr                                            &
   USE ereport_mod, ONLY: ereport
 
   USE set_n_source_coeff_mod, ONLY: set_n_source_coeff
+  USE calc_actinic_flux_mod, ONLY: calc_actinic_flux
 
   IMPLICIT NONE
 
@@ -159,11 +160,16 @@ SUBROUTINE mcica_column(ierr                                            &
 !       Direct flux
   , flux_total(nd_profile, 2*nd_layer+2)                                &
 !       Long flux vector
+  , actinic_flux(nd_profile, nd_layer)                                  &
+!       Actinic flux
   , flux_direct_clear(nd_profile, 0: nd_layer)                          &
 !       Clear direct flux
-  , flux_total_clear(nd_profile, 2*nd_layer+2)
+  , flux_total_clear(nd_profile, 2*nd_layer+2)                          &
 !       Clear total flux
-
+  , actinic_flux_clear(nd_profile, nd_layer)
+!       Clear actinic flux
+  LOGICAL, INTENT(IN) :: l_actinic
+!       Actinic fluxes calculated
 
 
 ! Local variabales.
@@ -229,6 +235,11 @@ SUBROUTINE mcica_column(ierr                                            &
   , path_div_gathered(nd_profile, 1)
 !       Gathered path scaling for calculating direct flux divergence
 
+! Variables for actinic flux calculation
+  LOGICAL :: l_mask(nd_profile, nd_layer)
+!       Mask of cloudy points over all cloud types
+  REAL(RealK), ALLOCATABLE :: tau_abs(:, :)
+!       Temporary array for the optical depth due to absorption
 
   INTEGER :: path_base
 
@@ -287,6 +298,23 @@ SUBROUTINE mcica_column(ierr                                            &
     END DO
   END IF
 
+! Calculate the optical depth to absorption for the actinic flux
+  IF (l_actinic) THEN
+    ALLOCATE(tau_abs(nd_profile, nd_layer))
+    DO i=1, n_cloud_top-1
+      DO l=1, n_profile
+        tau_abs(l, i) = &
+          ss_prop%tau_clr(l, i) * ( 1.0_RealK - ss_prop%omega_clr(l, i) )
+      END DO
+    END DO
+    DO i=n_cloud_top, n_layer
+      DO l=1, n_profile
+        tau_abs(l, i) = &
+          ss_prop%tau(l, i, 0) * ( 1.0_RealK - ss_prop%omega(l, i, 0) )
+      END DO
+    END DO
+  END IF
+
 ! Calculate clear-sky fluxes before optical properties are overwritten
 ! for cloud points.
   IF (l_clear) THEN
@@ -311,6 +339,16 @@ SUBROUTINE mcica_column(ierr                                            &
     , l_scale_solar, adjust_solar_ke                                    &
     , flux_direct_clear, flux_total_clear                               &
     , nd_profile, nd_layer, nd_source_coeff)
+
+!   Calculate the clear-sky actinic flux
+    IF (l_actinic) THEN
+      CALL calc_actinic_flux(control, sph%clear, sph%common, &
+        n_profile, n_layer, tau_abs, &
+        flux_total_clear, flux_direct_clear, sec_0, &
+        l_scale_solar, adjust_solar_ke, &
+        actinic_flux_clear, &
+        nd_profile, nd_layer)
+    END IF
   END IF
 
 
@@ -320,6 +358,7 @@ SUBROUTINE mcica_column(ierr                                            &
 
 ! Zero points where cloud exists so they can be overwritten by the sum
 ! of the cloudy contributions (which already include clear-sky)
+  l_mask = .FALSE.
   IF (isolir == ip_solar) THEN
     DO k=1, cld%n_cloud_type
       DO i=n_cloud_top, n_layer
@@ -333,6 +372,10 @@ SUBROUTINE mcica_column(ierr                                            &
             reflect(l, i)=0.0_RealK
             trans_0(l, i)=0.0_RealK
             trans_0_dir(l, i)=0.0_RealK
+            IF (l_actinic) THEN
+              l_mask(l, i) = .TRUE.
+              tau_abs(l, i)=0.0_RealK
+            END IF
             DO j=1, n_source_coeff
               source_coeff(l, i, j)=0.0_RealK
             END DO
@@ -351,6 +394,10 @@ SUBROUTINE mcica_column(ierr                                            &
             l_list(n_list(i,k),i,k)=l
             trans(l, i)=0.0_RealK
             reflect(l, i)=0.0_RealK
+            IF (l_actinic) THEN
+              l_mask(l, i) = .TRUE.
+              tau_abs(l, i)=0.0_RealK
+            END IF
             DO j=1, n_source_coeff
               source_coeff(l, i, j)=0.0_RealK
             END DO
@@ -447,6 +494,17 @@ SUBROUTINE mcica_column(ierr                                            &
               END DO
             END IF
           END IF
+          IF (l_actinic) THEN
+            DO l=1, n_list(i,k)
+              ll=l_list(l,i,k)
+              ! Calculate effective optical depth to absorption by
+              ! assuming the flux divergence is distributed
+              ! proportional to 1-trans
+              tau_abs(ll, i) = tau_abs(ll,i) + cld%frac_cloud(ll, i, k) &
+                * (1.0_RealK - trans_temp(l, 1)) / ( tau_gathered(l, 1) &
+                * (1.0_RealK - omega_gathered(l, 1)) )
+            END DO
+          END IF
         ELSE IF ( (i_scatter_method == ip_no_scatter_abs) .OR.          &
                   (i_scatter_method == ip_no_scatter_ext) ) THEN
           DO l=1, n_list(i,k)
@@ -468,13 +526,25 @@ SUBROUTINE mcica_column(ierr                                            &
                 +cld%frac_cloud(ll, i, k)*source_coeff_temp(l, 1, j)
             END DO
           END DO
+          IF (l_actinic) THEN
+            DO l=1, n_list(i,k)
+              ll=l_list(l,i,k)
+              tau_abs(ll, i) = tau_abs(ll,i) + cld%frac_cloud(ll, i, k) &
+                * (1.0_RealK - trans_temp(l, 1)) / tau_gathered(l, 1)
+            END DO
+          END IF
         END IF
 
       END IF
 
     END DO
   END DO
-
+  IF (l_actinic) THEN
+    WHERE (l_mask)
+      ! Convert weighted sum to absorption optical depth for actinic flux
+      tau_abs = (1.0_RealK - trans) / tau_abs
+    END WHERE
+  END IF
 
 ! Calculate the transmission through cloudy layers for spherical geometry
   IF (control%l_spherical_solar) THEN
@@ -540,6 +610,14 @@ SUBROUTINE mcica_column(ierr                                            &
     , flux_direct, flux_total                                           &
     , nd_profile, nd_layer, nd_source_coeff)
 
+  IF (l_actinic) THEN
+    CALL calc_actinic_flux(control, sph%allsky, sph%common, &
+      n_profile, n_layer, tau_abs, flux_total, flux_direct, sec_0, &
+      l_scale_solar, adjust_solar_ke, &
+      actinic_flux, &
+      nd_profile, nd_layer)
+    DEALLOCATE(tau_abs)
+  END IF
 
   IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 

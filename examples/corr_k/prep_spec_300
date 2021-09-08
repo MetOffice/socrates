@@ -19,7 +19,7 @@ echo 'Water vapour'
 Ccorr_k -F pt48 \
   -D $HITRAN_DIR/01_hit09_cut.par \
   -R 38 40 -c 2500.0 -i 0.2 -l 1 1.0e2 -t 1.0e-3  \
-  -k -s sp_lw_300_skel +p -lk \
+  -k -s sp_lw_300_skel +p -lk -np 4 \
   -o h2o_l -m h2o_lm -L h2o_lbl.nc -sm h2o_map.nc
 
 echo 'Foreign-broadened continuum'
@@ -55,7 +55,7 @@ echo 'CFC 113'
 Ccorr_k -F pt48 \
   -X $HITRAN_DIR/CFC-113_IR00.xsc \
   -R 79 124 -i 1.0 -l 16 0.4e-5 -t 1.0e-3 \
-  -s sp_lw_300_skel +p -lk \
+  -s sp_lw_300_skel +p -lk -np 4 \
   -o cfc113_l -m cfc113_lm -L cfc113_lbl.nc
 
 

@@ -38,6 +38,12 @@ echo "Testing pseudo-spherical geometry code:"
 cd ../../
 
 echo ---
+echo "Testing photolysis and non-LTE code:"
+cd sp_uv
+./run_me || err=1
+cd ../
+
+echo ---
 echo "Test McICA code (create mcica_data file and run on CRM profile):"
 cd netcdf/mcica
 ./run_me || err=1

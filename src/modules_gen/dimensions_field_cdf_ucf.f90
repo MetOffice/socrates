@@ -20,7 +20,7 @@ MODULE dimensions_field_cdf_ucf
 !       Number of atmospheric layers
   INTEGER :: npd_channel = 2
 !       Number of spectral channels permitted for output
-  INTEGER :: npd_column = 6
+  INTEGER :: npd_column = 24
 !       Maximum number of cloudy subcolumns
   INTEGER :: npd_direction = 63
 !       Maximum number of directions for radiances

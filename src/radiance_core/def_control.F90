@@ -141,6 +141,10 @@ TYPE StrCtrl
 !   Flag for absorption by nitrogen
   LOGICAL :: l_ar                                                 = .FALSE.
 !   Flag for absorption by argon
+  LOGICAL :: l_o                                                  = .FALSE.
+!   Flag for absorption by atomic oxygen
+  LOGICAL :: l_n                                                  = .FALSE.
+!   Flag for absorption by atomic nitrogen
 
 
 ! Properties of clouds:
@@ -259,6 +263,8 @@ TYPE StrCtrl
 !   in radiation.
   LOGICAL :: l_mixing_ratio                                       = .FALSE.
 !   True if mixing ratios are with respect to dry mass
+  LOGICAL :: l_map_sub_bands                                      = .FALSE.
+!   Map sub-bands to channels rather than bands
 
 
 ! Band-by-band control options
@@ -267,7 +273,7 @@ TYPE StrCtrl
   INTEGER, ALLOCATABLE :: i_gas_overlap_band(:)
 !   Gas overlap assumption in each band
   INTEGER, ALLOCATABLE :: map_channel(:)
-!   Mapping of actual bands to the output channels
+!   Mapping of actual bands or sub-bands to the output channels
   REAL (RealK), ALLOCATABLE :: weight_band(:)
 !   Weighting function for bands
   REAL (RealK), ALLOCATABLE :: weight_diag(:)
@@ -279,6 +285,8 @@ TYPE StrCtrl
 ! Switches for diagnostic output
   LOGICAL :: l_clear                                              = .FALSE.
 !   Calculate clear-sky fluxes
+  LOGICAL :: l_flux_div                                           = .FALSE.
+!   Calculate flux divergence
   LOGICAL :: l_blue_flux_surf                                     = .FALSE.
 !   Calculate blue surface fluxes
   LOGICAL :: l_cloud_absorptivity                                 = .FALSE.
@@ -303,6 +311,8 @@ TYPE StrCtrl
 !   Calculate total downward flux per band
   LOGICAL :: l_flux_up_band                                       = .FALSE.
 !   Calculate upward flux per band
+  LOGICAL :: l_flux_div_band                                      = .FALSE.
+!   Calculate flux divergence per band
   LOGICAL :: l_flux_direct_clear_band                             = .FALSE.
 !   Calculate clear-sky direct flux per band
   LOGICAL :: l_flux_direct_clear_div_band                         = .FALSE.
@@ -313,6 +323,24 @@ TYPE StrCtrl
 !   Calculate clear-sky downward flux per band
   LOGICAL :: l_flux_up_clear_band                                 = .FALSE.
 !   Calculate clear-sky upward flux per band
+  LOGICAL :: l_flux_div_clear_band                                = .FALSE.
+!   Calculate clear-sky flux divergence per band
+  LOGICAL :: l_actinic_flux                                       = .FALSE.
+!   Calculate actinic flux per channel
+  LOGICAL :: l_actinic_flux_clear                                 = .FALSE.
+!   Calculate clear-sky actinic flux per channel
+  LOGICAL :: l_actinic_flux_band                                  = .FALSE.
+!   Calculate actinic flux per band
+  LOGICAL :: l_actinic_flux_clear_band                            = .FALSE.
+!   Calculate clear-sky actinic flux per band
+  LOGICAL :: l_photolysis_rate                                    = .FALSE.
+!   Calculate photolysis rates per channel
+  LOGICAL :: l_photolysis_rate_clear                              = .FALSE.
+!   Calculate clear-sky photolysis rates per channel
+  LOGICAL :: l_photolysis_div                                     = .FALSE.
+!   Calculate flux divergence for photolysis
+  LOGICAL :: l_photolysis_div_clear                               = .FALSE.
+!   Calculate clear-sky flux divergence for photolysis
   LOGICAL :: l_aerosol_absorption_band                            = .FALSE.
 !   Calculate total aerosol absorption per band
   LOGICAL :: l_aerosol_scattering_band                            = .FALSE.
@@ -375,7 +403,7 @@ IF (.NOT. ALLOCATED(control%i_gas_overlap_band))          &
   ALLOCATE(control%i_gas_overlap_band    ( sp%dim%nd_band ))
 
 IF (.NOT. ALLOCATED(control%map_channel))                 &
-  ALLOCATE(control%map_channel           ( sp%dim%nd_band ))
+  ALLOCATE(control%map_channel ( MAX(sp%dim%nd_sub_band, sp%dim%nd_band) ))
 
 IF (.NOT. ALLOCATED(control%weight_band))                 &
   ALLOCATE(control%weight_band           ( sp%dim%nd_band ))

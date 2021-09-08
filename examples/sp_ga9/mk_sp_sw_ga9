@@ -244,7 +244,5 @@ rm *.avg
 rm sp_sw_ga7
 rm sp_sw_ga7_k
 rm -f fit_sw_drop5_6 mon_sw_drop5_6
-rm -f h2o_s260_l*
-rm -f h2o_s6_s*
 
 exit 0

@@ -17,17 +17,28 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
+    if (len(sys.argv) > 4):
+        filename4 = sys.argv[4]
+        name4 = filename4[filename4.find('.') + 1:]
+        dgs4 = Dataset(filename4)
+        var4 = dgs4.variables[name4][:]
+    if (len(sys.argv) > 3):
+        filename3 = sys.argv[3]
+        name3 = filename3[filename3.find('.') + 1:]
+        dgs3 = Dataset(filename3)
+        var3 = dgs3.variables[name3][:]
     if (len(sys.argv) > 2):
-        filename = sys.argv[1]
         filename2 = sys.argv[2]
+        name2 = filename2[filename2.find('.') + 1:]
         dgs2 = Dataset(filename2)
-    elif (len(sys.argv) > 1):
+        var2 = dgs2.variables[name2][:]
+    if (len(sys.argv) > 1):
         filename = sys.argv[1]
+        name = filename[filename.find('.') + 1:]
+        dgs = Dataset(filename)
+        var = dgs.variables[name][:]
     else:
         raise RuntimeError('please enter a file name')
-
-dgs = Dataset(filename)
-name = filename[filename.find('.') + 1:]
 
 lon = dgs.variables['lon'][:]
 lat = dgs.variables['lat'][:]
@@ -36,10 +47,13 @@ p = dgs.variables['plev'][:]
 n_lon = len(lon)
 n_lat = len(lat)
 layers= len(p)
+e_factor=2.718
 
-var = dgs.variables[name][:]
+if ('ph_rate' in name):
+    e_factor=1.0e2
+    xlim = 0.25
+
 if (len(sys.argv) > 2):
-    var2 = dgs2.variables[name][:]
     var = var - var2
 
 try:
@@ -59,11 +73,15 @@ except:
 else:
     fig=plt.figure()
     vmean = np.zeros(layers)
+    vtop = np.sum(var[:, 0, :, :]) / (n_lon * n_lat)
     for i in np.arange(layers):
         vmean[i] = np.sum(var[:, i, :, :]) / (n_lon * n_lat)
+        if (vmean[i] > vtop/e_factor):
+          e_layer = i
     ax1 = fig.add_subplot(121)
+    ax2 = fig.add_subplot(122)
     ax1.plot(vmean, -np.log(p/max(p))*CONST)
-    ax1.set_title('Average profile')
+    ax1.set_title(dgs.variables[name].title)
     ax1.set_xlabel(name)
     ax1.set_ylabel('Approx height (km)')
     wn = 0.5e-2/wl_short + 0.5e-2/wl_long
@@ -71,15 +89,48 @@ else:
     toa_spec = np.zeros(n_channel)
     surf_spec = np.zeros(n_channel)
     for ch in range(0, n_channel):
-        toa_spec[ch]  = np.sum(var[ch,0,       :,:])/(width[ch]*n_lon*n_lat)
+        toa_spec[ch]  = np.sum(var[ch,0, :,:])/(width[ch]*n_lon*n_lat)
         surf_spec[ch] = np.sum(var[ch,layers-1,:,:])/(width[ch]*n_lon*n_lat)
-    ax2 = fig.add_subplot(122)
     ax2.plot(wl, toa_spec, color='blue', label='TOA')
-    ax2.plot(wl, surf_spec, color='green', label='Surface')
-    ax2.set_xscale('log')
-    ax2.set_title('TOA & surface spectrum')
     ax2.set_xlabel('Wavelength (micron)')
-    ax2.set_ylabel('Flux (Wm-2m-1)')
+    if ('ph_rate' in name):
+        ax2.set_ylabel('J rate (s-1m-1)')
+        ax2.set_yscale('symlog')
+        e_height = -np.log(p[e_layer]/max(p))*CONST
+        ax1.plot([min(vmean),max(vmean)], [e_height,e_height], color='green')
+        ax1.set_xscale('log')
+        mid_spec = np.zeros(n_channel)
+        for ch in range(0, n_channel):
+            mid_spec[ch]  = np.sum(var[ch,e_layer, :,:])/(width[ch]*n_lon*n_lat)
+        ax2.plot(wl, mid_spec, color='green', label='Mid atmos')
+        ax2.set_title('Top & Mid atmosphere spectra')
+        ax2.set_xlim(right=xlim)
+    elif (name == 'aflx'):
+        ax2.set_ylabel('Actinic Flux (Wm-2m-1)')
+        ax2.set_yscale('symlog')
+        e_layer = layers/2
+        e_height = -np.log(p[e_layer]/max(p))*CONST
+        ax1.plot([min(vmean),max(vmean)], [e_height,e_height], color='green')
+        mid_spec = np.zeros(n_channel)
+        for ch in range(0, n_channel):
+            mid_spec[ch]  = np.sum(var[ch,e_layer, :,:])/(width[ch]*n_lon*n_lat)
+        ax2.plot(wl, mid_spec, color='green', label='Mid atmos')
+        ax2.set_title('Top & Mid atmosphere spectra')
+    elif (name == 'hrts'):
+        ax2.set_ylabel('Heating rate (Kday-1m-1)')
+        e_layer = layers/2
+        e_height = -np.log(p[e_layer]/max(p))*CONST
+        ax1.plot([min(vmean),max(vmean)], [e_height,e_height], color='green')
+        mid_spec = np.zeros(n_channel)
+        for ch in range(0, n_channel):
+            mid_spec[ch]  = np.sum(var[ch,e_layer, :,:])/(width[ch]*n_lon*n_lat)
+        ax2.plot(wl, mid_spec, color='green', label='Mid atmos')
+        ax2.set_title('Top & Mid atmosphere spectra')
+    else:
+        ax2.plot(wl, surf_spec, color='green', label='Surface')
+        ax2.set_title('TOA & surface spectrum')
+        ax2.set_ylabel('Flux (Wm-2m-1)')
+        ax2.set_xscale('symlog')
     plt.legend()
 
 plt.tight_layout()

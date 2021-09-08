@@ -16,6 +16,7 @@ PROGRAM corr_k
   USE def_solarspec
   USE def_inst_flt
   USE def_std_io_icf
+  USE def_hitran_record
   USE hitran_cnst
 
   IMPLICIT NONE
@@ -363,6 +364,26 @@ PROGRAM corr_k
       CALL open_file_in(ierr, iu_lbl, &
         "Give the name of the HITRAN .xsc database.")
       IF (ierr /= i_normal) STOP
+      EXIT
+!
+    ELSE IF ( (char_if == 'U') .OR. (char_if == 'u') ) THEN
+!
+      l_access_HITRAN=.FALSE.
+      l_access_xsc=.TRUE.
+      ! A bespoke input format is used for UV cross-section data
+      xsc_header_format = uvxsc_header_frmt
+      xsc_data_format = uvxsc_data_frmt
+      CALL get_free_unit(ierr, iu_lbl)
+      IF (ierr /= i_normal) THEN
+        WRITE(iu_err, '(A, i5)') 'Error in get_free_unit: ', ierr
+        STOP
+      END IF
+      CALL open_file_in(ierr, iu_lbl, &
+        "Give the name of the .uvxsc database.")
+      IF (ierr /= i_normal) THEN
+        WRITE(iu_err, '(A, i5)') 'Error in open_file_in: ', ierr        
+        STOP
+      END IF
       EXIT
 !
     ELSE IF ( (char_if == 'N') .OR. (char_if == 'n') ) THEN

@@ -248,14 +248,14 @@ SUBROUTINE corr_k_single &
 ! Local variables
   INTEGER :: alloc_status
 !   Status flag for allocation of HITRAN arrays
-  INTEGER :: i, ipb
-!   Loop variable
-  INTEGER :: j
+  INTEGER :: i, j, k, ipb
 !   Loop variable
   INTEGER :: ibb
 !   Loop variable for bands
   INTEGER :: ib
 !   Loop variable for bands
+  INTEGER :: isb
+!   Loop variable for sub-bands
   INTEGER :: ip, it, ipt
 !   Loop variable for pressure and temperature
   INTEGER :: igf
@@ -315,11 +315,13 @@ SUBROUTINE corr_k_single &
 !   Mask for binning absorption coefficients by their scaling behaviour
   REAL  (RealK), Allocatable :: k_for(:)
 !   Foreign continuum absorption coefficients at weighting frequencies
-  INTEGER, Allocatable :: map(:), gmap(:), pmap(:)
+  INTEGER, Allocatable :: map(:), gmap(:), pmap(:), kmap(:)
 !   Mapping array in frequency space used to order the absorption
 !   coefficients
   REAL  (RealK), Allocatable :: wgt(:), wgt_sum(:), wgt_ref(:), wgt_sv(:)
 !   Weightings at different frequencies
+  REAL  (RealK), Allocatable :: wgt_unsorted(:)
+!   Copy of the unsorted weights to calculate sub-band weights
   REAL  (RealK), Allocatable :: wgt_k(:)
 !   Product of weighting and absorption coefficients
   REAL  (RealK) :: integ_wgt, integ_wgt_tmp
@@ -359,7 +361,15 @@ SUBROUTINE corr_k_single &
 !   Actual increment applied across the band
   REAL  (RealK) :: kabs_line
 !   Contribution to absorption from a single line
-!
+
+! Sub-bands
+  INTEGER :: n_sub_band
+  INTEGER, Allocatable :: sub_band_k(:)
+  REAL (RealK) :: sub_band_w_sum
+  REAL (RealK), Allocatable :: sub_band_w(:)
+  REAL (RealK), Allocatable :: sub_band_nu_short(:)
+  REAL (RealK), Allocatable :: sub_band_nu_long(:)
+
 ! Continuum variables:
   REAL  (RealK), Dimension(:), Allocatable :: u_c
 !   Pathlengths for continuum absorption
@@ -572,7 +582,7 @@ SUBROUTINE corr_k_single &
 !
     SUBROUTINE write_fit_90 &
       (iu_k_out, l_continuum, l_cont_gen, l_self_broadening, i_band, &
-       i_index, i_index_1, i_index_2, &
+       i_gas, i_index, i_index_1, i_index_2, &
        p, t, n_points, amount, transmittance, trans_calc, &
        n_k, k, w_k, i_scale, i_scale_function, scale_vector)
 !
@@ -581,6 +591,7 @@ SUBROUTINE corr_k_single &
       INTEGER, Intent(IN) :: iu_k_out
 !
       INTEGER, Intent(IN) :: i_band
+      INTEGER, Intent(IN) :: i_gas
       INTEGER, Intent(IN) :: i_index
       INTEGER, Intent(IN) :: i_index_1
       INTEGER, Intent(IN) :: i_index_2
@@ -753,7 +764,7 @@ SUBROUTINE corr_k_single &
       band_min(ib) = ANINT(1.0_RealK/(nu_inc*wavelength_long(ib)))*nu_inc
       band_max(ib) = ANINT(1.0_RealK/(nu_inc*wavelength_short(ib)))*nu_inc
 
-      WRITE(*,'(a,i3,a,2f12.3,a)') 'Band ', ib, ' limits adjusted to:', &
+      WRITE(*,'(a,i3,a,2f16.3,a)') 'Band ', ib, ' limits adjusted to:', &
         band_min(ib), band_max(ib), ' m-1'
     END IF
   END DO
@@ -804,6 +815,12 @@ SUBROUTINE corr_k_single &
 !   Set the wavenumbers of the weighting points in the band (in nu_wgt).
     CALL set_wgt_int
     IF (ierr /= i_normal) RETURN
+
+    ! Allocate sub-band arrays
+    ALLOCATE(sub_band_k(n_nu))
+    ALLOCATE(sub_band_w(n_nu))
+    ALLOCATE(sub_band_nu_short(n_nu))
+    ALLOCATE(sub_band_nu_long(n_nu))
 
 !   Find P/T closest to the reference conditions.
     IF (l_scale_pT) THEN
@@ -873,7 +890,10 @@ SUBROUTINE corr_k_single &
             IF (ierr /= i_normal) RETURN
           ENDDO
         ENDIF
-!
+
+!       There will be no sub-bands in this case.
+        n_sub_band=0
+
       ELSE
 !
         IF (.NOT.l_lbl_exist.AND.l_access_hitran) THEN
@@ -1209,6 +1229,15 @@ SUBROUTINE corr_k_single &
 
           CALL apply_response_int
 
+!         Save the unsorted weights to calculate the sub-band weights
+          ALLOCATE(wgt_unsorted(n_nu))
+          wgt_unsorted=wgt
+!         Adjust the boundary weights using the correct bounds
+          wgt_unsorted(1)=wgt_unsorted(1) &
+            *(nu_wgt(1)+nu_inc/2.0_RealK-1.0/wavelength_long(ib))/nu_inc
+          wgt_unsorted(n_nu)=wgt_unsorted(n_nu) &
+            *(1.0/wavelength_short(ib)-nu_wgt(n_nu)+nu_inc/2.0_RealK)/nu_inc
+
 !         Sort the weighting function.
           kabs=kabs(map)
           wgt=wgt(map)
@@ -1261,6 +1290,35 @@ SUBROUTINE corr_k_single &
 
 !         Save mapping if requested
           IF (l_save_map) CALL output_map_band_cdf
+
+          ! Calculate sub-band mapping
+          ALLOCATE( kmap(n_nu) )
+          ! kmap holds the k-term number for each nu
+          DO ik=1, n_k(ib)
+            kmap(map( ig(ik-1)+1 : ig(ik) )) = ik
+          END DO
+          ! Sub-bands are found where k-terms are mapped to contiguous
+          ! regions in frequency
+          k=0
+          n_sub_band=0
+          DO i=1, n_nu
+            IF (kmap(i) /= k) THEN
+              k=kmap(i)
+              n_sub_band=n_sub_band+1
+              sub_band_k(n_sub_band)=k
+              sub_band_w(n_sub_band)=wgt_unsorted(i)
+              sub_band_nu_short(n_sub_band)=nu_wgt(i)-nu_inc/2.0_RealK
+            ELSE
+              sub_band_w(n_sub_band)=sub_band_w(n_sub_band)+wgt_unsorted(i)
+            END IF
+            sub_band_nu_long(n_sub_band)=nu_wgt(i)+nu_inc/2.0_RealK
+          END DO
+          sub_band_w_sum=SUM(sub_band_w(1:n_sub_band))
+          DO isb=1, n_sub_band
+            sub_band_w(isb)=sub_band_w(isb)/sub_band_w_sum
+          END DO
+          DEALLOCATE(kmap)
+          DEALLOCATE(wgt_unsorted)
 
         END IF
 
@@ -1342,12 +1400,14 @@ SUBROUTINE corr_k_single &
 !
 !   Write out the calculated fit.
     IF (l_fit_line_data .OR. l_fit_cont_data) THEN
+
       CALL write_fit_90(iu_k_out, .FALSE., l_fit_cont_data, &
-        l_self_broadening, ib, i_index, i_index_1, i_index_2, &
+        l_self_broadening, ib, i_gas, i_index, i_index_1, i_index_2, &
         p_calc(ipt_ref), t_calc(ipt_ref), &
         n_path, u_l_ref, trans_ref, trans_calc, &
         n_k(ib), k_opt(:, ib), w_k(:, ib), IP_scale_term, &
         i_scale_function, scale_vector(:, :, ib))
+
       IF (i_scale_function == IP_scale_lookup) THEN
 !       Write look-up table to file:
         ALLOCATE(p_lookup( n_p ))
@@ -1405,14 +1465,35 @@ SUBROUTINE corr_k_single &
           WRITE(iu_k_out,'(6(1PE13.6))') kopt_all(ik,1:n_t(1),ibb)
         END DO
       END IF
+
+      IF (n_sub_band > 1) THEN
+        ! Write out sub-band mappings ordered in increasing wavelength
+        WRITE(iu_k_out, '(/a,i6,a)') 'Sub-band mapping: ', &
+          n_sub_band, ' sub-bands.'
+        WRITE(iu_k_out, '(a)') &
+        'Sub-band  k-term       weight       wavelength_short   wavelength_long'
+        WRITE(iu_k_out, '(2i8, 3(2x,1PE16.9))') 1, &
+          sub_band_k(n_sub_band), sub_band_w(n_sub_band), &
+          wavelength_short(ib), 1.0_RealK/sub_band_nu_short(n_sub_band)
+        DO isb=n_sub_band-1, 2, -1
+          WRITE(iu_k_out, '(2i8, 3(2x,1PE16.9))') n_sub_band-isb+1, &
+            sub_band_k(isb), sub_band_w(isb), &
+            1.0_RealK/sub_band_nu_long(isb), 1.0_RealK/sub_band_nu_short(isb)
+        END DO
+        WRITE(iu_k_out, '(2i8, 3(2x,1PE16.9))') n_sub_band, &
+          sub_band_k(1), sub_band_w(1), &
+          1.0_RealK/sub_band_nu_long(1), wavelength_long(ib)
+      END IF
+
     ENDIF
+
     IF (l_fit_frn_continuum) i_index_c = IP_frn_continuum
     IF (l_fit_self_continuum) i_index_c = IP_self_continuum
     IF (l_fit_frn_continuum .OR. l_fit_self_continuum) THEN
       ALLOCATE(trans_app_c(n_path_c*n_pp))
       trans_app_c(:) = EXP( -k_cont * u_fit_c(:, ipt_ref) )
       CALL write_fit_90(iu_k_out, .TRUE., .FALSE., &
-        .FALSE., ib, i_index_c, 0, 0, &
+        .FALSE., ib, i_gas, i_index_c, 0, 0, &
         p_calc(ipt_ref), t_calc(ipt_ref), &
         n_path_c*n_pp, u_fit_c(:, ipt_ref), &
         trans_fit_c(:, ipt_ref), trans_app_c(:), &
@@ -1448,7 +1529,12 @@ SUBROUTINE corr_k_single &
 
     IF (l_fit_line_data .OR. l_fit_cont_data) DEALLOCATE(trans_ref)
     IF (l_fit_line_data .OR. l_fit_cont_data) DEALLOCATE(trans_calc)
-!
+
+    DEALLOCATE(sub_band_nu_long)
+    DEALLOCATE(sub_band_nu_short)
+    DEALLOCATE(sub_band_w)
+    DEALLOCATE(sub_band_k)
+
   ENDDO Bands
 !
   IF (l_fit_line_data .OR. l_fit_cont_data) CALL output_ck_cdf
@@ -1562,14 +1648,14 @@ CONTAINS
 !   this band
     num_lines_in_band = 0
     DO
-      READ(iu_lbl, xsc_header_frmt, IOSTAT = io_status) single_header
+      READ(iu_lbl, xsc_header_format, IOSTAT = io_status) single_header
       IF (io_status < 0) EXIT ! EOF
       IF (single_header%wavenumber_min <= upper_band_limit .AND. &
           single_header%wavenumber_max >= lower_band_limit) THEN
         num_lines_in_band = num_lines_in_band + 1
       END IF
       ALLOCATE(xsc_data(single_header%no_pts))
-      READ(iu_lbl, xsc_data_frmt, IOSTAT = io_status) xsc_data
+      READ(iu_lbl, xsc_data_format, IOSTAT = io_status) xsc_data
       DEALLOCATE(xsc_data)
     END DO
 
@@ -1579,10 +1665,10 @@ CONTAINS
       REWIND(iu_lbl)
       num_lines_in_band = 0
       DO
-        READ(iu_lbl, xsc_header_frmt, IOSTAT = io_status) single_header
+        READ(iu_lbl, xsc_header_format, IOSTAT = io_status) single_header
         IF (io_status < 0) EXIT ! EOF
         ALLOCATE(xsc_data(single_header%no_pts))
-        READ(iu_lbl, xsc_data_frmt, IOSTAT = io_status) xsc_data
+        READ(iu_lbl, xsc_data_format, IOSTAT = io_status) xsc_data
         IF (single_header%wavenumber_min <= upper_band_limit .AND. &
             single_header%wavenumber_max >= lower_band_limit) THEN
           num_lines_in_band = num_lines_in_band + 1
@@ -1958,6 +2044,10 @@ CONTAINS
     kabs(1:n_nu)=0.0_RealK
     ptorr=p_calc(ipt)*760.0_RealK/101325.0_RealK
 
+!$OMP PARALLEL DO                                            &
+!$OMP PRIVATE(j, i, l, ll, waveno, p_lk, t_lk, k_int, p_int, &
+!$OMP         t_int, p_test, p_test2, t_test, t_test2)       &
+!$OMP NUM_THREADS(n_omp_threads)
 !   Look-up absorption cross-section for P/T/wavenumber
     DO j = 1, n_nu
 !     Lookup wavenumer in cm-1
@@ -2025,6 +2115,7 @@ CONTAINS
           / (molar_weight(i_gas)*atomic_mass_unit*1.0E+04_RealK)
       END IF
     END DO
+!$OMP END PARALLEL DO
 
   END SUBROUTINE calc_xsc_abs_int
 

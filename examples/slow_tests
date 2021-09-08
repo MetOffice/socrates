@@ -10,6 +10,12 @@ fi
 err=0
 
 echo ---
+echo "Testing spectral file creation for photolysis:"
+cd sp_uv
+./run_me_sp || err=1
+cd ../
+
+echo ---
 echo "Testing prep_spec for generating solar variability data:"
 cd spectral_var
 ./run_me || err=1

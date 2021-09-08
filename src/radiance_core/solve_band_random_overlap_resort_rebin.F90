@@ -16,7 +16,7 @@
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
-    , control, atm, cld, bound, radout, i_band                                 &
+    , control, dimen, spectrum, atm, cld, bound, radout, i_band                &
 !                 Atmospheric Column
     , n_profile, n_layer, d_mass                                               &
 !                 Angular Integration
@@ -60,14 +60,13 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
     , n_viewing_level, i_rad_layer, frac_rad_layer                             &
 !                 Viewing Geometry
     , n_direction, direction                                                   &
-!                 Weighting factor for the band
-    , weight_band, l_initial                                                   &
 !                 Calculcated radiances
     , i_direct                                                                 &
-!                 Flags for Clear-sky Fluxes
-    , l_clear, i_solver_clear                                                  &
-!                 Special Surface Fluxes
-    , l_blue_flux_surf, weight_blue                                            &
+!                 Flags for initialising diagnostics
+    , l_initial, l_initial_band                                                &
+    , l_initial_channel, l_initial_channel_tile                                &
+!                 Flags for Fluxes
+    , l_actinic, l_clear, i_solver_clear                                       &
 !                 Dimensions
     , nd_profile, nd_layer, nd_layer_clr, id_ct, nd_column                     &
     , nd_flux_profile, nd_radiance_profile, nd_j_profile                       &
@@ -81,8 +80,10 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
     )
 
 
-  USE realtype_rd, ONLY: RealK
-  USE def_control, ONLY: StrCtrl
+  USE realtype_rd,  ONLY: RealK
+  USE def_control,  ONLY: StrCtrl
+  USE def_dimen,    ONLY: StrDim
+  USE def_spectrum, ONLY: StrSpecData
   USE def_atm,     ONLY: StrAtm
   USE def_cld,     ONLY: StrCld
   USE def_bound,   ONLY: StrBound
@@ -99,6 +100,12 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
 
 ! Control options:
   TYPE(StrCtrl),      INTENT(IN)    :: control
+
+! Dimensions:
+  TYPE(StrDim),       INTENT(IN)    :: dimen
+
+! Spectral data:
+  TYPE(StrSpecData),  INTENT(IN)    :: spectrum
 
 ! Atmospheric properties:
   TYPE(StrAtm),       INTENT(IN)    :: atm
@@ -219,12 +226,6 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
 !       Accuracy for adaptive truncation
     , euler_factor
 !       Factor applied to the last term of an alternating series
-  REAL (RealK), INTENT(IN) ::                                                  &
-      weight_band
-!       Weighting factor for the current band
-  LOGICAL, INTENT(INOUT) ::                                                    &
-      l_initial
-!       Flag to initialize diagnostics
 
 !                 Treatment of scattering
   INTEGER, INTENT(IN) ::                                                       &
@@ -371,7 +372,21 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
       frac_rad_layer(nd_viewing_level)
 !       Fractions below the tops of the layers
 
-!                 Flags for clear-sky calculations
+!                   Flags for initialising diagnostics
+  LOGICAL, INTENT(INOUT) ::                                                    &
+      l_initial                                                                &
+!       Initialise rather than increment broadband diagnostics
+    , l_initial_band(spectrum%dim%nd_band)                                     &
+!       Initialise rather than increment band-by-band diagnostics
+    , l_initial_channel(dimen%nd_channel)                                      &
+!       Initialise rather than increment channel diagnostics
+    , l_initial_channel_tile(dimen%nd_channel)
+!       Initialise rather than increment channel diagnostics on tiles
+    
+!                   Flags for flux calculations
+  LOGICAL, INTENT(IN) ::                                                       &
+      l_actinic
+!       Flag for calculation of actinic flux
   LOGICAL, INTENT(IN) ::                                                       &
       l_clear
 !       Calculate clear-sky properties
@@ -384,18 +399,10 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
       i_direct(nd_radiance_profile, 0: nd_layer)
 !       Direct solar irradiance on levels
 
-!                  Special Diagnostics:
-  LOGICAL, INTENT(IN) ::                                                       &
-      l_blue_flux_surf
-!       Flag to calculate the blue flux at the surface
-  REAL (RealK), INTENT(IN) ::                                                  &
-      weight_blue
-!       Weights for blue fluxes in this band
-
 
 
 ! Local variables.
-  INTEGER                                                                      &
+  INTEGER ::                                                                   &
       k                                                                        &
 !       Loop variable
     , l                                                                        &
@@ -404,11 +411,13 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
 !       Loop variable
     , i_layer
 !       Loop variable
-  INTEGER                                                                      &
+  INTEGER ::                                                                   &
       i_abs_band                                                               &
 !       Index of active gas
     , iex                                                                      &
 !       Index of ESFT term
+    , iex_minor(nd_abs)                                                        &
+!       Index of ESFT term for minor gas (dummy here)
     , i_band_esft_mix                                                          &
 !       Number of terms in band for two absorbers combined
     , i_band_esft_mix_red                                                      &
@@ -468,10 +477,14 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
 !       Partial direct flux at the surface
     , flux_total_part(nd_flux_profile, 2*nd_layer+2)                           &
 !       Partial total flux
+    , actinic_flux_part(nd_flux_profile, nd_layer)                             &
+!       Partial actinic flux
     , flux_direct_clear_part(nd_flux_profile, 0: nd_layer)                     &
 !       Partial clear-sky direct flux
-    , flux_total_clear_part(nd_flux_profile, 2*nd_layer+2)
+    , flux_total_clear_part(nd_flux_profile, 2*nd_layer+2)                     &
 !       Partial clear-sky total flux
+    , actinic_flux_clear_part(nd_flux_profile, nd_layer)
+!       Clear partial actinic flux
   REAL (RealK) ::                                                              &
       i_direct_part(nd_radiance_profile, 0: nd_layer)                          &
 !       Partial solar irradiances
@@ -484,9 +497,14 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
   REAL (RealK) ::                                                              &
       weight_incr                                                              &
 !       Weight applied to increments
-    , weight_blue_incr
+    , weight_blue_incr                                                         &
 !       Weight applied to blue increments
+    , weight_sub_band_incr
+!       Weight applied to sub-band increments
 
+  INTEGER :: i_abs_major
+!       Index for the major gas (first gas in band)
+  
   REAL (RealK) ::                                                       &
       contrib_funci_part(nd_flux_profile, nd_layer)
 !       Contribution (or weighting) function
@@ -494,9 +512,6 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
       contrib_funcf_part(nd_flux_profile, nd_layer)
 !       Contribution (or weighting) function
 
-  LOGICAL :: l_initial_band
-!       Flag to initialise band-by-band diagnostics
-  
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
@@ -507,11 +522,15 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
 
   IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
   
-  l_initial_band = .TRUE.
-
 ! Set target weights using Gaussian quadrature
   n_esft_red = n_esft_red_in
   IF (n_esft_red > 0 .AND. n_abs > 1) THEN
+    IF (control%l_map_sub_bands) THEN
+      ! Not compatible with sub-band mapping
+      ierr = 1
+      IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
+      RETURN
+    END IF
 ! DEPENDS ON: calc_gauss_weight_90
     CALL calc_gauss_weight_90(ierr, n_esft_red,                                &
       gpnt_gauleg(1:n_esft_red), w_esft_gauleg(1:n_esft_red))
@@ -722,7 +741,7 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
 !                   Viewing Geometry
       , n_direction, direction                                                 &
 !                 Calculated fluxes
-      , flux_direct_part, flux_total_part                                      &
+      , flux_direct_part, flux_total_part, l_actinic, actinic_flux_part        &
 !                   Calculated radiances
       , radiance_part                                                          &
 !                   Calculated rate of photolysis
@@ -731,6 +750,7 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
       , l_clear, i_solver_clear                                                &
 !                 Clear-sky fluxes calculated
       , flux_direct_clear_part, flux_total_clear_part                          &
+      , actinic_flux_clear_part                                                &
 !                 Contribution function
       , contrib_funci_part, contrib_funcf_part                                 &
 !                 Dimensions of arrays
@@ -743,24 +763,31 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
       )
 
 !   Increment the fluxes within the band.
-    weight_incr=weight_band*w_esft_target(iex)
-    IF (l_blue_flux_surf)                                                      &
-      weight_blue_incr=weight_blue*w_esft_target(iex)
+    weight_incr=control%weight_band(i_band)*w_esft_target(iex)
+    i_abs_major = index_abs(1)
+    weight_sub_band_incr = weight_incr / w_abs_esft(iex, i_abs_major)
+    iex_minor = 0
+    IF (control%l_blue_flux_surf)                                              &
+      weight_blue_incr=spectrum%solar%weight_blue(i_band)*w_esft_target(iex)
+    
 ! DEPENDS ON: augment_radiance
-    CALL augment_radiance(control, radout, i_band                              &
+    CALL augment_radiance(control, spectrum, atm, radout                       &
+      , i_band, iex, iex_minor                                                 &
       , n_profile, n_layer, n_viewing_level, n_direction                       &
-      , l_clear, l_initial, l_initial_band                                     &
-      , weight_incr, weight_blue_incr                                          &
+      , l_clear, l_initial, l_initial_band, l_initial_channel                  &
+      , weight_incr, weight_blue_incr, weight_sub_band_incr                    &
 !                   Actual radiances
       , i_direct                                                               &
 !                   Increments to radiances
-      , flux_direct_part, flux_total_part                                      &
+      , flux_direct_part, flux_total_part, actinic_flux_part                   &
       , i_direct_part, radiance_part, photolysis_part                          &
       , flux_direct_clear_part, flux_total_clear_part                          &
+      , actinic_flux_clear_part, k_abs_layer                                   &
       , sph, contrib_funci_part, contrib_funcf_part                            &
 !                   Dimensions
-      , nd_flux_profile, nd_radiance_profile, nd_j_profile                     &
-      , nd_layer, nd_viewing_level, nd_direction                               &
+      , nd_profile, nd_flux_profile, nd_radiance_profile, nd_j_profile         &
+      , nd_layer, nd_viewing_level, nd_direction, dimen%nd_channel             &
+      , nd_abs, nd_esft_term                                                   &
       )
 
 !   Add in the increments from surface tiles
@@ -779,9 +806,11 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
         END IF
       END IF
 ! DEPENDS ON: augment_tiled_radiance
-      CALL augment_tiled_radiance(control, radout, i_band                      &
+      CALL augment_tiled_radiance(control, spectrum, radout                    &
+        , i_band, iex, iex_minor                                               &
         , n_point_tile, n_tile, list_tile                                      &
-        , l_initial, weight_incr, weight_blue_incr                             &
+        , l_initial_channel_tile                                               &
+        , weight_incr, weight_blue_incr, weight_sub_band_incr                  &
 !                   Surface characteristics
         , rho_alb_tile                                                         &
 !                   Increments to radiances
@@ -790,14 +819,9 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
         , planck%flux_tile, planck%flux(:, n_layer)                            &
 !                   Dimensions
         , nd_flux_profile, nd_point_tile, nd_tile                              &
-        , nd_brdf_basis_fnc                                                    &
+        , nd_brdf_basis_fnc, dimen%nd_channel, nd_abs                          &
         )
     END IF
-    
-!   After the first call to these routines quantities should be
-!   incremented rather than initialized, until the flag is reset.
-    l_initial=.FALSE.
-    l_initial_band = .FALSE.
     
   END DO
 

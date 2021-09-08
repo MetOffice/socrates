@@ -26,10 +26,10 @@ if [ "$sw" ] ; then
   echo 'Creating sp_sw_ga9...'
   ./mk_sp_sw_ga9 > mk_sp_sw_ga9_log
 else
-  cp ../../data/spectra/ga9/sp_sw_ga9 .
-  cp ../../data/spectra/ga9/sp_sw_ga9_k .
-  cp ../../data/spectra/ga9_ref/sp_sw_260_jm3 .
-  cp ../../data/spectra/ga9_ref/sp_sw_260_jm3_k .
+  cp -n ../../data/spectra/ga9/sp_sw_ga9 .
+  cp -n ../../data/spectra/ga9/sp_sw_ga9_k .
+  cp -n ../../data/spectra/ga9_ref/sp_sw_260_jm3 .
+  cp -n ../../data/spectra/ga9_ref/sp_sw_260_jm3_k .
 fi
 if [ "$lw" ] ; then
   echo 'Creating sp_lw_300_jm3...'
@@ -37,10 +37,10 @@ if [ "$lw" ] ; then
   echo 'Creating sp_lw_ga9...'
   ./mk_sp_lw_ga9 > mk_sp_lw_ga9_log
 else
-  cp ../../data/spectra/ga9/sp_lw_ga9 .
-  cp ../../data/spectra/ga9/sp_lw_ga9_k .
-  cp ../../data/spectra/ga9_ref/sp_lw_300_jm3 .
-  cp ../../data/spectra/ga9_ref/sp_lw_300_jm3_k .
+  cp -n ../../data/spectra/ga9/sp_lw_ga9 .
+  cp -n ../../data/spectra/ga9/sp_lw_ga9_k .
+  cp -n ../../data/spectra/ga9_ref/sp_lw_300_jm3 .
+  cp -n ../../data/spectra/ga9_ref/sp_lw_300_jm3_k .
 fi
 
 # Create mcica_data file for reference spectral files
@@ -71,7 +71,7 @@ mv mcica_data mcica_data_ga9
 echo 'Testing output...'
 intel=0
 (diff -q sp_sw_ga9 ../../data/spectra/ga9/sp_sw_ga9 && \
- echo 'Matched ifort GA9 SW output' && intel=1) || \
+ echo 'Matched ifort GA9 SW output') && intel=1 || \
 (diff -q sp_sw_ga9 sp_sw_ga9_gfortran && \
  echo 'Matched gfortran GA9 SW output') || ierr=1
 diff -q sp_lw_ga9 ../../data/spectra/ga9/sp_lw_ga9 || ierr=1
@@ -81,7 +81,7 @@ if [ $intel -gt 0 ] ; then
     # Only test hi-res output for ifort as results differ with gfortran
     diff -q sp_sw_260_jm3 ../../data/spectra/ga9_ref/sp_sw_260_jm3 || ierr=1
     diff -q sp_lw_300_jm3 ../../data/spectra/ga9_ref/sp_lw_300_jm3 || ierr=1
-    diff -q mcica_data_ga9_ref ../../data/spectra/ga9_ref/mcica_data || ierr=1
+    diff -q mcica_data_ga9_ref ../../data/spectra/ga9_ref/mcica_data
 fi
 
 if [ $ierr -gt 0 ] ; then
@@ -93,6 +93,9 @@ else
     rm -f mcica_data_ga9 mcica_data_ga9_ref
     rm -f mk_sp_sw_ga9_log mk_sp_lw_ga9_log assign_subcols_ga9_log
     rm -f mk_sp_sw_260_jm3_log mk_sp_lw_300_jm3_log assign_subcols_ga9_ref_log
+    rm -f h2o_s260_l* h2o_s260_s* h2o_s6_s*
+    rm -f h2o_l300_l* h2o_nir300_l* h2o_l300_s* h2o_nir300_s*
+    rm -f h2o_l9_s* h2o_nir9_s*
     echo OK
     exit 0
 fi

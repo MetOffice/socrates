@@ -19,20 +19,20 @@ Band        Lower limit         Upper limit
     7        5.000000000E-06     7.142857143E-06
     8        2.500000000E-06     5.000000000E-06
 *END
-*BLOCK: TYPE =    4: SUBTYPE =    0: VERSION =    0
+*BLOCK: TYPE =    4: SUBTYPE =    0: VERSION =    1
 Gaseous absorbers in each interval
 (The number is the indexing number of the species as set out
  in the summary block 0.)
-A zero indicates that there in no gaseous absorption in the interval.
-Band        Number of active absorbers followed by indexing numbers
-    1           0
-    2           0
-    3           0
-    4           0
-    5           0
-    6           0
-    7           0
-    8           0
+A zero indicates that there is no gaseous absorption in the interval.
+Band, number of absorbers and overlap method, followed by indexing numbers
+    1           0           0
+    2           0           0
+    3           0           0
+    4           0           0
+    5           0           0
+    6           0           0
+    7           0           0
+    8           0           0
 *END
 *BLOCK: TYPE =    6: SUBTYPE =    0: version =    1
 Thermal source function.

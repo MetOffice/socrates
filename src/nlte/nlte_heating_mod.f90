@@ -32,7 +32,8 @@ CONTAINS
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-SUBROUTINE nlte_heating_lw(t, p, gas_mix_ratio, heat_rate, n_layer, n_profile)  
+SUBROUTINE nlte_heating_lw(t, p, co2_mix_ratio, o3_mix_ratio, heat_rate, &
+                           n_layer, n_profile)  
 
   USE realtype_rd, ONLY: RealK
   USE nlte_heating_data_mod
@@ -41,24 +42,19 @@ SUBROUTINE nlte_heating_lw(t, p, gas_mix_ratio, heat_rate, n_layer, n_profile)
   ! Imported variables
   INTEGER, INTENT(IN) :: n_layer, n_profile
   REAL (RealK), INTENT(IN) :: t(:, :), p(:, :)
-  REAL (RealK), INTENT(IN) :: gas_mix_ratio(:, :, :)
+  REAL (RealK), INTENT(IN) :: co2_mix_ratio(:, :)
+  REAL (RealK), INTENT(IN) :: o3_mix_ratio(:, :)
+  ! (Note: no mass mixing ratio for atomic oxygen available)
 
   ! Heating rate (passed in as LTE, returned with correction)
-  REAL (RealK), INTENT(INOUT) :: heat_rate(:, :, :)
+  REAL (RealK), INTENT(INOUT) :: heat_rate(:, :)
 
   ! Local variables
-
-  ! Gas list (Note: no mass mixing ratio for atomic oxygen available)
-  INTEGER, PARAMETER :: n_gas_types = 2
-  ! Need a better way of defining which gases should be taken - this is
-  ! currently hard-coded to match up to the gas list in sp_lw_ga7 but
-  ! the hard-coding should be removed.
-  INTEGER, DIMENSION(n_gas_types) :: gas_list_index = (/2, 3/)
 
   ! Scale height, and pressure, temperature, gas mixing ratios and heating 
   ! rates corresponding to the scale height
   REAL (RealK), DIMENSION(n_level) :: x, p_x, t_x
-  REAL (RealK), DIMENSION(n_gas_types, n_level) :: gas_mix_ratio_x
+  REAL (RealK), DIMENSION(n_level) :: gas_mix_ratio_x
   REAL (RealK), DIMENSION(n_level) :: hr_x = 0.0d0
 
   ! NLTE heating rate 
@@ -83,7 +79,7 @@ SUBROUTINE nlte_heating_lw(t, p, gas_mix_ratio, heat_rate, n_layer, n_profile)
   REAL (RealK) :: spec_heat
 
   ! Indexing variables and misc
-  INTEGER :: i, j, k
+  INTEGER :: i, j
   LOGICAL :: l_splined
 
   ALLOCATE(xspline(n_layer))
@@ -120,34 +116,41 @@ SUBROUTINE nlte_heating_lw(t, p, gas_mix_ratio, heat_rate, n_layer, n_profile)
      ! Reverse the temperature array
      t_x = t_x(n_level:1:-1)
 
-     ! Interpolate the gas mixing ratios to the new scale height
+     ! Interpolate the CO2 gas mixing ratios to the new scale height
      ! Note: needs some error handling here.
-     DO k = 1, n_gas_types
-        DO i = 1, n_level
-           l_splined = .false.
-           CALL interpolate_p(n_layer, p(j, :), &
-                              gas_mix_ratio(j, :, gas_list_index(k)), &
-                              xspline, yspline, yspline2, p_x(i), &
-                              gas_mix_ratio_x(k, i), IP_1_lin_lin, l_splined)
-        END DO
-        ! Reverse the gas mixing arrays
-        gas_mix_ratio_x(k, :) = gas_mix_ratio_x(k, n_level:1:-1)
+     DO i = 1, n_level
+        l_splined = .false.
+        CALL interpolate_p(n_layer, p(j, :), co2_mix_ratio(j, :), &
+                           xspline, yspline, yspline2, p_x(i), &
+                           gas_mix_ratio_x(i), IP_1_lin_lin, l_splined)
      END DO
-
-     ! A base CO2 mixing ratio level is set up in ppm (needed for the 
-     ! interpolation)
-     vmr_co2_base = gas_mix_ratio_x(1, matrix_min) * 1.0e6
+     ! Reverse the gas mixing arrays
+     gas_mix_ratio_x = gas_mix_ratio_x(n_level:1:-1)
 
      ! Convert mass mixing ratios (mmr) to volume mixing ratios (vmr)
      ! NOTE: Fomichev uses the fact that the mmr of CO2 is constant below 
      ! x=12.5. Here this uses the mmr directly from the UM.
      DO i = matrix_min, n_level
-        vmr_co2(i) = gas_mix_ratio_x(1, i) * amm(i) / molmass_co2 
+        vmr_co2(i) = gas_mix_ratio_x(i) * amm(i) / molmass_co2
      END DO
+
+     ! A base CO2 volume mixing ratio is set up in ppm (needed for the 
+     ! interpolation)
+     vmr_co2_base = vmr_co2(matrix_min) * 1.0e6
+
+     ! Interpolate the O3 gas mixing ratios to the new scale height
+     DO i = 1, n_level
+        l_splined = .false.
+        CALL interpolate_p(n_layer, p(j, :), o3_mix_ratio(j, :), &
+                           xspline, yspline, yspline2, p_x(i), &
+                           gas_mix_ratio_x(i), IP_1_lin_lin, l_splined)
+     END DO
+     ! Reverse the gas mixing arrays
+     gas_mix_ratio_x = gas_mix_ratio_x(n_level:1:-1)
 
      ! O3 needed for matrix parameterisation only, up to x=10.5
      DO i = matrix_min, o3_matrix_max
-        vmr_o3(i) = gas_mix_ratio_x(2, i) * amm(i) / molmass_o3
+        vmr_o3(i) = gas_mix_ratio_x(i) * amm(i) / molmass_o3
      END DO
     
      ! Set up part of Planck equation
@@ -192,7 +195,7 @@ SUBROUTINE nlte_heating_lw(t, p, gas_mix_ratio, heat_rate, n_layer, n_profile)
      DO i = 1, n_layer
         ! Boundary condition at 0.1 hPa = 10 Pa
         IF (p(j,i) < 10.) THEN 
-           heat_rate(j, i, 1) = heat_rate_nlte(j, i)
+           heat_rate(j, i) = heat_rate_nlte(j, i)
         END IF
      END DO
 

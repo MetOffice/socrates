@@ -154,7 +154,10 @@ Include gaseous absorption using specified overlap assumption, as defined in gas
 Consider absorption by only one gas specified by \fItype\fR, as given in gas\_list\_pcf.f90
 .TP
 .B 2
-Random overlap (most accurate but slow)
+Random overlap (accurate but slow)
+.TP
+.B 3
+Exact overlap of minor gas k-terms with major gas (requires sub-band mappings)
 .TP
 .B 4
 Equivalent extinction with corrected scaling (recommended for fast runs)

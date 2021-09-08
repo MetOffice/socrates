@@ -4,6 +4,7 @@ SOURCE_RADCORE=	adjust_ir_radiance.f90 \
 		augment_tiled_radiance.f90 \
 		band_solver.f90 \
 		build_sph_matrix.f90 \
+		calc_actinic_flux_mod.f90 \
 		calc_brdf.f90 \
 		calc_cg_coeff.f90 \
                 calc_contrib_func.f90 \
@@ -43,6 +44,7 @@ SOURCE_RADCORE=	adjust_ir_radiance.f90 \
 		layer_part_integ.f90 \
 		legendre_weight.f90 \
 		legendre_mod.f90 \
+		map_sub_bands_mod.f90 \
 		mcica_column.f90 \
 		mcica_sample.f90 \
 		mix_app_scat.f90 \

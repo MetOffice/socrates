@@ -370,9 +370,5 @@ rm *.aod
 rm sp_aod_wavel
 rm sp_lw_ga7
 rm sp_lw_ga7_k
-rm -f h2o_l300_l*
-rm -f h2o_nir300_l*
-rm -f h2o_l9_s*
-rm -f h2o_nir9_s*
 
 exit 0

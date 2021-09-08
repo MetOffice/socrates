@@ -35,6 +35,7 @@ do case $1 in
       -C) CTN_NUM_PATH=$2 ; CTN_MIN_PATH=$3 ; CTN_MAX_PATH=$4 ; shift 4 ;;
       -D) DATABASE=$2 ; shift 2 ;;
       -X) XDATABASE=$2 ; shift 2 ;;
+      -UVX) UVXDATABASE=$2 ; shift 2 ;;
       -CIA) CIADATABASE=$2 ; shift 2 ;;
       -L) LBL_FILE=$2 ; shift 2 ;;
       -F) FILE_PT=$2 ; shift 2 ;;
@@ -96,12 +97,15 @@ if [ "$DATABASE" ]
   then echo l >> /tmp/ck.$$
   echo $DATABASE >> /tmp/ck.$$
   echo $RAD_DATA/gases/parsum.dat >> /tmp/ck.$$
+else if [ "$XDATABASE" ]
+  then echo x >> /tmp/ck.$$
+  echo $XDATABASE >> /tmp/ck.$$
+else if [ "$UVXDATABASE" ]
+  then echo u >> /tmp/ck.$$
+  echo $UVXDATABASE >> /tmp/ck.$$
 else
-  if [ "$XDATABASE" ]
-    then echo x >> /tmp/ck.$$
-    echo $XDATABASE >> /tmp/ck.$$
-  else
-    echo n >> /tmp/ck.$$
+  echo n >> /tmp/ck.$$
+    fi
   fi
 fi
 if [ "$CIADATABASE" ]
@@ -230,7 +234,7 @@ if [ "$DATABASE" ]
   fi
   echo $LINE_INC >> /tmp/ck.$$
 else
-  if [ "$XDATABASE" ] || [ "$CONT_DATA" ]
+  if [ "$XDATABASE" ] || [ "$UVXDATABASE" ] || [ "$CONT_DATA" ]
     then echo $LINE_INC >> /tmp/ck.$$
   fi
 fi

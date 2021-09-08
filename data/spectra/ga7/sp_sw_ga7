@@ -3,6 +3,7 @@ Summary of spectral data.
 Number of spectral bands =     6
 Total number of gaseous absorbers =     8
 Maximum number of k-terms in a band =    12
+Maximum number of spectral sub-bands in a band =     6
 Total number of aerosols =    26
 List of indexing numbers and absorbers.
 Index       Absorber(identifier and name)
@@ -75,25 +76,24 @@ Band        Rayleigh coefficient
     5        1.788411198E-07
     6        1.082347954E-08
 *END
-*BLOCK: TYPE =    4: SUBTYPE =    0: VERSION =    0
+*BLOCK: TYPE =    4: SUBTYPE =    0: VERSION =    1
 Gaseous absorbers in each interval
 (The number is the indexing number of the species as set out
  in the summary block 0.)
-A zero indicates that there in no gaseous absorption in the interval.
-Band        Number of active absorbers followed by indexing numbers
-    1           3
+A zero indicates that there is no gaseous absorption in the interval.
+Band, number of absorbers and overlap method, followed by indexing numbers
+    1           3           0
          3    6    7
-    2           2
+    2           2           0
          3    7
-    3           3
+    3           3           0
          3    1    6
-    4           3
+    4           3           0
          1    3    6
-    5           4
+    5           4           0
          1    2    5    6
-    6           7
-         1    2    3    4
-    5    7    8
+    6           7           0
+         1    2    3    4    5    7    8
 *END
 *BLOCK: TYPE =    5: SUBTYPE =    0: version =    1
 Exponential sum fiting coefficients: (exponents: m2/kg)
@@ -2301,17 +2301,17 @@ Band =     6     Fitting parameters:
 Specification of sub-bands for spectral variability data.
 Wavelength limits (m) and Rayleigh coefficients at STP (m2/kg).
 Number of spectral sub-bands = 12
-Sub-band Band  k-term     Lower limit         Upper limit       Rayleigh coeff
-    1      1      1     2.000000000E-07     2.200000000E-07     5.411639620E-04
-    2      1      2     2.200000000E-07     2.400000000E-07     3.808912673E-04
-    3      1      3     2.400000000E-07     2.600000000E-07     2.532462086E-04
-    4      1      4     2.600000000E-07     2.800000000E-07     1.841386263E-04
-    5      1      5     2.800000000E-07     3.000000000E-07     1.319010864E-04
-    6      1      6     3.000000000E-07     3.200000000E-07     1.006372358E-04
-    7      2      1     3.200000000E-07     4.000000000E-07     5.509622529E-05
-    8      2      2     4.000000000E-07     5.050000000E-07     2.147544832E-05
-    9      3      0     5.050000000E-07     6.900000000E-07     7.463127997E-06
-   10      4      0     6.900000000E-07     1.190000000E-06     1.639144948E-06
-   11      5      0     1.190000000E-06     2.380000000E-06     1.788411198E-07
-   12      6      0     2.380000000E-06     1.000000000E-05     1.082347954E-08
+Sub-band  Band  k-term    Lower limit         Upper limit       Rayleigh coeff
+      1      1      1   2.000000000E-07     2.200000000E-07     5.411639620E-04
+      2      1      2   2.200000000E-07     2.400000000E-07     3.808912673E-04
+      3      1      3   2.400000000E-07     2.600000000E-07     2.532462086E-04
+      4      1      4   2.600000000E-07     2.800000000E-07     1.841386263E-04
+      5      1      5   2.800000000E-07     3.000000000E-07     1.319010864E-04
+      6      1      6   3.000000000E-07     3.200000000E-07     1.006372358E-04
+      7      2      1   3.200000000E-07     4.000000000E-07     5.509622529E-05
+      8      2      2   4.000000000E-07     5.050000000E-07     2.147544832E-05
+      9      3      0   5.050000000E-07     6.900000000E-07     7.463127997E-06
+     10      4      0   6.900000000E-07     1.190000000E-06     1.639144948E-06
+     11      5      0   1.190000000E-06     2.380000000E-06     1.788411198E-07
+     12      6      0   2.380000000E-06     1.000000000E-05     1.082347954E-08
 *END

@@ -63,7 +63,8 @@ SUBROUTINE out_spectrum(file_spectral, Spectrum, ierr)
   ENDIF
 
 ! Determine if an extended file is required and open it if so.
-  l_exist_k = Spectrum%Planck%l_planck_tbl
+  l_exist_k = Spectrum%Planck%l_planck_tbl &
+         .OR. Spectrum%Dim%nd_sub_band_gas > 1
   IF (ALLOCATED(Spectrum%Gas%i_scale_fnc)) THEN
     l_exist_k = l_exist_k .OR. &
      ANY(Spectrum%Gas%i_scale_fnc == ip_scale_lookup)
@@ -137,6 +138,7 @@ SUBROUTINE out_spectrum(file_spectral, Spectrum, ierr)
   IF (Spectrum%Basic%l_present(18)) CALL write_block_18
   IF (Spectrum%Basic%l_present(19)) &
     CALL write_block_19(Spectrum%Basic, Spectrum%ContGen)
+  IF (Spectrum%Basic%l_present(20)) CALL write_block_20
 
 ! Close the file.
   CLOSE(iu_spc)
@@ -157,9 +159,9 @@ CONTAINS
 !   Local variables.
     INTEGER :: i, j
 !     Loop variables
-    INTEGER, Pointer :: i_type, i_type_1, i_type_2
+    INTEGER :: i_type, i_type_1, i_type_2
 !     Identifier for gas
-    INTEGER, Pointer :: i_index_1, i_index_2
+    INTEGER :: i_index_1, i_index_2
 !     Indices of continuum gases
     INTEGER :: nd_k_term, nd_k_term_cont
 !     Maximum number of k-terms in a band
@@ -185,6 +187,16 @@ CONTAINS
         'Maximum number of k-terms in a band =', nd_k_term
     END IF
 
+    IF (ALLOCATED(Spectrum%Gas%n_sub_band_gas)) THEN
+      IF (ANY(Spectrum%Gas%n_sub_band_gas(1:Spectrum%Basic%n_band, &
+                                          1:Spectrum%Gas%n_absorb) > 1)) THEN
+        WRITE (iu_spc, '(a48, i6)') &
+          'Maximum number of spectral sub-bands in a band =', &
+          MAXVAL(Spectrum%Gas%n_sub_band_gas(1:Spectrum%Basic%n_band, &
+                                             1:Spectrum%Gas%n_absorb))
+      END IF
+    END IF
+
     IF (Spectrum%ContGen%n_cont > 0) THEN
       WRITE(iu_spc, '(a, i5)') 'Total number of generalised continua = ', &
         Spectrum%ContGen%n_cont
@@ -207,11 +219,16 @@ CONTAINS
         'Total number of aerosols =', Spectrum%Aerosol%n_aerosol
     END IF
 
+    IF (Spectrum%Photol%n_pathway > 0) THEN
+      WRITE(iu_spc, '(a37, 1x, i5)') &
+        'Total number of photolysis pathways =', Spectrum%Photol%n_pathway
+    END IF
+
     WRITE(iu_spc, '(a)') 'List of indexing numbers and absorbers.'
     WRITE(iu_spc, '(a)') &
       'Index       Absorber(identifier and name)'
     DO i=1, Spectrum%Gas%n_absorb
-      i_type => Spectrum%Gas%type_absorb(i)
+      i_type = Spectrum%Gas%type_absorb(i)
       WRITE(iu_spc, '(i5, 7x, i5, 7x, a)') &
         i, i_type, name_absorb(i_type)
     END DO
@@ -222,10 +239,10 @@ CONTAINS
         'Gas 1(index and name)              ' // &
         'Gas 2(index and name)'
       DO j = 1, Spectrum%ContGen%n_cont
-        i_index_1 => Spectrum%ContGen%index_cont_gas_1(j)
-        i_index_2 => Spectrum%ContGen%index_cont_gas_2(j)
-        i_type_1 => Spectrum%Gas%type_absorb(i_index_1)
-        i_type_2 => Spectrum%Gas%type_absorb(i_index_2)
+        i_index_1 = Spectrum%ContGen%index_cont_gas_1(j)
+        i_index_2 = Spectrum%ContGen%index_cont_gas_2(j)
+        i_type_1 = Spectrum%Gas%type_absorb(i_index_1)
+        i_type_2 = Spectrum%Gas%type_absorb(i_index_2)
         WRITE(iu_spc, '(i5, 5x, i5, 5x, a, 5x, i5, 5x, a)') j, &
           i_index_1, name_absorb(i_type_1), &
           i_index_2, name_absorb(i_type_2)
@@ -240,6 +257,41 @@ CONTAINS
         i_type=Spectrum%Aerosol%type_aerosol(i)
         WRITE(iu_spc, '(i5, 7x, i5, 7x, a)') &
           i, i_type, name_aerosol_component(i_type)
+      END DO
+    END IF
+
+    IF (Spectrum%Photol%n_pathway > 0) THEN
+      WRITE(iu_spc, '(a)') 'List of photolysis pathways.'
+      WRITE(iu_spc, '(a)') &
+       'Index  Absorber index  Reaction (Thermalisation indicator and Products)'
+      DO i=1, Spectrum%Photol%n_pathway
+        IF (Spectrum%Photol%pathway_products(i) > 0) THEN
+          IF (Spectrum%Photol%l_thermalise(i)) THEN
+            WRITE(iu_spc, '(2(i5, 7x), i5, l5, 2x, a)') i, &
+              Spectrum%Photol%pathway_absorber(i), &
+              Spectrum%Photol%pathway_products(i), &
+              Spectrum%Photol%l_thermalise(i), &
+              TRIM(photol_products(Spectrum%Photol%pathway_products(i), &
+              Spectrum%Gas%type_absorb(Spectrum%Photol%pathway_absorber(i))))
+          ELSE
+            WRITE(iu_spc, '(3(i5, 7x), a)') i, &
+              Spectrum%Photol%pathway_absorber(i), &
+              Spectrum%Photol%pathway_products(i), &
+              TRIM(photol_products(Spectrum%Photol%pathway_products(i), &
+              Spectrum%Gas%type_absorb(Spectrum%Photol%pathway_absorber(i))))
+          END IF
+        ELSE
+          IF (Spectrum%Photol%l_thermalise(i)) THEN
+            WRITE(iu_spc, '(2(i5, 7x), i5, l5)') i, &
+              Spectrum%Photol%pathway_absorber(i), &
+              Spectrum%Photol%pathway_products(i), &
+              Spectrum%Photol%l_thermalise(i)
+          ELSE
+            WRITE(iu_spc, '(3(i5, 7x))') i, &
+              Spectrum%Photol%pathway_absorber(i), &
+              Spectrum%Photol%pathway_products(i)
+          END IF
+        END IF
       END DO
     END IF
 
@@ -383,25 +435,27 @@ CONTAINS
 !
 !
     WRITE(iu_spc, '(a19, a16, a16)') &
-      '*BLOCK: TYPE =    4', ': SUBTYPE =    0', ': VERSION =    0'
+      '*BLOCK: TYPE =    4', ': SUBTYPE =    0', ': VERSION =    1'
     WRITE(iu_spc, '(a)') 'Gaseous absorbers in each interval'
     WRITE(iu_spc, '(a, /A)') &
       '(The number is the indexing number of the species as set out', &
       ' in the summary block 0.)'
     WRITE(iu_spc, '(a)') &
-      'A zero indicates that there in no gaseous absorption ' // &
+      'A zero indicates that there is no gaseous absorption ' // &
       'in the interval.'
-    WRITE(iu_spc, '(a4, 8x, a55)') 'Band', &
-      'Number of active absorbers followed by indexing numbers'
-!
+    WRITE(iu_spc, '(a, a, a)') 'Band,', &
+      ' number of absorbers and overlap method,', &
+      ' followed by indexing numbers'
+
     DO i=1, Spectrum%Basic%n_band
-      WRITE(iu_spc, '(i5, 7x, i5)') i, Spectrum%Gas%n_band_absorb(i)
-      IF (Spectrum%Gas%n_band_absorb(i) > 0) then
-        WRITE(iu_spc, '(5x, 4(2x, i3))') &
+      WRITE(iu_spc, '(i5, 2(7x, i5))') &
+        i, Spectrum%Gas%n_band_absorb(i), Spectrum%Gas%i_overlap(i)
+      IF (Spectrum%Gas%n_band_absorb(i) > 0) THEN
+        WRITE(iu_spc, '(5x, 12(2x, i3))') &
           Spectrum%Gas%index_absorb(1:Spectrum%Gas%n_band_absorb(i), i)
       ENDIF
     ENDDO
-!
+
     WRITE(iu_spc, '(a4)') '*END'
 !
 !
@@ -419,7 +473,7 @@ CONTAINS
     TYPE  (StrSpecGas) :: SpGas
 !
 !   Local variables.
-    INTEGER :: i, j, k, igf
+    INTEGER :: i, j, k, igf, isb
 !     Loop variables
     INTEGER :: i_index
 !     Index of gas
@@ -517,11 +571,38 @@ CONTAINS
         END IF
       ENDDO
     ENDDO
-!
-    WRITE(iu_spc, '(a4)') '*END'
     IF (ANY(SpGas%i_scale_fnc == ip_scale_lookup)) THEN
       WRITE(iu_spc1, '(a4)') '*END'
     END IF
+
+    IF (ANY(Spectrum%Gas%n_sub_band_gas(1:SpBasic%n_band, &
+                                        1:SpGas%n_absorb) > 1)) THEN
+      WRITE(iu_spc1,'(//,a6,a2,a16)') '*BLOCK', ': ', 'sub-band mapping'
+    END IF
+    DO i=1, SpBasic%n_band
+      DO j=1, SpGas%n_band_absorb(i)
+        i_index=SpGas%index_absorb(j, i)
+        IF (Spectrum%Gas%n_sub_band_gas(i, i_index) > 1) THEN
+          WRITE(iu_spc1, '(/,2(a,i4),a,i6)') 'Band: ',i,', gas: ',i_index, &
+            ', sub-bands: ', Spectrum%Gas%n_sub_band_gas(i, i_index)
+          WRITE(iu_spc1, '(a)') &
+        'Sub-band  k-term       weight       wavelength_short   wavelength_long'
+          DO isb=1, Spectrum%Gas%n_sub_band_gas(i, i_index)
+            WRITE(iu_spc1, '(2i8, 3(2x,1PE16.9))') isb, &
+              Spectrum%Gas%sub_band_k(isb, i, i_index), &
+              Spectrum%Gas%sub_band_w(isb, i, i_index), &
+              Spectrum%Gas%wavelength_sub_band(:, isb, i, i_index)
+          END DO
+        END IF
+      END DO
+    END DO
+    IF (ANY(Spectrum%Gas%n_sub_band_gas(1:SpBasic%n_band, &
+                                        1:SpGas%n_absorb) > 1)) THEN
+      WRITE(iu_spc1, '(a4)') '*END'
+    END IF
+
+
+    WRITE(iu_spc, '(a4)') '*END'
 !
 !
 !
@@ -1063,10 +1144,10 @@ CONTAINS
       'Number of spectral sub-bands = ', SpVar%n_sub_band
     IF (SpVar%n_sub_band > SpBasic%n_band) THEN
       WRITE(iu_spc, '(a)') &
-        'Sub-band Band  k-term     Lower limit         Upper limit' // &
+        'Sub-band  Band  k-term    Lower limit         Upper limit' // &
         '       Rayleigh coeff'
       DO i=1, SpVar%n_sub_band
-        WRITE(iu_spc, '(3(i5, 2x), 2x, 1pe16.9, 2(4x, 1pe16.9))') &
+        WRITE(iu_spc, '(3i7, 2x, 1pe16.9, 2(4x, 1pe16.9))') &
           i, SpVar%index_sub_band(1:2,i), SpVar%wavelength_sub_band(1:2,i), &
           SpVar%rayleigh_coeff(i, 0)
       END DO
@@ -1157,7 +1238,7 @@ CONTAINS
 !     Index of continuum
 
     WRITE(iu_spc, '(a19, a16, a16)') &
-      '*BLOCK: TYPE =   19', ': SUBTYPE =    0', ': version =    0'
+      '*BLOCK: TYPE =   19', ': SUBTYPE =    0', ': VERSION =    0'
     WRITE(iu_spc, '(a)') &
       'Exponential sum fiting continuum coefficients: (exponents: m5/kg2)'
     WRITE(iu_spc, '(a, i5)') &
@@ -1166,7 +1247,7 @@ CONTAINS
       'Continuum, number of k-terms, overlap treatment, ', &
       'followed by, k-terms and weights.'
 
-    WRITE(iu_spc1,'(a)') '*BLOCK: continuum k-table'
+    WRITE(iu_spc1,'(/,a)') '*BLOCK: continuum k-table'
     WRITE(iu_spc1,'(/,2(a,i4),a)') 'Lookup table: ', &
       SpCont%n_t_lookup_cont, ' temperatures.'
     WRITE(iu_spc1,'(6(1PE13.6))') &
@@ -1203,5 +1284,41 @@ CONTAINS
   END SUBROUTINE write_block_19
 
 
+
+  SUBROUTINE write_block_20
+
+    IMPLICIT NONE
+
+    INTEGER :: i, i_wl, n_t
+    
+    WRITE(iu_spc, '(a19, a16, a16)') &
+      '*BLOCK: TYPE =   20', ': SUBTYPE =    0', ': VERSION =    0'
+    WRITE(iu_spc, '(a)') &
+      'Photolysis quantum yield lookup tables'
+    WRITE(iu_spc, '(a,i5)') &
+      'Max number of temperatures:', Spectrum%Dim%nd_t_lookup_photol
+    WRITE(iu_spc, '(a,i6)') &
+      'Max number of wavelengths:', Spectrum%Dim%nd_wl_lookup_photol
+    DO i=1, Spectrum%Photol%n_pathway
+      WRITE(iu_spc, '(/,a,i4,a,1pe16.9)') 'Pathway index:', &
+        i, ', Threshold wavelength:', Spectrum%Photol%threshold_wavelength(i)
+      n_t = Spectrum%Photol%n_t_lookup_photol(i)
+      WRITE(iu_spc, '(a,i5,a,3(3x,1pe16.9))') 'Temperatures:', &
+        n_t, ':', Spectrum%Photol%t_lookup_photol(1:MIN(n_t, 3), i)
+      IF (n_t > 3) WRITE(iu_spc, '(19x, 3(3x,1pe16.9))') &
+        Spectrum%Photol%t_lookup_photol(4:n_t, i)
+      WRITE(iu_spc, '(a,i6,a)') 'Wavelengths:', &
+        Spectrum%Photol%n_wl_lookup_photol(i), ',     Quantum Yield:'
+      DO i_wl=1, Spectrum%Photol%n_wl_lookup_photol(i)
+        WRITE(iu_spc, '(4(3x,1pe16.9))') &
+          Spectrum%Photol%wl_lookup_photol(i_wl, i), &
+          Spectrum%Photol%quantum_yield(1:MIN(n_t, 3), i_wl, i)
+        IF (n_t > 3) WRITE(iu_spc, '(19x, 3(3x,1pe16.9))') &
+          Spectrum%Photol%quantum_yield(4:n_t, i_wl, i)
+      END DO
+    END DO
+    WRITE(iu_spc, '(a4)') '*END'
+
+  END SUBROUTINE write_block_20
 
 END SUBROUTINE out_spectrum

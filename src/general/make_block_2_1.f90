@@ -105,7 +105,7 @@ SUBROUTINE make_block_2_1(Sp, Sol, filter, l_filter, l_enhance, l_verbose, ierr)
     sol_wavelength_end   = Sol%bandbnds(2,Sol%n_points)
   END SELECT  
   
-  IF (l_verbose) WRITE(*, '(a,f16.9)') &
+  IF (l_verbose) WRITE(*, '(a,f21.9)') &
     'Total irradiance of solar spectrum = ', total_solar_irradiance
 
 ! Add on the tail of the distribution using a rayleigh-jeans law.
@@ -192,7 +192,10 @@ SUBROUTINE make_block_2_1(Sp, Sol, filter, l_filter, l_enhance, l_verbose, ierr)
         ALLOCATE(bw(n_points_band))
         DO j=i_short, i_long
           y(j-i_short+1)=Sol%irrad(j)
-          IF (j == i_short) THEN
+          IF (i_short == i_long) THEN
+            bw(1) = wave_length_end - wave_length_begin
+            x(1)  = wave_length_begin + (bw(1)/2.0)
+          ELSE IF (j == i_short) THEN
             bw(j-i_short+1) = Sol%bandbnds(2,j) - wave_length_begin
             x(j-i_short+1)  = wave_length_begin + (bw(j-i_short+1)/2.0)
           ELSE IF (j == i_long) THEN

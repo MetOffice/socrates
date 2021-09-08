@@ -18,7 +18,7 @@ USE realtype_rd, ONLY: RealK
 
 IMPLICIT NONE
 
-INTEGER, PARAMETER :: npd_gases = 38
+INTEGER, PARAMETER :: npd_gases = 40
 !   Number of indexed gases
 
 INTEGER, PARAMETER :: IP_h2o = 1
@@ -97,6 +97,10 @@ INTEGER, PARAMETER :: IP_ar = 37
 !   Identifier for argon
 INTEGER, PARAMETER :: IP_air = 38
 !   Identifier for all other gases, used by generalised continuum
+INTEGER, PARAMETER :: IP_o = 39
+!   Identifier for atomic oxygen
+INTEGER, PARAMETER :: IP_n = 40
+!   Identifier for atomic nitrogen
 
 CHARACTER (LEN=20), PARAMETER :: name_absorb(npd_gases) = (/ &
                                    "Water Vapour        ", &
@@ -136,7 +140,9 @@ CHARACTER (LEN=20), PARAMETER :: name_absorb(npd_gases) = (/ &
                                    "Hydrogen cyanide    ", &
                                    "Hydrogen sulphide   ", &
                                    "Argon               ", &
-                                   "Dry air             " /)
+                                   "Dry air             ", &
+                                   "Atomic oxygen       ", &
+                                   "Atomic nitrogen     " /)
 
 
 ! Molecular weights taken from "General Inorganic Chemistry"
@@ -179,7 +185,9 @@ REAL (RealK), PARAMETER :: molar_weight(npd_gases) = (/ &
   27.0253_RealK,     & ! HCN (from NIST)
   34.081_RealK,      & ! H2S (from NIST)
   39.948_RealK,      & ! Ar (from NIST)
-  28.966_RealK      /) ! Dry air
+  28.966_RealK,      & ! Dry air
+  15.9994_RealK,     & ! O (from NIST)
+  14.00674_RealK    /) ! N (from NIST)
 
 
 ! Array of identifiers in HITRAN for each gas in the radiation code.
@@ -221,7 +229,9 @@ INTEGER, PARAMETER :: hitran_number(npd_gases) = (/ &
   23,  & ! HCN
   31,  & ! H2S
   0,   & ! Ar
-  0   /) ! Dry air
+  0,   & ! Dry air
+  0,   & ! O
+  0   /) ! N
 
 ! Depolarization factors used to compute the Rayleigh scattering coefficients
 REAL (RealK), PARAMETER :: depolarization_factor(npd_gases) = (/ &
@@ -262,6 +272,248 @@ REAL (RealK), PARAMETER :: depolarization_factor(npd_gases) = (/ &
   0.0_RealK,     & ! HCN
   0.0_RealK,     & ! H2S
   0.0006_RealK,  & ! Ar (Parthasarathy, Indian J. Phys. 25, 21 (1951))
-  0.0279_RealK  /) ! Dry air
+  0.0279_RealK,  & ! Dry air
+  0.0_RealK,     & ! O
+  0.0_RealK     /) ! N
+
+! Maximum number of photolysis products for a given absorber
+INTEGER, PARAMETER :: npd_products = 8
+
+INTEGER, PRIVATE :: i
+CHARACTER(LEN=56), PARAMETER :: blank = ""
+! Description of photolysis products
+CHARACTER(LEN=56), PARAMETER :: photol_products(npd_products, npd_gases) &
+  = RESHAPE([CHARACTER(LEN=56) ::    &
+  "H2O -> O(3P) + H2             ",  &
+  "H2O -> OH(X2Pi) + H           ",  &
+  "H2O -> O(1D) + H2             ",  &
+  "H2O -> OH(A2Sigma+) + H       ",  &
+  "H2O -> O(3P) + H + H          ",  &
+  (blank, i=1, npd_products-5),      & ! H2O
+  (blank, i=1, npd_products),        & ! CO2
+  "O3 -> O(3P) + O2(X3Sigmag-)   ",  &
+  "O3 -> O(3P) + O2(a1Deltag)    ",  &
+  "O3 -> O(3P) + O2(b1Sigmag+)   ",  &
+  "O3 -> O(1D) + O2(X3Sigmag-)   ",  &
+  "O3 -> O(1D) + O2(a1Deltag)    ",  &
+  "O3 -> O(1D) + O2(b1Sigmag+)   ",  &
+  "O3 -> 3 O(3P)                 ",  &
+  "O3 -> O(1S) + O2(a1Deltag)    ",  &
+  (blank, i=1, npd_products-8),      & ! O3
+  "N2O -> N2 + O(1D)             ",  &
+  "N2O -> N2 + O(3P)             ",  &
+  "N2O -> N(4S) + NO(2Pi)        ",  &
+  "N2O -> N2 + O(1S)             ",  &
+  (blank, i=1, npd_products-4),      & ! N2O
+  (blank, i=1, npd_products),        & ! CO
+  (blank, i=1, npd_products),        & ! CH4
+  "O2 -> O(3P) + O(3P)           ",  &
+  "O2 -> O(3P) + O(1D)           ",  &
+  "O2 -> O(1D) + O(1D)           ",  &
+  "O2 -> O(3P) + O(1S)           ",  &
+  "O2 -> O(1D) + O(1S)           ",  &
+  "O2 -> O2+                     ",  &
+  "O2 -> O+ + O                  ",  &
+  (blank, i=1, npd_products-7),      & ! O2
+  (blank, i=1, npd_products),        & ! NO
+  (blank, i=1, npd_products),        & ! SO2
+  "NO2 -> NO + O(3P)             ",  &
+  "NO2 -> NO + O(1D)             ",  &
+  (blank, i=1, npd_products-2),      & ! NO2
+  (blank, i=1, npd_products),        & ! NH3
+  "HNO3 -> OH + NO2              ",  &
+  "HNO3 -> HONO + O(3P)          ",  &
+  "HNO3 -> H + NO3               ",  &
+  "HNO3 -> OH + NO2*(12B2)       ",  &
+  "HNO3 -> HONO + O(1D)          ",  &
+  "HNO3 -> HONO (a3A)+ O(3P)     ",  &
+  (blank, i=1, npd_products-6),      & ! HNO3
+  "N2 -> N + N                   ",  &
+  "N2 -> N2+                     ",  &
+  "N2 -> N+ + N                  ",  &
+  (blank, i=1, npd_products-3),      & ! N2
+  (blank, i=1, npd_products),        & ! CFC11
+  (blank, i=1, npd_products),        & ! CFC12
+  (blank, i=1, npd_products),        & ! CFC113
+  (blank, i=1, npd_products),        & ! HCFC22
+  (blank, i=1, npd_products),        & ! HFC125
+  (blank, i=1, npd_products),        & ! HFC134a
+  (blank, i=1, npd_products),        & ! CFC114
+  (blank, i=1, npd_products),        & ! TiO
+  (blank, i=1, npd_products),        & ! VO
+  (blank, i=1, npd_products),        & ! H2
+  (blank, i=1, npd_products),        & ! He
+  "OCS -> CO + S(3P)             ",  &
+  "OCS -> CO + S(1D)             ",  &
+  "OCS -> CO + S(1S)             ",  &
+  (blank, i=1, npd_products-3),      & ! OCS
+  (blank, i=1, npd_products),        & ! Na
+  (blank, i=1, npd_products),        & ! K
+  (blank, i=1, npd_products),        & ! FeH
+  (blank, i=1, npd_products),        & ! CrH
+  (blank, i=1, npd_products),        & ! Li
+  (blank, i=1, npd_products),        & ! Rb
+  (blank, i=1, npd_products),        & ! Cs
+  (blank, i=1, npd_products),        & ! PH3
+  (blank, i=1, npd_products),        & ! C2H2
+  (blank, i=1, npd_products),        & ! HCN
+  (blank, i=1, npd_products),        & ! H2S
+  (blank, i=1, npd_products),        & ! Ar
+  (blank, i=1, npd_products),        & ! Dry air
+  "O -> O+(4S)                   ",  &
+  "O -> O+(2D)                   ",  &
+  "O -> O+(2P)                   ",  &
+  "O -> O+(4Pe)                  ",  &
+  "O -> O+(2Pe)                  ",  &
+  "O -> O++                      ",  &
+  "O -> O+++                     ",  &
+  (blank, i=1, npd_products-7),      & ! O
+  "N -> N+                       ",  &
+  "N -> N++                      ",  &
+  (blank, i=1, npd_products-2)       & ! N
+  ], shape=[npd_products, npd_gases] )
+
+! Name used by UKCA for photolysis pathway
+CHARACTER(LEN=56), PARAMETER :: photol_fldname(0:npd_products, npd_gases) &
+  = RESHAPE([CHARACTER(LEN=56) ::    &
+  "jh2o                          ",  & ! H2O -> Unspecified
+  (blank, i=1, npd_products),        & ! H2O
+  (blank, i=0, npd_products),        & ! CO2
+  (blank, i=0, npd_products),        & ! O3
+  (blank, i=0, npd_products),        & ! N2O
+  (blank, i=0, npd_products),        & ! CO
+  (blank, i=0, npd_products),        & ! CH4
+  "jo2                           ",  & ! O2 -> Unspecified
+  "jo2                           ",  & ! O2 -> O(3P) + O(3P)
+  "jo2b                          ",  & ! O2 -> O(3P) + O(1D)
+  (blank, i=3, npd_products),        & ! O2
+  (blank, i=0, npd_products),        & ! NO
+  (blank, i=0, npd_products),        & ! SO2
+  (blank, i=0, npd_products),        & ! NO2
+  (blank, i=0, npd_products),        & ! NH3
+  (blank, i=0, npd_products),        & ! HNO3
+  (blank, i=0, npd_products),        & ! N2
+  (blank, i=0, npd_products),        & ! CFC11
+  (blank, i=0, npd_products),        & ! CFC12
+  (blank, i=0, npd_products),        & ! CFC113
+  (blank, i=0, npd_products),        & ! HCFC22
+  (blank, i=0, npd_products),        & ! HFC125
+  (blank, i=0, npd_products),        & ! HFC134a
+  (blank, i=0, npd_products),        & ! CFC114
+  (blank, i=0, npd_products),        & ! TiO
+  (blank, i=0, npd_products),        & ! VO
+  (blank, i=0, npd_products),        & ! H2
+  (blank, i=0, npd_products),        & ! He
+  (blank, i=0, npd_products),        & ! OCS
+  (blank, i=0, npd_products),        & ! Na
+  (blank, i=0, npd_products),        & ! K
+  (blank, i=0, npd_products),        & ! FeH
+  (blank, i=0, npd_products),        & ! CrH
+  (blank, i=0, npd_products),        & ! Li
+  (blank, i=0, npd_products),        & ! Rb
+  (blank, i=0, npd_products),        & ! Cs
+  (blank, i=0, npd_products),        & ! PH3
+  (blank, i=0, npd_products),        & ! C2H2
+  (blank, i=0, npd_products),        & ! HCN
+  (blank, i=0, npd_products),        & ! H2S
+  (blank, i=0, npd_products),        & ! Ar
+  (blank, i=0, npd_products),        & ! Dry air
+  (blank, i=0, npd_products),        & ! O
+  (blank, i=0, npd_products)         & ! N
+  ], shape=[npd_products+1, npd_gases] )
+
+! Threshold wavelength defining energy required for photolysis
+REAL (RealK), PARAMETER :: threshold_wavelength(npd_products, npd_gases) &
+  = RESHAPE ( [REAL(RealK) ::       &
+  246.0E-09_RealK,                  & ! H2O -> O(3P) + H2
+  242.0E-09_RealK,                  & ! H2O -> OH(X2Pi) + H
+  175.0E-09_RealK,                  & ! H2O -> O(1D) + H2
+  134.0E-09_RealK,                  & ! H2O -> OH(A2Sigma+) + H
+  129.0E-09_RealK,                  & ! H2O -> O(3P) + H + H
+  (0.0_RealK, i=1, npd_products-5), & ! H2O
+  (0.0_RealK, i=1, npd_products),   & ! CO2
+  1180.0E-09_RealK,                 & ! O3 -> O(3P) + O2(X3Sigmag-)
+   612.0E-09_RealK,                 & ! O3 -> O(3P) + O2(a1Deltag)
+   463.0E-09_RealK,                 & ! O3 -> O(3P) + O2(b1Sigmag+)
+   411.0E-09_RealK,                 & ! O3 -> O(1D) + O2(X3Sigmag-)
+   310.0E-09_RealK,                 & ! O3 -> O(1D) + O2(a1Deltag)
+   267.0E-09_RealK,                 & ! O3 -> O(1D) + O2(b1Sigmag+)
+   201.0E-09_RealK,                 & ! O3 -> 3 O(3P)
+   196.0E-09_RealK,                 & ! O3 -> O(1S) + O2(a1Deltag)
+  (0.0_RealK, i=1, npd_products-8), & ! O3
+  336.0E-09_RealK,                  & ! N2O -> N2 + O(1D)
+  713.0E-09_RealK,                  & ! N2O -> N2 + O(3P)
+  248.0E-09_RealK,                  & ! N2O -> N(4S) + NO(2Pi)
+  210.0E-09_RealK,                  & ! N2O -> N2 + O(1S)
+  (0.0_RealK, i=1, npd_products-4), & ! N2O
+  (0.0_RealK, i=1, npd_products),   & ! CO
+  (0.0_RealK, i=1, npd_products),   & ! CH4
+  242.3E-09_RealK,                  & ! O2 -> O(3P) + O(3P)
+  175.0E-09_RealK,                  & ! O2 -> O(3P) + O(1D)
+  137.0E-09_RealK,                  & ! O2 -> O(1D) + O(1D)
+  132.0E-09_RealK,                  & ! O2 -> O(3P) + O(1S)
+  110.0E-09_RealK,                  & ! O2 -> O(1D) + O(1S)
+  102.78E-09_RealK,                 & ! O2 -> O2+
+   66.2E-09_RealK,                  & ! O2 -> O+ + O
+  (0.0_RealK, i=1, npd_products-7), & ! O2
+  (0.0_RealK, i=1, npd_products),   & ! NO
+  (0.0_RealK, i=1, npd_products),   & ! SO2
+  398.0E-09_RealK,                  & ! NO2 -> NO + O(3P)
+  244.0E-09_RealK,                  & ! NO2 -> NO + O(1D)
+  (0.0_RealK, i=1, npd_products-2), & ! NO2
+  (0.0_RealK, i=1, npd_products),   & ! NH3
+  581.0E-09_RealK,                  & ! HNO3 -> OH + NO2
+  392.0E-09_RealK,                  & ! HNO3 -> HONO + O(3P)
+  280.0E-09_RealK,                  & ! HNO3 -> H + NO3
+    0.0E-09_RealK,                  & ! HNO3 -> OH + NO2*(12B2)
+  242.0E-09_RealK,                  & ! HNO3 -> HONO + O(1D)
+    0.0E-09_RealK,                  & ! HNO3 -> HONO (a3A)+ O(3P)
+  (0.0_RealK, i=1, npd_products-6), & ! HNO3
+   98.6E-09_RealK,                  & ! N2 -> N + N
+   79.8E-09_RealK,                  & ! N2 -> N2+
+   51.0E-09_RealK,                  & ! N2 -> N+ + N
+  (0.0_RealK, i=1, npd_products-3), & ! N2
+  (0.0_RealK, i=1, npd_products),   & ! CFC11
+  (0.0_RealK, i=1, npd_products),   & ! CFC12
+  (0.0_RealK, i=1, npd_products),   & ! CFC113
+  (0.0_RealK, i=1, npd_products),   & ! HCFC22
+  (0.0_RealK, i=1, npd_products),   & ! HFC125
+  (0.0_RealK, i=1, npd_products),   & ! HFC134a
+  (0.0_RealK, i=1, npd_products),   & ! CFC114
+  (0.0_RealK, i=1, npd_products),   & ! TiO
+  (0.0_RealK, i=1, npd_products),   & ! VO
+  (0.0_RealK, i=1, npd_products),   & ! H2
+  (0.0_RealK, i=1, npd_products),   & ! He
+  388.0E-09_RealK,                  & ! OCS -> CO + S(3P)
+  285.0E-09_RealK,                  & ! OCS -> CO + S(1D)
+  209.0E-09_RealK,                  & ! OCS -> CO + S(1S)
+  (0.0_RealK, i=1, npd_products-3), & ! OCS
+  (0.0_RealK, i=1, npd_products),   & ! Na
+  (0.0_RealK, i=1, npd_products),   & ! K
+  (0.0_RealK, i=1, npd_products),   & ! FeH
+  (0.0_RealK, i=1, npd_products),   & ! CrH
+  (0.0_RealK, i=1, npd_products),   & ! Li
+  (0.0_RealK, i=1, npd_products),   & ! Rb
+  (0.0_RealK, i=1, npd_products),   & ! Cs
+  (0.0_RealK, i=1, npd_products),   & ! PH3
+  (0.0_RealK, i=1, npd_products),   & ! C2H2
+  (0.0_RealK, i=1, npd_products),   & ! HCN
+  (0.0_RealK, i=1, npd_products),   & ! H2S
+  (0.0_RealK, i=1, npd_products),   & ! Ar
+  (0.0_RealK, i=1, npd_products),   & ! Dry air
+   91.25E-09_RealK,                 & ! O -> O+(4S) 
+   73.18E-09_RealK,                 & ! O -> O+(2D) 
+   66.58E-09_RealK,                 & ! O -> O+(2P) 
+   43.50E-09_RealK,                 & ! O -> O+(4Pe)
+   31.00E-09_RealK,                 & ! O -> O+(2Pe)
+   24.80E-09_RealK,                 & ! O -> O++    
+   12.179E-09_RealK,                & ! O -> O+++   
+  (0.0_RealK, i=1, npd_products-7), & ! O
+   85.92E-09_RealK,                 & ! N -> N+
+   28.00E-09_RealK,                 & ! N -> N++
+  (0.0_RealK, i=1, npd_products-2)  & ! N
+  ], shape=[npd_products, npd_gases] )
+
+
 
 END MODULE gas_list_pcf

@@ -3,6 +3,7 @@ Summary of spectral data.
 Number of spectral bands =     6
 Total number of gaseous absorbers =     4
 Maximum number of k-terms in a band =     7
+Maximum number of spectral sub-bands in a band =     6
 Total number of aerosols =    26
 List of indexing numbers and absorbers.
 Index       Absorber(identifier and name)

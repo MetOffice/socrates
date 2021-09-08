@@ -410,10 +410,15 @@ INTEGER, PARAMETER :: ip_scale_term = 2
 ! gas_overlap_pcf, gasovl3a
 ! ------------------------------------------------------------------
 ! Module to set treatments of overlapping gaseous absorption.
+INTEGER, PARAMETER :: ip_overlap_hybrid              = 0
+!   Overlap treatment depends on band (specified in spectral file)
 INTEGER, PARAMETER :: ip_overlap_single              = 1
 !   One species only
 INTEGER, PARAMETER :: ip_overlap_random              = 2
 !   Random overlap
+INTEGER, PARAMETER :: ip_overlap_exact_major         = 3
+!   Exact overlap between minor and major species,
+!   random overlap between minor species
 INTEGER, PARAMETER :: ip_overlap_k_eqv_scl           = 4
 !   Equivalent extinction using correct scaling
 INTEGER, PARAMETER :: ip_overlap_k_eqv               = 5

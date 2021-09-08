@@ -140,6 +140,7 @@ diff -q ref_sw_ga9_avg.nflx cdl_sw_ga9_avg.nflx || ierr=1
 diff -q ref_lw_ga9_avg.nflx cdl_lw_ga9_avg.nflx || ierr=1
 diff -q ref_sw_260_avg.nflx cdl_sw_260_avg.nflx || ierr=1
 diff -q ref_lw_300_avg.nflx cdl_lw_300_avg.nflx || ierr=1
+resrm sw_ga7_avg
 resrm sw_ga9_avg
 resrm lw_ga9_avg
 resrm sw_260_avg

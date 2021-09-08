@@ -100,8 +100,12 @@ INTEGER :: nd_mix
 !   Number of eta for mixture absorbing species
 INTEGER :: nd_band_mix_gas
 !   Number of bands where mixed species exist
+INTEGER :: nd_sub_band_k
+!   Size allocated for spectral sub-bands for each k-term
+INTEGER :: nd_sub_band_gas
+!   Size allocated for spectral sub-bands in each band
 INTEGER :: nd_sub_band
-!   Size allocated for spectral sub-bands (for spectral variability)
+!   Size allocated for total spectral sub-bands (for spectral variability)
 INTEGER :: nd_times
 !   Size allocated for times (for spectral variability)
 INTEGER :: nd_cont
@@ -140,6 +144,8 @@ nd_tmp = 0
 nd_pre = 0
 nd_mix = 0
 nd_band_mix_gas = 0
+nd_sub_band_k = 0
+nd_sub_band_gas = 1
 nd_sub_band = 0
 nd_times = 0
 nd_cont = 0
@@ -150,26 +156,9 @@ nd_gas_frac = 0
 
 Sp%Dim%nd_type = npd_type
 
-! Initialise other integer values to zero
-Sp%Basic%n_band = 0
-Sp%Gas%n_absorb = 0
-Sp%Gas%n_absorb_sb = 0
-Sp%Planck%n_deg_fit = 0
-Sp%Aerosol%n_aerosol = 0
-Sp%Aerosol%n_aerosol_mr = 0
-Sp%Aerosol%n_aod_wavel = 0
-Sp%ContGen%n_cont = 0
-
-! It is important to know which gas is water vapour for some
-! applications: here we initialize INDEX_WATER to 0 to
-! produce an error in the code if it is not reset to a legal value.
-! This should guard against omitting water vapour when it is needed.
-Sp%Cont%index_water=0
-
 ! Initialization of logical variables.
 ALLOCATE(Sp%Basic%l_present(0:Sp%Dim%nd_type))
 Sp%Basic%l_present = .FALSE.
-Sp%Planck%l_planck_tbl = .FALSE.
 
 ! Get a unit to read the file.
 CALL assign_file_unit(file_spectral, iu_spc, handler="fortran")
@@ -283,6 +272,8 @@ Sp%Dim%nd_tmp = nd_tmp
 Sp%Dim%nd_pre = nd_pre
 Sp%Dim%nd_mix = nd_mix
 Sp%Dim%nd_band_mix_gas = nd_band_mix_gas
+Sp%Dim%nd_sub_band_k = nd_sub_band_k
+Sp%Dim%nd_sub_band_gas = nd_sub_band_gas
 Sp%Dim%nd_sub_band = nd_sub_band
 Sp%Dim%nd_times = nd_times
 Sp%Dim%nd_cont = nd_cont
@@ -511,6 +502,13 @@ ELSE IF (i_type == 19) THEN
       l_block_read= .TRUE.
     END IF
   END IF
+ELSE IF (i_type == 20) THEN
+  IF (i_subtype == 0) THEN
+    IF (i_version == 0) THEN
+      CALL read_block_20_0_0
+      l_block_read= .TRUE.
+    END IF
+  END IF
 END IF
 
 IF (ierr /= i_normal) THEN
@@ -645,6 +643,9 @@ DO
   CASE ('Total number of generalised continua', 'nd_cont')
     READ(line(desc_end+1:),*,IOSTAT=ios, IOMSG=iomessage) Sp%ContGen%n_cont
     nd_cont = Sp%ContGen%n_cont
+  CASE ('Total number of photolysis pathways', 'nd_pathway')
+    READ(line(desc_end+1:),*,IOSTAT=ios, IOMSG=iomessage) Sp%Photol%n_pathway
+    Sp%Dim%nd_pathway = Sp%Photol%n_pathway
   CASE ('List of indexing numbers and absorbers.')
     ALLOCATE(Sp%Gas%type_absorb(nd_species))
     READ(iu_spc, *)
@@ -668,8 +669,29 @@ DO
         idum, Sp%ContGen%index_cont_gas_1(i), &
         Sp%ContGen%index_cont_gas_2(i)
     END DO
+  CASE ('List of photolysis pathways.')
+    ALLOCATE(Sp%Photol%pathway_absorber(Sp%Dim%nd_pathway))
+    ALLOCATE(Sp%Photol%pathway_products(Sp%Dim%nd_pathway))
+    ALLOCATE(Sp%Photol%l_thermalise(Sp%Dim%nd_pathway))
+    READ(iu_spc, *)
+    DO i = 1, Sp%Photol%n_pathway
+      READ(iu_spc, '(2(i5, 7x),i5,l5)',IOSTAT=ios, IOMSG=iomessage) idum, &
+        Sp%Photol%pathway_absorber(i), &
+        Sp%Photol%pathway_products(i), &
+        Sp%Photol%l_thermalise(i)
+      IF (ios > 0) THEN
+        ! Recover if logical field is blank
+        ios=0
+        BACKSPACE(iu_spc)
+        READ(iu_spc, '(2(i5, 7x),i5)',IOSTAT=ios, IOMSG=iomessage) idum, &
+          Sp%Photol%pathway_absorber(i), Sp%Photol%pathway_products(i)
+        Sp%Photol%l_thermalise(i) = .FALSE.
+      END IF
+    END DO
   CASE ('Maximum number of k-terms in a band','nd_k_term')
     READ(line(desc_end+1:),*,IOSTAT=ios, IOMSG=iomessage) nd_k_term
+  CASE ('Maximum number of spectral sub-bands in a band','nd_sub_band_gas')
+    READ(line(desc_end+1:),*,IOSTAT=ios, IOMSG=iomessage) nd_sub_band_gas
   CASE ('Maximum number of continuum k-terms in a band', 'nd_k_term_cont')
     READ(line(desc_end+1:),*,IOSTAT=ios, IOMSG=iomessage) nd_k_term_cont
 
@@ -927,6 +949,8 @@ READ(iu_spc, '(////)')
 
 ! Read in the list of absorbers in each band.
 ALLOCATE(Sp%Gas%n_band_absorb(nd_band))
+ALLOCATE(Sp%Gas%i_overlap(nd_band))
+Sp%Gas%i_overlap = 0
 ALLOCATE(Sp%Gas%index_absorb(nd_species, nd_band))
 DO i=1, Sp%Basic%n_band
   READ(iu_spc, FMT='(i5, 7x, i5)', IOSTAT=ios, IOMSG=iomessage) &
@@ -970,10 +994,11 @@ READ(iu_spc, '(////)')
 
 ! Read in the list of absorbers in each band.
 ALLOCATE(Sp%Gas%n_band_absorb(nd_band))
+ALLOCATE(Sp%Gas%i_overlap(nd_band))
 ALLOCATE(Sp%Gas%index_absorb(nd_species, nd_band))
 DO i=1, Sp%Basic%n_band
-  READ(iu_spc, FMT='(i5, 7x, i5)', IOSTAT=ios, IOMSG=iomessage) &
-    idum, Sp%Gas%n_band_absorb(i)
+  READ(iu_spc, FMT='(i5, 2(7x, i5))', IOSTAT=ios, IOMSG=iomessage) &
+    idum, Sp%Gas%n_band_absorb(i), Sp%Gas%i_overlap(i)
   IF (ios /= 0) THEN
     cmessage = '*** Error in subroutine read_block_4_0_1. ' // &
       'The list of absorbers is not correct: '// TRIM(iomessage)
@@ -981,7 +1006,7 @@ DO i=1, Sp%Basic%n_band
     RETURN
   END IF
   IF (Sp%Gas%n_band_absorb(i) > 0) THEN
-    READ(iu_spc, '(5x, 8(2x, i3))', IOSTAT=ios, IOMSG=iomessage) &
+    READ(iu_spc, '(5x, 12(2x, i3))', IOSTAT=ios, IOMSG=iomessage) &
       ( Sp%Gas%index_absorb(j, i), &
         j=1, Sp%Gas%n_band_absorb(i) )
   END IF
@@ -1190,13 +1215,16 @@ INTEGER :: idum_fnc
 !   Dummy integer
 INTEGER :: number_term
 !   Number of ESFT terms
-INTEGER :: j, i_term, l, it, ip, igf
+INTEGER :: n_sub_band_gas
+!   Number of sub-bands
+INTEGER :: j, i_term, l, it, ip, igf, isb
 !   Loop variables
 LOGICAL :: l_lookup
 !   True if a k-table is used
 LOGICAL :: l_k_table_exists
 !   True if the k-table is present in the extended spectral file
-
+LOGICAL :: l_sub_band_data_exists
+!   True if sub-band data is present in the extended spectral file
 
 ! Allocate space for the arrays of k-terms.
 ALLOCATE(Sp%Gas%i_band_k(nd_band, nd_species))
@@ -1207,16 +1235,21 @@ ALLOCATE(Sp%Gas%k(nd_k_term, nd_band, nd_species))
 ALLOCATE(Sp%Gas%w(nd_k_term, nd_band, nd_species))
 ALLOCATE(Sp%Gas%p_ref(nd_species, nd_band))
 ALLOCATE(Sp%Gas%t_ref(nd_species, nd_band))
-ALLOCATE(Sp%Gas%scale(nd_scale_variable, nd_k_term, &
-  nd_band, nd_species))
+ALLOCATE(Sp%Gas%scale(nd_scale_variable, nd_k_term, nd_band, nd_species))
 ALLOCATE(Sp%Gas%i_scat(nd_k_term, nd_band, nd_species))
 ALLOCATE(Sp%Gas%num_ref_p(nd_species, nd_band))
 ALLOCATE(Sp%Gas%num_ref_t(nd_species, nd_band))
 ALLOCATE(Sp%Gas%index_sb(nd_species))
 ALLOCATE(Sp%Gas%l_self_broadening(nd_species))
+ALLOCATE(Sp%Gas%n_sub_band_gas(nd_band, nd_species))
+ALLOCATE(Sp%Gas%sub_band_k(nd_sub_band_gas, nd_band, nd_species))
+ALLOCATE(Sp%Gas%sub_band_w(nd_sub_band_gas, nd_band, nd_species))
+ALLOCATE(Sp%Gas%wavelength_sub_band(2, nd_sub_band_gas, nd_band, nd_species))
 Sp%Gas%num_ref_p=0
 Sp%Gas%num_ref_t=0
 Sp%Gas%index_sb=0
+Sp%Gas%n_sub_band_gas=1
+Sp%Gas%sub_band_k=0
 l_lookup=.FALSE.
 
 DO
@@ -1446,6 +1479,60 @@ IF (l_lookup) THEN
         END IF
       END IF
     END DO
+  END DO
+END IF
+
+IF (nd_sub_band_gas > 1) THEN
+  ! Locate correct block in extended spectral file
+  l_sub_band_data_exists=.FALSE.
+  REWIND(iu_spc1)
+  DO
+    READ(iu_spc1, '(a80)') char_dum
+    IF ( char_dum(1:6) == '*BLOCK' ) THEN
+      IF ( char_dum(9:24) == 'sub-band mapping' ) THEN
+        l_sub_band_data_exists=.TRUE.
+        EXIT
+      END IF
+    END IF
+  END DO
+
+  ! Return with error if the sub-band data does not exist
+  IF (.NOT. l_sub_band_data_exists) THEN
+    cmessage = 'No sub-band data per band in extended spectral file.'
+    ierr = i_err_fatal
+    RETURN
+  END IF
+
+  DO
+    READ(iu_spc1, '(a80)', IOSTAT=ios) char_dum
+    IF (ios /= 0) THEN
+      cmessage = 'Sub-band data block not correctly terminated.'
+      ierr=i_err_fatal
+      RETURN
+    END IF
+    IF ( char_dum(1:4) == '*END' ) EXIT
+    IF ( char_dum(1:4) == 'Band' ) THEN
+      BACKSPACE(iu_spc1)
+      READ(iu_spc1, '(6x,i4,7x,i4,13x,i6)') &
+        idum_band, idum_species, n_sub_band_gas
+      Sp%Gas%n_sub_band_gas(idum_band, idum_species)=n_sub_band_gas
+      READ(iu_spc1, *)
+      DO isb=1, n_sub_band_gas
+        READ(iu_spc1, '(8x, i8, 3(2x,1PE16.9))', IOSTAT=ios) &
+          Sp%Gas%sub_band_k(isb, idum_band, idum_species), &
+          Sp%Gas%sub_band_w(isb, idum_band, idum_species), &
+          Sp%Gas%wavelength_sub_band(:, isb, idum_band, idum_species)
+      END DO
+      IF (MAXVAL(Sp%Gas%sub_band_k(1:n_sub_band_gas, idum_band, idum_species)) &
+          > Sp%Gas%i_band_k(idum_band, idum_species)) THEN
+        WRITE(cmessage,'(a, i0, a, i0, a)') &
+          '*** Error in subroutine read_block_5_0_1: ' // &
+          'Sub-band data for band: ', idum_band, ', gas: ', idum_species, &
+          'in _k file has more k-terms than data in main spectral file.'
+        ierr=i_err_fatal
+        RETURN
+      END IF
+    END IF
   END DO
 END IF
 
@@ -3064,6 +3151,8 @@ INTEGER :: desc_end
 !   Position of equals sign to delimit end of item description
 INTEGER :: idum
 !   Dummy integer
+INTEGER :: i_band
+!   Loop index
 LOGICAL :: l_exist_var
 !   True if spectral variability file exists and is readable
 REAL (RealK), ALLOCATABLE :: rayleigh_coeff(:)
@@ -3086,7 +3175,7 @@ DO
     nd_sub_band=Sp%Var%n_sub_band
 
     ALLOCATE(Sp%Var%index_sub_band(2, nd_sub_band))
-    ALLOCATE(Sp%Var%wavelength_sub_band(2, nd_sub_band))
+    ALLOCATE(Sp%Var%wavelength_sub_band(0:2, nd_sub_band))
     ALLOCATE(rayleigh_coeff(nd_sub_band))
 
     IF (Sp%Var%n_sub_band > Sp%Basic%n_band) THEN
@@ -3095,20 +3184,42 @@ DO
 
       ! Read sub-band information
       DO i=1, Sp%Var%n_sub_band
-        READ(iu_spc, '(3(i5, 2x), 2x, 1pe16.9, 2(4x, 1pe16.9))', &
+        READ(iu_spc, '(3i7, 2x, 1pe16.9, 2(4x, 1pe16.9))', &
           IOSTAT=ios, IOMSG=iomessage) &
-          idum, Sp%Var%index_sub_band(:,i), Sp%Var%wavelength_sub_band(:,i), &
+          idum, Sp%Var%index_sub_band(:,i), Sp%Var%wavelength_sub_band(1:2,i), &
           rayleigh_coeff(i)
+        Sp%Var%wavelength_sub_band(0, i) = 1.0_RealK / &
+          ( 0.5_RealK/Sp%Var%wavelength_sub_band(1, i) &
+          + 0.5_RealK/Sp%Var%wavelength_sub_band(2, i) )
       END DO
     ELSE IF (Sp%Var%n_sub_band == Sp%Basic%n_band) THEN
-      ! Sub-bands are equal to full-bands
-      DO i=1, Sp%Var%n_sub_band
-        Sp%Var%index_sub_band(1,i) = i
-        Sp%Var%index_sub_band(2,i) = 0
-        Sp%Var%wavelength_sub_band(1,i) = Sp%Basic%wavelength_short(i)
-        Sp%Var%wavelength_sub_band(2,i) = Sp%Basic%wavelength_long(i)
-        rayleigh_coeff(i) = Sp%Rayleigh%rayleigh_coeff(i)
-      END DO
+      IF (Sp%Basic%wavelength_short(1) &
+        > Sp%Basic%wavelength_short(Sp%Basic%n_band)) THEN
+        ! Reverse order of bands so sub-bands are in wavelength order
+        DO i=1, Sp%Var%n_sub_band
+          i_band = Sp%Basic%n_band + 1 - i
+          Sp%Var%index_sub_band(1, i) = i_band
+          Sp%Var%index_sub_band(2, i) = 0
+          Sp%Var%wavelength_sub_band(1, i) = Sp%Basic%wavelength_short(i_band)
+          Sp%Var%wavelength_sub_band(2, i) = Sp%Basic%wavelength_long(i_band)
+          Sp%Var%wavelength_sub_band(0, i) = 1.0_RealK / &
+            ( 0.5_RealK/Sp%Var%wavelength_sub_band(1, i) &
+            + 0.5_RealK/Sp%Var%wavelength_sub_band(2, i) )
+          rayleigh_coeff(i) = Sp%Rayleigh%rayleigh_coeff(i_band)
+        END DO
+      ELSE
+        ! Sub-bands are equal to full-bands
+        DO i=1, Sp%Var%n_sub_band
+          Sp%Var%index_sub_band(1, i) = i
+          Sp%Var%index_sub_band(2, i) = 0
+          Sp%Var%wavelength_sub_band(1, i) = Sp%Basic%wavelength_short(i)
+          Sp%Var%wavelength_sub_band(2, i) = Sp%Basic%wavelength_long(i)
+          Sp%Var%wavelength_sub_band(0, i) = 1.0_RealK / &
+            ( 0.5_RealK/Sp%Var%wavelength_sub_band(1, i) &
+            + 0.5_RealK/Sp%Var%wavelength_sub_band(2, i) )
+          rayleigh_coeff(i) = Sp%Rayleigh%rayleigh_coeff(i)
+        END DO
+      END IF
     ELSE
       cmessage = 'Not enough sub-bands in block 17 (should be >= n_band).'
       ierr=i_err_fatal
@@ -3391,5 +3502,79 @@ END DO
 END SUBROUTINE read_block_19_0_0
 
 
+! Photolysis quantum yields
+SUBROUTINE read_block_20_0_0
+  IMPLICIT NONE
+
+  INTEGER :: i_path, i_wl, i_sub
+  REAL (RealK) :: sub_band_wn
+
+  READ(iu_spc, *)
+  READ(iu_spc, FMT='(27x,i5)', IOSTAT=ios, IOMSG=iomessage) &
+      Sp%Dim%nd_t_lookup_photol
+  READ(iu_spc, FMT='(26x,i6)', IOSTAT=ios, IOMSG=iomessage) &
+      Sp%Dim%nd_wl_lookup_photol
+
+  ALLOCATE(Sp%Photol%n_t_lookup_photol(Sp%Dim%nd_pathway))
+  ALLOCATE(Sp%Photol%n_wl_lookup_photol(Sp%Dim%nd_pathway))
+  ALLOCATE(Sp%Photol%qy_sub(nd_sub_band, Sp%Dim%nd_pathway))
+  ALLOCATE(Sp%Photol%t_lookup_photol(Sp%Dim%nd_t_lookup_photol, &
+                                     Sp%Dim%nd_pathway))
+  ALLOCATE(Sp%Photol%wl_lookup_photol(Sp%Dim%nd_wl_lookup_photol, &
+                                      Sp%Dim%nd_pathway))
+  ALLOCATE(Sp%Photol%quantum_yield(Sp%Dim%nd_t_lookup_photol, &
+                                   Sp%Dim%nd_wl_lookup_photol, &
+                                   Sp%Dim%nd_pathway))
+  ALLOCATE(Sp%Photol%threshold_wavelength(Sp%Dim%nd_pathway))
+
+  DO i=1, Sp%Photol%n_pathway
+    READ(iu_spc, *)
+    READ(iu_spc, '(14x, i4, 23x, 1pe16.9)', IOSTAT=ios, IOMSG=iomessage) &
+      i_path, Sp%Photol%threshold_wavelength(i)
+    IF (ios /= 0) THEN
+      cmessage = '*** Error in subroutine read_block_20_0_0. ' // &
+        TRIM(iomessage)
+      ierr=i_err_fatal
+      RETURN
+    END IF
+    READ(iu_spc, FMT='(13x,i5)', IOSTAT=ios, IOMSG=iomessage) &
+      Sp%Photol%n_t_lookup_photol(i)
+    BACKSPACE(iu_spc)
+    READ(iu_spc, '(19x, 3(3x,1pe16.9))', IOSTAT=ios, IOMSG=iomessage) &
+      Sp%Photol%t_lookup_photol(1:Sp%Photol%n_t_lookup_photol(i), i)
+    READ(iu_spc, FMT='(12x,i6)', IOSTAT=ios, IOMSG=iomessage) &
+      Sp%Photol%n_wl_lookup_photol(i)
+    DO i_wl=1, Sp%Photol%n_wl_lookup_photol(i)
+      READ(iu_spc, '(3x,1pe16.9)', IOSTAT=ios, IOMSG=iomessage) &
+        Sp%Photol%wl_lookup_photol(i_wl, i)
+      BACKSPACE(iu_spc)
+      READ(iu_spc, '(19x, 3(3x,1pe16.9))', IOSTAT=ios, IOMSG=iomessage) &
+        Sp%Photol%quantum_yield(1:Sp%Photol%n_t_lookup_photol(i), i_wl, i)
+    END DO
+    IF (Sp%Basic%l_present(17)) THEN
+      i_wl=1
+      outer: DO i_sub=1, Sp%Var%n_sub_band
+        sub_band_wn = 0.5_RealK/sp%var%wavelength_sub_band(1, i_sub) &
+                    + 0.5_RealK/sp%var%wavelength_sub_band(2, i_sub)
+        inner: DO
+          IF (Sp%Photol%wl_lookup_photol(i_wl, i)*sub_band_wn > 1.0_RealK) THEN
+            IF (MAXVAL(Sp%Photol%quantum_yield( &
+              1:Sp%Photol%n_t_lookup_photol(i), i_wl, i)) > 1.0E-9_RealK) THEN
+              Sp%Photol%qy_sub(i_sub, i) = i_wl
+            ELSE
+              Sp%Photol%qy_sub(i_sub:Sp%Var%n_sub_band, i) = 0
+            END IF
+            EXIT inner
+          ELSE IF (i_wl == Sp%Photol%n_wl_lookup_photol(i)) THEN
+            Sp%Photol%qy_sub(i_sub:Sp%Var%n_sub_band, i) = 0
+            EXIT outer
+          END IF
+          i_wl = i_wl+1
+        END DO inner
+      END DO outer
+    END IF
+  END DO
+  
+END SUBROUTINE read_block_20_0_0
 
 END SUBROUTINE read_spectrum

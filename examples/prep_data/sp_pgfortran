@@ -695,7 +695,7 @@ Band        Rayleigh coefficient
 Gaseous absorbers in each interval
 (The number is the indexing number of the species as set out
  in the summary block 0.)
-A zero indicates that there in no gaseous absorption in the interval.
+A zero indicates that there is no gaseous absorption in the interval.
 Band        Number of active absorbers followed by indexing numbers
     1           1
          1

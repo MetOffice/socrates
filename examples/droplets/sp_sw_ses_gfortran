@@ -24,13 +24,13 @@ Band        Lower limit         Upper limit
 Normalized solar flux in each spectral interval.
 Band        Normalized flux
     1        1.510641549E-01
-    2        6.571897443E-02
+    2        6.571897445E-02
     3        1.662930568E-01
-    4        8.534461430E-02
+    4        8.534461432E-02
     5        1.182322421E-01
     6        1.876178055E-01
     7        1.244352196E-01
-    8        6.773916772E-02
+    8        6.773916774E-02
     9        2.889869529E-02
 *END
 *BLOCK: TYPE =    3: SUBTYPE =    0: VERSION =    0
@@ -47,21 +47,21 @@ Band        Rayleigh coefficient
     8        6.048694424E-08
     9        1.011848144E-08
 *END
-*BLOCK: TYPE =    4: SUBTYPE =    0: VERSION =    0
+*BLOCK: TYPE =    4: SUBTYPE =    0: VERSION =    1
 Gaseous absorbers in each interval
 (The number is the indexing number of the species as set out
  in the summary block 0.)
-A zero indicates that there in no gaseous absorption in the interval.
-Band        Number of active absorbers followed by indexing numbers
-    1           0
-    2           0
-    3           0
-    4           0
-    5           0
-    6           0
-    7           0
-    8           0
-    9           0
+A zero indicates that there is no gaseous absorption in the interval.
+Band, number of absorbers and overlap method, followed by indexing numbers
+    1           0           0
+    2           0           0
+    3           0           0
+    4           0           0
+    5           0           0
+    6           0           0
+    7           0           0
+    8           0           0
+    9           0           0
 *END
 *BLOCK: TYPE =    8: SUBTYPE =    0: VERSION =    0
 Continuum absorbers in each interval

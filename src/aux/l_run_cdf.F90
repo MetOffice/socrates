@@ -40,7 +40,10 @@ PROGRAM l_run_cdf
     earth_radius, pi
   USE socrates_set_spectrum, only: set_spectrum
   USE socrates_set_cld_mcica, only: set_cld_mcica
-  USE nlte_heating_mod
+  USE sw_nlte_heating_mod, only: nlte_heating_sw, &
+    hartley_wavelength_min, hartley_wavelength_max, &
+    euv_wavelength_max, lte_wavelength_max
+  USE nlte_heating_mod, only: nlte_heating_lw
 
   IMPLICIT NONE
 
@@ -141,15 +144,26 @@ PROGRAM l_run_cdf
 !       Total downward flux
   REAL  (RealK), ALLOCATABLE :: flux_net(:,:,:)
 !       Net flux
+  REAL  (RealK), ALLOCATABLE :: actinic_flux(:,:,:)
+!       Actinic flux
+  REAL  (RealK), ALLOCATABLE :: photolysis_rate(:,:,:,:)
+!       Photolysis rates
   REAL  (RealK), ALLOCATABLE :: heating_rate(:,:,:)
 !       Heating rates
+  REAL  (RealK), ALLOCATABLE :: heat_rate_lte_bands(:,:)
+  REAL  (RealK), ALLOCATABLE :: heat_rate_euv_bands(:,:)
+  REAL  (RealK), ALLOCATABLE :: heat_rate_hartley_band(:,:)
+!       Spectral heating rates for non-LTE correction
   REAL  (RealK), ALLOCATABLE :: contrib_func_i(:,:,:)
 !       Contribution function (to the upwards intensity at TOA)
   REAL  (RealK), ALLOCATABLE :: contrib_func_f(:,:,:)
 !       Contribution function (to the outgoing flux at TOA)
   
+  REAL  (RealK), ALLOCATABLE :: layer_heat_capacity(:,:)
+!       Heat capacity of layers
+
 ! Controlling variables:
-  INTEGER :: i, j, l, ic, ll
+  INTEGER :: i, j, l, ic, ll, i_sub, k
 !       Loop variables
   INTEGER :: n_term
 !       Number of phase terms
@@ -157,8 +171,16 @@ PROGRAM l_run_cdf
 !       First band read in
   INTEGER :: b2
 !       Second band read in
+  INTEGER :: n_band_active
+!       Number of active bands
+  INTEGER :: n_sub_per_channel
+!       Number of sub-bands per channel
+  INTEGER :: n_remainder
+!       Number of channels with larger number of sub-bands
   INTEGER :: path_end
 !       location of last / in location of spectral_file
+  INTEGER :: gas_index(npd_gases)
+!       pointers to gases in spectral file
   CHARACTER  (LEN=24) :: name_vert_coord
 !       Name of vertical coordinate
   CHARACTER (LEN=200) :: MCICA_DATA
@@ -186,6 +208,9 @@ PROGRAM l_run_cdf
 
 ! Temporary array for resizing
   REAL (RealK), ALLOCATABLE :: phase_fnc_prsc(:,:,:,:,:)
+
+! Mid-point wavelength of band
+  REAL (RealK) :: wavelength_band
 
 ! External functions:
   LOGICAL, EXTERNAL :: set_interactive
@@ -221,12 +246,19 @@ PROGRAM l_run_cdf
 
   WRITE(iu_stdout, "(a,i0,a)") &
     "Enter the number of channels for output (1 - ", &
-    Spectrum%Basic%n_band, "):"
+    MAX(Spectrum%Basic%n_band, Spectrum%Var%n_sub_band), "):"
   READ(iu_stdin, *) n_channel
-  IF ((n_channel < 1) .OR. (n_channel > Spectrum%Basic%n_band)) THEN
+  IF ((n_channel < 1) .OR. &
+      (n_channel > MAX(Spectrum%Basic%n_band, Spectrum%Var%n_sub_band))) THEN
     WRITE(*, "(a)") "Number of channels out of range, setting to 1."
     n_channel = 1
   END IF
+
+  ! Find the index of gases in the spectral file
+  gas_index(:)=0
+  DO i=1, spectrum%gas%n_absorb
+    gas_index(spectrum%gas%type_absorb(i))=i
+  END DO
 
 ! ------------------------------------------------------------------
 ! Input Files:
@@ -271,6 +303,12 @@ PROGRAM l_run_cdf
   control%l_flux_direct_clear_sph_band = .FALSE.
   control%l_flux_down_clear_band = .FALSE.
   control%l_flux_up_clear_band = .FALSE.
+  control%l_actinic_flux = spectrum%basic%l_present(2)
+  control%l_actinic_flux_clear = .FALSE.
+  control%l_actinic_flux_band = .FALSE.
+  control%l_actinic_flux_clear_band = .FALSE.
+  control%l_photolysis_rate = spectrum%photol%n_pathway > 0
+  control%l_flux_div = spectrum%photol%n_pathway > 0
   control%l_aerosol_absorption_band = .FALSE.
   control%l_aerosol_scattering_band = .FALSE.
   control%l_aerosol_asymmetry_band = .FALSE.
@@ -327,7 +365,6 @@ PROGRAM l_run_cdf
   dimen%nd_subcol_req             = 1
   dimen%nd_aerosol_mode           = 1
 
-  CALL allocate_control(control, spectrum)
   CALL allocate_atm(atm, dimen, spectrum)
   CALL allocate_cld(cld, dimen, spectrum)
   CALL allocate_aer(aer, dimen, spectrum)
@@ -343,6 +380,18 @@ PROGRAM l_run_cdf
               dimen%nd_channel)                                       )
   ALLOCATE( heating_rate(dimen%nd_profile, dimen%nd_layer,              &
               dimen%nd_channel)                                       )
+  IF (control%l_actinic_flux) THEN
+    ALLOCATE( actinic_flux(dimen%nd_profile, dimen%nd_layer,            &
+                dimen%nd_channel)                                     )
+  ELSE
+    ALLOCATE( actinic_flux(1, 1, 1) )
+  END IF
+  IF (control%l_photolysis_rate) THEN
+    ALLOCATE( photolysis_rate(dimen%nd_profile, dimen%nd_layer,         &
+                spectrum%dim%nd_pathway, dimen%nd_channel)            )
+  ELSE
+    ALLOCATE( photolysis_rate(1, 1, 1, 1) )
+  END IF
   IF (control%l_contrib_func) THEN
     ALLOCATE( contrib_func_i(dimen%nd_profile, dimen%nd_layer,          &
                 dimen%nd_channel)                                     )
@@ -352,6 +401,7 @@ PROGRAM l_run_cdf
     ALLOCATE( contrib_func_i(1, 1, 1) )
     ALLOCATE( contrib_func_f(1, 1, 1) )
   END IF
+  ALLOCATE( layer_heat_capacity(dimen%nd_profile, dimen%nd_layer)     )
 
   npd_cdl_data = Max(dimen%nd_profile*dimen%nd_layer*dimen%nd_channel,  &
                      dimen%nd_profile*spectrum%dim%nd_band*             &
@@ -362,7 +412,8 @@ PROGRAM l_run_cdf
 
   npd_cdl_dimen_size = Max(npd_latitude,npd_longitude,                  &
                            dimen%nd_layer,dimen%nd_direction,           &
-                           dimen%nd_viewing_level,spectrum%dim%nd_band)
+                           dimen%nd_viewing_level,spectrum%dim%nd_band, &
+                           dimen%nd_channel)
   print *,'Setting npd_cdl_dimen_size: ',npd_cdl_dimen_size
 
 
@@ -490,13 +541,35 @@ PROGRAM l_run_cdf
       STOP
     ENDIF
   ENDIF
+  n_band_active = control%last_band - control%first_band + 1
 
 ! Map spectral bands into output channels
+  IF ( (n_channel*(n_band_active/n_channel) /= n_band_active) .AND. &
+       (spectrum%var%n_sub_band >= n_channel) ) THEN
+    ! Number of bands not a multiple of channels so use sub-bands
+    control%l_map_sub_bands = .TRUE.
+  END IF
+  CALL allocate_control(control, spectrum)
   IF (n_channel == 1) THEN
     control%map_channel(1:Spectrum%Basic%n_band)=1
-  ELSE IF (n_channel == control%last_band - control%first_band + 1) THEN
+  ELSE IF (n_channel == n_band_active) THEN
     DO i = 1, n_channel
       control%map_channel(control%first_band + i-1)=i
+    END DO
+  ELSE IF (control%l_map_sub_bands) THEN
+    ! Map the sub-bands to channels as equally as possible 
+    n_sub_per_channel = spectrum%var%n_sub_band/n_channel
+    n_remainder = spectrum%var%n_sub_band - n_channel*n_sub_per_channel
+    ! If the sub-bands do not divide equally into channels, spread the
+    ! remainder out one per channel starting from channel one
+    DO i_sub=1, n_remainder*(n_sub_per_channel+1)
+      control%map_channel(i_sub) = (i_sub-1)/(n_sub_per_channel+1) + 1
+    END DO
+    ! Once the remainder sub-bands run out, the rest of the channels
+    ! will contain one less sub-band
+    DO i_sub=1, (n_channel-n_remainder)*n_sub_per_channel
+      control%map_channel(i_sub+n_remainder*(n_sub_per_channel+1)) &
+        = (i_sub-1)/n_sub_per_channel + 1 + n_remainder
     END DO
   ELSE
     WRITE(iu_stdout, '(a)') 'Enter channel map.'
@@ -618,6 +691,21 @@ PROGRAM l_run_cdf
 
     ELSE IF (process_flag(j:j) == 'n') THEN
       l_nlte = .TRUE.
+      IF (n_channel > 1) THEN
+        write (iu_err, '(/a)') &
+          '*** Error: The Non-LTE scheme is only compatible with ' // &
+          'single channel output.'
+        STOP
+      END IF
+      IF (control%isolir == IP_solar) THEN
+        ! Flux divergence is corrected by band in the SW NLTE scheme
+        control%l_flux_div = .TRUE.
+        control%l_flux_div_band = .TRUE.
+        ! The cosine of the solar zenith angle is also needed
+        DO l=1, atm%n_profile
+          bound%cos_zen(l, :) = COS(pi*bound%zen_0(l)/180.0_RealK)
+        END DO
+      END IF
     ENDIF
   ENDDO
 
@@ -1125,8 +1213,9 @@ PROGRAM l_run_cdf
     END DO
     DO i=atm%n_layer, 1, -1
       DO l=1, atm%n_profile
-        atm%r_level(l, i-1) = &
-          atm%mass(l, i)/atm%density(l, i) + atm%r_level(l, i)
+        atm%r_level(l, i-1) = atm%r_level(l, i) + &
+          (LOG(atm%p_level(l, i)) - LOG(atm%p_level(l, i-1))) &
+          * r * atm%t(l, i) / grav_acc
         atm%r_layer(l, i) = &
           (atm%r_level(l, i-1) + atm%r_level(l, i)) / 2.0_RealK
         r_layer(l, i) = atm%r_layer(l, i)
@@ -1213,6 +1302,11 @@ END IF
        ( (control%i_angular_integration == IP_spherical_harmonic).AND.  &
          (control%i_sph_mode == IP_sph_mode_flux) ) ) THEN
 
+    DO i=1, atm%n_layer
+      DO l=1, atm%n_profile
+        layer_heat_capacity(l, i) = atm%mass(l, i)*cp_air_dry
+      END DO
+    END DO
     DO ic=1, n_channel
       DO i=0, atm%n_layer
         DO l=1, atm%n_profile
@@ -1220,27 +1314,31 @@ END IF
             radout%flux_down(l, i, ic)-radout%flux_up(l, i, ic)
         ENDDO
       ENDDO
-      IF (control%l_spherical_solar) THEN
+      IF (control%l_flux_div) THEN
+        DO i=1, atm%n_layer
+          DO l=1, atm%n_profile
+!           Heating rate in the conventional units of K/day.
+            heating_rate(l, i, ic) = seconds_per_day &
+              * radout%flux_div(l, i, ic) / layer_heat_capacity(l, i)
+          END DO
+        END DO
+      ELSE IF (control%l_spherical_solar) THEN
         DO i=1, atm%n_layer
           DO l=1, atm%n_profile
             heating_rate(l, i, ic) = ( radout%flux_direct_div(l, i, ic)   &
               + flux_net(l, i-1, ic)-flux_net(l, i, ic) ) /               &
-              (atm%mass(l, i)*cp_air_dry)
+              layer_heat_capacity(l, i)
 !           Convert heating rates to the conventional units of K/day.
             heating_rate(l, i, ic) =                                      &
               seconds_per_day*heating_rate(l, i, ic)
           ENDDO
         ENDDO
-        print*, 'Spherical path 1: ', radout%spherical_path(1,1:atm%n_layer,1)
-        print*, 'Spherical path 2: ', radout%spherical_path(1,1:atm%n_layer,2)
-        print*, 'Spherical path surface: ', &
-          radout%spherical_path(1,1:atm%n_layer,atm%n_layer+1)
       ELSE
         DO i=1, atm%n_layer
           DO l=1, atm%n_profile
             heating_rate(l, i, ic) =                                      &
               (flux_net(l, i-1, ic)-flux_net(l, i, ic)) /                 &
-              (atm%mass(l, i)*cp_air_dry)
+              layer_heat_capacity(l, i)
 !           Convert heating rates to the conventional units of K/day.
             heating_rate(l, i, ic) =                                      &
               seconds_per_day*heating_rate(l, i, ic)
@@ -1290,14 +1388,83 @@ END IF
           ENDDO
         ENDDO
       ENDIF
-
-      ! Non-LTE cooling
-      IF (l_nlte) THEN
-        CALL nlte_heating_lw(atm%t, atm%p, atm%gas_mix_ratio, heating_rate, &
-          atm%n_layer, atm%n_profile)
-      END IF
-
     ENDDO
+
+    ! Non-LTE cooling
+    IF (l_nlte) THEN
+      IF (control%isolir == IP_solar) THEN
+        ! Use the band-by-band flux divergence to determine the heating
+        ! rate contribution from three different spectral regions.
+        ALLOCATE(heat_rate_hartley_band(dimen%nd_profile, dimen%nd_layer))
+        ALLOCATE(heat_rate_euv_bands(dimen%nd_profile, dimen%nd_layer))
+        ALLOCATE(heat_rate_lte_bands(dimen%nd_profile, dimen%nd_layer))
+        heat_rate_hartley_band = 0.0_RealK
+        heat_rate_euv_bands = 0.0_RealK
+        heat_rate_lte_bands = 0.0_RealK
+        DO k=1, spectrum%basic%n_band
+          wavelength_band = ( spectrum%basic%wavelength_short(k) &
+            + spectrum%basic%wavelength_long(k) ) / 2.0_RealK
+          IF ( wavelength_band > hartley_wavelength_min .AND. &
+               wavelength_band < hartley_wavelength_max ) THEN
+            ! Ozone Hartley Band: 210nm - 320nm (requires NLTE correction)
+            DO i=1, atm%n_layer
+              DO l=1, atm%n_profile
+                heat_rate_hartley_band(l, i) = heat_rate_hartley_band(l, i) &
+                  + radout%flux_div_band(l, i, k)
+              END DO
+            END DO
+          ELSE IF ( wavelength_band < euv_wavelength_max ) THEN
+            ! Extreme-UV: < 98.6nm (requires NLTE correction)
+            DO i=1, atm%n_layer
+              DO l=1, atm%n_profile
+                heat_rate_euv_bands(l, i) = heat_rate_euv_bands(l, i) &
+                  + radout%flux_div_band(l, i, k)
+              END DO
+            END DO
+          ELSE IF ( wavelength_band < lte_wavelength_max ) THEN
+            ! LTE regions: < 1.1 microns, excluding above regions
+            DO i=1, atm%n_layer
+              DO l=1, atm%n_profile
+                heat_rate_lte_bands(l, i) = heat_rate_lte_bands(l, i) &
+                  + radout%flux_div_band(l, i, k)
+              END DO
+            END DO
+          END IF
+        END DO
+        DO i=1, atm%n_layer
+          DO l=1, atm%n_profile
+            ! Convert flux divergence to heating rate in K/day
+            heat_rate_hartley_band(l, i) = heat_rate_hartley_band(l, i) &
+              * seconds_per_day / layer_heat_capacity(l, i)
+            heat_rate_lte_bands(l, i) = heat_rate_lte_bands(l, i) &
+              * seconds_per_day / layer_heat_capacity(l, i)
+            heat_rate_euv_bands(l, i) = heat_rate_euv_bands(l, i) &
+              * seconds_per_day / layer_heat_capacity(l, i)
+          END DO
+        END DO
+        CALL nlte_heating_sw( &
+          atm%gas_mix_ratio(:, atm%n_layer, gas_index(ip_co2)), &
+          bound%cos_zen(:, 1), atm%p, heating_rate(:, :, 1), &
+          heat_rate_lte_bands, heat_rate_hartley_band, &
+          heat_rate_euv_bands, &
+          atm%n_layer, atm%n_profile)
+        DEALLOCATE(heat_rate_lte_bands)
+        DEALLOCATE(heat_rate_euv_bands)
+        DEALLOCATE(heat_rate_hartley_band)
+      ELSE
+        CALL nlte_heating_lw(atm%t, atm%p, &
+          atm%gas_mix_ratio(:, :, gas_index(ip_co2)), &
+          atm%gas_mix_ratio(:, :, gas_index(ip_o3)), &
+          heating_rate(:, :, 1), atm%n_layer, atm%n_profile)
+      END IF
+    END IF
+
+    IF (control%l_actinic_flux) THEN
+      actinic_flux = radout%actinic_flux
+    END IF
+    IF (control%l_photolysis_rate) THEN
+      photolysis_rate = radout%photolysis_rate
+    END IF
     IF (control%l_contrib_func) THEN
       contrib_func_i = radout%contrib_funci
       contrib_func_f = radout%contrib_funcf
@@ -1314,7 +1481,7 @@ END IF
       n_channel,                                                        &
       flux_total, flux_diffuse_down,                                    &
       radout%flux_up, flux_net,                                         &
-      flux_direct, heating_rate,                                        &
+      flux_direct, actinic_flux, photolysis_rate, heating_rate,         &
       contrib_func_i, contrib_func_f,                                   &
       dimen%nd_profile, npd_latitude, npd_longitude, dimen%nd_layer,    &
       dimen%nd_channel,                                                 &

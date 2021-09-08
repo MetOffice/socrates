@@ -174,7 +174,7 @@
           k=0
 5         k=k+1
           IF (type(i) == header_gas(k)) THEN
-!           Column contains physical data.
+!           Column contains gaseous data.
             i_data_group(i)=IP_gaseous_data
             i_data_type(i)=k
           ELSE IF (k < npd_gases) THEN

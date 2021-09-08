@@ -65,7 +65,7 @@ SUBROUTINE mcica_sample(ierr                                            &
 !                 Viewing geometry
     , n_direction, direction                                            &
 !                 Calculated Fluxes
-    , flux_direct, flux_total                                           &
+    , flux_direct, flux_total, l_actinic, actinic_flux                  &
 !                 Calculated Radiances
     , radiance                                                          &
 !                 Calculated mean radiances
@@ -73,7 +73,7 @@ SUBROUTINE mcica_sample(ierr                                            &
 !                 Flags for Clear-sky Calculation
     , l_clear, i_solver_clear                                           &
 !                 Clear-sky Fluxes Calculated
-    , flux_direct_clear, flux_total_clear                               &
+    , flux_direct_clear, flux_total_clear, actinic_flux_clear           &
 !                 Contribution function
     , contrib_funci_part, contrib_funcf_part                            &
 !                 Dimensions of Arrays
@@ -353,8 +353,12 @@ SUBROUTINE mcica_sample(ierr                                            &
   REAL (RealK), INTENT(INOUT) ::                                        &
       flux_direct(nd_flux_profile, 0: nd_layer)                         &
 !       Direct flux
-    , flux_total(nd_flux_profile, 2*nd_layer+2)
+    , flux_total(nd_flux_profile, 2*nd_layer+2)                         &
 !       Total flux
+    , actinic_flux(nd_flux_profile, nd_layer)
+!       Actinic flux
+  LOGICAL, INTENT(IN) :: l_actinic
+!       Flag for calculation of actinic flux
 
 !                 Calculated radiances
   REAL (RealK), INTENT(INOUT) ::                                        &
@@ -377,8 +381,10 @@ SUBROUTINE mcica_sample(ierr                                            &
   REAL (RealK), INTENT(INOUT) ::                                        &
       flux_direct_clear(nd_flux_profile, 0: nd_layer)                   &
 !       Clear-sky direct flux
-    , flux_total_clear(nd_flux_profile, 2*nd_layer+2)
+    , flux_total_clear(nd_flux_profile, 2*nd_layer+2)                   &
 !       Clear-sky total flux
+    , actinic_flux_clear(nd_flux_profile, nd_layer)
+!       Clear-sky actinic flux
 
 ! Variables required for McICA
   INTEGER, INTENT(IN) ::                                                &
@@ -422,6 +428,8 @@ SUBROUTINE mcica_sample(ierr                                            &
 !       Partial direct flux
     , flux_total_subcol(nd_flux_profile, 2*nd_layer+2)                  &
 !       Partial total flux
+    , actinic_flux_subcol(nd_flux_profile, nd_layer)                    &
+!       Partial actinic flux
     , flux_direct_sph(nd_flux_profile, 0: nd_layer+1)                   &
 !       Direct flux through spherical geometry
     , flux_direct_div(nd_flux_profile, nd_layer)                        &
@@ -789,6 +797,7 @@ SUBROUTINE mcica_sample(ierr                                            &
       , n_direction, direction                                          &
 !               calculated fluxes
       , flux_direct_subcol, flux_total_subcol                           &
+      , l_actinic, actinic_flux_subcol                                  &
 !               calculated radiances
       , radiance_subcol                                                 &
 !               calculated rate of photolysis
@@ -796,7 +805,7 @@ SUBROUTINE mcica_sample(ierr                                            &
 !             flags for clear-sky calculations
       , l_clear_calc, i_solver_clear                                    &
 !             clear-sky fluxes calculated
-      , flux_direct_clear, flux_total_clear                             &
+      , flux_direct_clear, flux_total_clear, actinic_flux_clear         &
 !             contribution function
       , contrib_funci_part, contrib_funcf_part                          &
 !             dimensions of arrays
@@ -809,6 +818,7 @@ SUBROUTINE mcica_sample(ierr                                            &
       )
 
     IF (m == cld%first_subcol_k(i_band,iex)) THEN
+
       IF (isolir == ip_solar) THEN
         DO k=0,n_layer
           DO j=1,n_profile
@@ -834,7 +844,17 @@ SUBROUTINE mcica_sample(ierr                                            &
           flux_total(j,k)=flux_total_subcol(j,k)
         END DO
       END DO
+
+      IF (l_actinic) THEN
+        DO k=1,n_layer
+          DO j=1,n_profile
+            actinic_flux(j,k)=actinic_flux_subcol(j,k)
+          END DO
+        END DO
+      END IF
+
     ELSE
+
       IF (isolir == ip_solar) THEN
         DO k=0,n_layer
           DO j=1,n_profile
@@ -862,6 +882,15 @@ SUBROUTINE mcica_sample(ierr                                            &
           flux_total(j,k)=flux_total(j,k)+flux_total_subcol(j,k)
         END DO
       END DO
+
+      IF (l_actinic) THEN
+        DO k=1,n_layer
+          DO j=1,n_profile
+            actinic_flux(j,k)=actinic_flux(j,k)+actinic_flux_subcol(j,k)
+          END DO
+        END DO
+      END IF
+
     END IF
 
   END DO
@@ -900,6 +929,16 @@ SUBROUTINE mcica_sample(ierr                                            &
         + ((1.0_RealK-cld%frac_cloudy(j))*flux_total_clear(j,k))
     END DO
   END DO
+
+  IF (l_actinic) THEN
+    DO k=1,n_layer
+      DO j=1,n_profile
+        actinic_flux(j,k) = actinic_flux(j,k) * subcol_k_inv
+        actinic_flux(j,k) = cld%frac_cloudy(j) * actinic_flux(j,k) &
+          + ( 1.0_RealK - cld%frac_cloudy(j) ) * actinic_flux_clear(j,k)
+      END DO
+    END DO
+  END IF
 
   IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
 

@@ -8,6 +8,7 @@
 
 MODULE sw_nlte_heating_mod
 
+USE realtype_rd, ONLY: RealK
 IMPLICIT NONE
 
 ! Description:
@@ -27,20 +28,30 @@ IMPLICIT NONE
 
 CHARACTER(LEN=*), PARAMETER, PRIVATE :: ModuleName='SW_NLTE_HEATING_MOD'
 
+! Ozone Hartley Band: 210nm - 320nm (requires NLTE correction)
+REAL (RealK), PARAMETER :: hartley_wavelength_min = 2.1E-07_RealK
+REAL (RealK), PARAMETER :: hartley_wavelength_max = 3.2E-07_RealK
+
+! Extreme-UV: < 98.6nm (requires NLTE correction)
+REAL (RealK), PARAMETER :: euv_wavelength_max = 9.86E-08_RealK
+
+! LTE regions: < 1.1 microns, excluding above regions
+REAL (RealK), PARAMETER :: lte_wavelength_max = 1.1E-06_RealK
+
 CONTAINS
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-SUBROUTINE nlte_heating_sw(trop_co2_vmr, coszin, p, heat_rate, &
+SUBROUTINE nlte_heating_sw(trop_co2_mmr, coszin, p, heat_rate, &
                            heat_rate_lte_bands, heat_rate_hartley_band, &
+                           heat_rate_euv_bands, &
                            n_layer, n_profile)
 
-  USE realtype_rd, ONLY: RealK
   USE nlte_heating_data_mod
   USE interpolate_p_mod
 
   ! Imported variables
   INTEGER, INTENT(IN) :: n_layer, n_profile
-  REAL (RealK), INTENT(IN) :: trop_co2_vmr
+  REAL (RealK), INTENT(IN) :: trop_co2_mmr(:)
   REAL (RealK), INTENT(IN) :: coszin(:)
   REAL (RealK), INTENT(IN) :: p(:, :)
 
@@ -52,6 +63,9 @@ SUBROUTINE nlte_heating_sw(trop_co2_vmr, coszin, p, heat_rate, &
 
   ! LTE heating rate for ozone hartley band (needed for O3 correction)
   REAL (RealK), INTENT(IN) :: heat_rate_hartley_band(:, :)
+
+  ! LTE heating rates for EUV bands (photoelectron heating efficiency)
+  REAL (RealK), INTENT(IN) :: heat_rate_euv_bands(:, :)
 
   ! Local variables
 
@@ -79,10 +93,14 @@ SUBROUTINE nlte_heating_sw(trop_co2_vmr, coszin, p, heat_rate, &
   INTEGER :: i, j, idx
   LOGICAL :: l_splined
 
-  REAL (RealK) :: sc_co2_col_am, sc_co2_vmr, blend
+  REAL (RealK) :: trop_co2_vmr, sc_co2_col_am, sc_co2_vmr
 
   ! Specific heats
   REAL (RealK) :: spec_heat_conv
+
+  ! Heating efficiency in the EUV bands is set to 0.05 following
+  ! Roble et al 1987 DOI:10.1029/JA092iA08p08745
+  REAL (RealK), PARAMETER :: euv_eff = 0.05_RealK
 
   ! O3 efficiency
   REAL (RealK) :: logp, z, topval
@@ -109,6 +127,9 @@ SUBROUTINE nlte_heating_sw(trop_co2_vmr, coszin, p, heat_rate, &
 
      ! Calculate the path length
      mean_effect_path = 35. / sqrt((1224. * coszin(j) * coszin(j)) + 1.)
+
+     ! Convert tropospheric CO2 mass mixing ratio to volume mixing ratio
+     trop_co2_vmr = trop_co2_mmr(j) * amm(1) / molmass_co2
 
      ! Loop over the dimensionless scale height
      DO i = 1, n_x_levs
@@ -230,8 +251,11 @@ SUBROUTINE nlte_heating_sw(trop_co2_vmr, coszin, p, heat_rate, &
 
      ! The Hartley Band requires an NLTE correction.
      ! The Huggins/Chappuis O3 bands do not require an NLTE correction.
+     ! The EUV bands require a correction for the heating efficiency of
+     ! photoelectrons.
      DO i = 1, n_layer
         heat_rate_nlte_temp(j, i) = heat_rate_hartley_band(j, i) * o3_eff(i) &
+          + heat_rate_euv_bands(j, i) * euv_eff &
           + heat_rate_lte_bands(j, i)
      END DO
 

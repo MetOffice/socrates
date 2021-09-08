@@ -27,12 +27,16 @@ TYPE StrOut
 !   Total downward flux
   REAL (RealK), ALLOCATABLE :: flux_up(:, :, :)
 !   Upward flux
+  REAL (RealK), ALLOCATABLE :: flux_div(:, :, :)
+!   Flux divergence
   REAL (RealK), ALLOCATABLE :: flux_direct_clear(:, :, :)
 !   Clear-sky direct flux
   REAL (RealK), ALLOCATABLE :: flux_down_clear(:, :, :)
 !   Clear-sky downward flux
   REAL (RealK), ALLOCATABLE :: flux_up_clear(:, :, :)
 !   Clear-sky upward flux
+  REAL (RealK), ALLOCATABLE :: flux_div_clear(:, :, :)
+!   Clear-sky flux divergence
   REAL (RealK), ALLOCATABLE :: flux_direct_div(:, :, :)
 !   Direct flux divergence
   REAL (RealK), ALLOCATABLE :: flux_direct_sph(:, :, :)
@@ -73,6 +77,8 @@ TYPE StrOut
 !   Total (or diffuse for spherical geometry) downward flux per band
   REAL (RealK), ALLOCATABLE :: flux_up_band(:, :, :)
 !   Upward flux per band
+  REAL (RealK), ALLOCATABLE :: flux_div_band(:, :, :)
+!   Flux divergence per band
   REAL (RealK), ALLOCATABLE :: flux_direct_clear_band(:, :, :)
 !   Clear-sky direct flux per band
   REAL (RealK), ALLOCATABLE :: flux_direct_clear_div_band(:, :, :)
@@ -83,11 +89,31 @@ TYPE StrOut
 !   Clear-sky downward flux per band
   REAL (RealK), ALLOCATABLE :: flux_up_clear_band(:, :, :)
 !   Clear-sky upward flux per band
+  REAL (RealK), ALLOCATABLE :: flux_div_clear_band(:, :, :)
+!   Clear-sky flux divergence per band
   REAL (RealK), ALLOCATABLE :: contrib_funci_band(:, :, :)
 !   Contribution function per band (intensity)
   REAL (RealK), ALLOCATABLE :: contrib_funcf_band(:, :, :)
 !   Contribution function per band (flux)
 
+! Photolysis diagnostics
+  REAL (RealK), ALLOCATABLE :: actinic_flux(:, :, :)
+!   Actinic flux
+  REAL (RealK), ALLOCATABLE :: actinic_flux_clear(:, :, :)
+!   Clear-sky actinic flux
+  REAL (RealK), ALLOCATABLE :: actinic_flux_band(:, :, :)
+!   Actinic flux per band
+  REAL (RealK), ALLOCATABLE :: actinic_flux_clear_band(:, :, :)
+!   Clear-sky actinic flux per band
+  REAL (RealK), ALLOCATABLE :: photolysis_rate(:, :, :, :)
+!   Photolysis rate for each reaction pathway
+  REAL (RealK), ALLOCATABLE :: photolysis_rate_clear(:, :, :, :)
+!   Clear-sky photolysis rate for each reaction pathway
+  REAL (RealK), ALLOCATABLE :: photolysis_div(:, :, :, :)
+!   Flux divergence for photolysis for each reaction pathway
+  REAL (RealK), ALLOCATABLE :: photolysis_div_clear(:, :, :, :)
+!   Clear-sky flux divergence for photolysis for each reaction pathway
+ 
 ! Cloud diagnostics
   REAL (RealK), ALLOCATABLE :: tot_cloud_cover(:)
 !   Total cloud cover
@@ -167,6 +193,13 @@ IF (.NOT. ALLOCATED(radout%flux_up))                                           &
                                                  0: dimen%nd_layer,            &
                                                  dimen%nd_channel            ))
 
+IF (control%l_flux_div) THEN
+  IF (.NOT. ALLOCATED(radout%flux_div))                                        &
+    ALLOCATE(radout%flux_div                   ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 dimen%nd_channel            ))
+END IF
+
 IF (.NOT. ALLOCATED(radout%flux_direct_clear))                                 &
   ALLOCATE(radout%flux_direct_clear            ( dimen%nd_2sg_profile,         &
                                                  0: dimen%nd_layer,            &
@@ -181,6 +214,13 @@ IF (.NOT. ALLOCATED(radout%flux_up_clear))                                     &
   ALLOCATE(radout%flux_up_clear                ( dimen%nd_2sg_profile,         &
                                                  0: dimen%nd_layer,            &
                                                  dimen%nd_channel            ))
+
+IF (control%l_flux_div) THEN
+  IF (.NOT. ALLOCATED(radout%flux_div_clear))                                  &
+    ALLOCATE(radout%flux_div_clear             ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 dimen%nd_channel            ))
+END IF
 
 IF (.NOT. ALLOCATED(radout%flux_direct_div))                                   &
   ALLOCATE(radout%flux_direct_div              ( dimen%nd_flux_profile,        &
@@ -272,6 +312,13 @@ IF (control%l_flux_up_band) THEN
                                                  sp%dim%nd_band              ))
 END IF
 
+IF (control%l_flux_div_band) THEN
+  IF (.NOT. ALLOCATED(radout%flux_div_band))                                   &
+    ALLOCATE(radout%flux_div_band              ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 sp%dim%nd_band              ))
+END IF
+
 IF (control%l_flux_direct_clear_band .OR.                                      &
      (.NOT.control%l_spherical_solar .AND.                                     &
        ( control%l_cloud_extinction .OR.                                       &
@@ -316,6 +363,73 @@ IF (control%l_flux_up_clear_band .OR.                                          &
     ALLOCATE(radout%flux_up_clear_band         ( dimen%nd_2sg_profile,         &
                                                  0: dimen%nd_layer,            &
                                                  sp%dim%nd_band              ))
+END IF
+
+IF (control%l_flux_div_clear_band) THEN
+  IF (.NOT. ALLOCATED(radout%flux_div_clear_band))                             &
+    ALLOCATE(radout%flux_div_clear_band        ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 sp%dim%nd_band              ))
+END IF
+
+IF (control%l_actinic_flux) THEN
+  IF (.NOT. ALLOCATED(radout%actinic_flux))                                    &
+    ALLOCATE(radout%actinic_flux               ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 dimen%nd_channel            ))
+END IF
+
+IF (control%l_actinic_flux_clear) THEN
+  IF (.NOT. ALLOCATED(radout%actinic_flux_clear))                              &
+    ALLOCATE(radout%actinic_flux_clear         ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 dimen%nd_channel            ))
+END IF
+
+IF (control%l_actinic_flux_band) THEN
+  IF (.NOT. ALLOCATED(radout%actinic_flux_band))                               &
+    ALLOCATE(radout%actinic_flux_band          ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 sp%dim%nd_band              ))
+END IF
+
+IF (control%l_actinic_flux_clear_band) THEN
+  IF (.NOT. ALLOCATED(radout%actinic_flux_clear_band))                         &
+    ALLOCATE(radout%actinic_flux_clear_band    ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 sp%dim%nd_band              ))
+END IF
+
+IF (control%l_photolysis_rate) THEN
+  IF (.NOT. ALLOCATED(radout%photolysis_rate))                                 &
+    ALLOCATE(radout%photolysis_rate            ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 sp%dim%nd_pathway,            &
+                                                 dimen%nd_channel            ))
+END IF
+
+IF (control%l_photolysis_rate_clear) THEN
+  IF (.NOT. ALLOCATED(radout%photolysis_rate_clear))                           &
+    ALLOCATE(radout%photolysis_rate_clear      ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 sp%dim%nd_pathway,            &
+                                                 dimen%nd_channel            ))
+END IF
+
+IF (control%l_photolysis_div) THEN
+  IF (.NOT. ALLOCATED(radout%photolysis_div))                                  &
+    ALLOCATE(radout%photolysis_div             ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 sp%dim%nd_pathway,            &
+                                                 dimen%nd_channel            ))
+END IF
+
+IF (control%l_photolysis_div_clear) THEN
+  IF (.NOT. ALLOCATED(radout%photolysis_div_clear))                            &
+    ALLOCATE(radout%photolysis_div_clear       ( dimen%nd_flux_profile,        &
+                                                 dimen%nd_layer,               &
+                                                 sp%dim%nd_pathway,            &
+                                                 dimen%nd_channel            ))
 END IF
 
 IF (.NOT. ALLOCATED(radout%tot_cloud_cover))                                   &
@@ -475,6 +589,24 @@ IF (ALLOCATED(radout%cloud_absorptivity)) &
     DEALLOCATE(radout%cloud_absorptivity)
 IF (ALLOCATED(radout%tot_cloud_cover)) &
     DEALLOCATE(radout%tot_cloud_cover)
+IF (ALLOCATED(radout%photolysis_div_clear)) &
+    DEALLOCATE(radout%photolysis_div_clear)
+IF (ALLOCATED(radout%photolysis_div)) &
+    DEALLOCATE(radout%photolysis_div)
+IF (ALLOCATED(radout%photolysis_rate_clear)) &
+    DEALLOCATE(radout%photolysis_rate_clear)
+IF (ALLOCATED(radout%photolysis_rate)) &
+    DEALLOCATE(radout%photolysis_rate)
+IF (ALLOCATED(radout%actinic_flux_clear_band)) &
+    DEALLOCATE(radout%actinic_flux_clear_band)
+IF (ALLOCATED(radout%actinic_flux_band)) &
+    DEALLOCATE(radout%actinic_flux_band)
+IF (ALLOCATED(radout%actinic_flux_clear)) &
+    DEALLOCATE(radout%actinic_flux_clear)
+IF (ALLOCATED(radout%actinic_flux)) &
+    DEALLOCATE(radout%actinic_flux)
+IF (ALLOCATED(radout%flux_div_clear_band)) &
+    DEALLOCATE(radout%flux_div_clear_band)
 IF (ALLOCATED(radout%flux_up_clear_band)) &
     DEALLOCATE(radout%flux_up_clear_band)
 IF (ALLOCATED(radout%flux_down_clear_band)) &
@@ -485,6 +617,8 @@ IF (ALLOCATED(radout%flux_direct_clear_div_band)) &
     DEALLOCATE(radout%flux_direct_clear_div_band)
 IF (ALLOCATED(radout%flux_direct_clear_band)) &
     DEALLOCATE(radout%flux_direct_clear_band)
+IF (ALLOCATED(radout%flux_div_band)) &
+    DEALLOCATE(radout%flux_div_band)
 IF (ALLOCATED(radout%flux_up_band)) &
     DEALLOCATE(radout%flux_up_band)
 IF (ALLOCATED(radout%flux_down_band)) &
@@ -519,12 +653,16 @@ IF (ALLOCATED(radout%flux_direct_sph)) &
     DEALLOCATE(radout%flux_direct_sph)
 IF (ALLOCATED(radout%flux_direct_div)) &
     DEALLOCATE(radout%flux_direct_div)
+IF (ALLOCATED(radout%flux_div_clear)) &
+    DEALLOCATE(radout%flux_div_clear)
 IF (ALLOCATED(radout%flux_up_clear)) &
     DEALLOCATE(radout%flux_up_clear)
 IF (ALLOCATED(radout%flux_down_clear)) &
     DEALLOCATE(radout%flux_down_clear)
 IF (ALLOCATED(radout%flux_direct_clear)) &
     DEALLOCATE(radout%flux_direct_clear)
+IF (ALLOCATED(radout%flux_div)) &
+    DEALLOCATE(radout%flux_div)
 IF (ALLOCATED(radout%flux_up)) &
     DEALLOCATE(radout%flux_up)
 IF (ALLOCATED(radout%flux_down)) &

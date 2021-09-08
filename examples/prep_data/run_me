@@ -51,7 +51,6 @@ EOF
 (diff -q sp_with_aer sp_ifort && echo "Matched ifort output") || \
 (diff -q sp_with_aer sp_gfortran && echo "Matched gfortran output") || \
 (diff -q sp_with_aer sp_pgfortran && echo "Matched pgfortran output") || \
-(diff -q sp_with_aer sp_postzen && echo "Matched post-zen (ifort) output") || \
 exit 1
 rm sulp_scat sulp_scatav sp_with_aer
 echo OK

@@ -61,7 +61,7 @@ SUBROUTINE monochromatic_radiance(ierr                                  &
 !                 Viewing geometry
     , n_direction, direction                                            &
 !                 Calculated Fluxes
-    , flux_direct, flux_total                                           &
+    , flux_direct, flux_total, l_actinic, actinic_flux                  &
 !                 Calculated Radiances
     , radiance                                                          &
 !                 Calculated mean radiances
@@ -69,7 +69,7 @@ SUBROUTINE monochromatic_radiance(ierr                                  &
 !                 Flags for Clear-sky Calculation
     , l_clear, i_solver_clear                                           &
 !                 Clear-sky Fluxes Calculated
-    , flux_direct_clear, flux_total_clear                               &
+    , flux_direct_clear, flux_total_clear, actinic_flux_clear           &
 !                 Contribution function
     , contrib_funci_part, contrib_funcf_part                            &
 !                 Dimensions of Arrays
@@ -344,8 +344,12 @@ SUBROUTINE monochromatic_radiance(ierr                                  &
   REAL (RealK), INTENT(OUT) ::                                          &
       flux_direct(nd_flux_profile, 0: nd_layer)                         &
 !       Direct flux
-    , flux_total(nd_flux_profile, 2*nd_layer+2)
+    , flux_total(nd_flux_profile, 2*nd_layer+2)                         &
 !       Total flux
+    , actinic_flux(nd_flux_profile, nd_layer)
+!       Actinic flux
+  LOGICAL, INTENT(IN) :: l_actinic
+!       Flag for calculation of actinic flux
 
 !                 Calculated radiances
   REAL (RealK), INTENT(OUT) ::                                          &
@@ -368,8 +372,10 @@ SUBROUTINE monochromatic_radiance(ierr                                  &
   REAL (RealK), INTENT(OUT) ::                                          &
       flux_direct_clear(nd_flux_profile, 0: nd_layer)                   &
 !       Clear-sky direct flux
-    , flux_total_clear(nd_flux_profile, 2*nd_layer+2)
+    , flux_total_clear(nd_flux_profile, 2*nd_layer+2)                   &
 !       Clear-sky total flux
+    , actinic_flux_clear(nd_flux_profile, nd_layer)
+!       Clear-sky actinic flux
 
   REAL (RealK), INTENT(INOUT) ::                                        &
       contrib_funci_part(nd_flux_profile, nd_layer)
@@ -558,11 +564,11 @@ SUBROUTINE monochromatic_radiance(ierr                                  &
       , n_column_slv, list_column_slv                                   &
       , i_clm_lyr_chn, i_clm_cld_typ, area_column                       &
 !                   Fluxes Calculated
-      , flux_direct, flux_total                                         &
+      , flux_direct, flux_total, l_actinic, actinic_flux                &
 !                   Flags for Clear-sky Calculation
       , l_clear, i_solver_clear                                         &
 !                   Clear-sky Fluxes Calculated
-      , flux_direct_clear, flux_total_clear                             &
+      , flux_direct_clear, flux_total_clear, actinic_flux_clear         &
 !                   Dimensions of Arrays
       , nd_profile, nd_layer, nd_layer_clr, id_ct, nd_column            &
       , nd_cloud_type, nd_region, nd_overlap_coeff                      &

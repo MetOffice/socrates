@@ -37,6 +37,7 @@ use ereport_mod, only: ereport
 use rad_pcf, only: i_normal, i_err_fatal
 use realtype_rd, only: RealK
 use missing_data_mod, only: rmdi
+use map_sub_bands_mod, only: map_sub_bands
 use yomhook,  only: lhook, dr_hook
 use parkind1, only: jprb, jpim
 
@@ -111,10 +112,13 @@ else if (present(spectrum_name).or.present(spectrum)) then
   if (spec%solar%weight_blue(1) == rmdi) then
     call set_weight_blue(spec, wavelength_blue)
   end if
+  ! Remove gases that are not required
   call compress_spectrum(spec, &
     l_h2o, l_co2, l_o3, l_o2, l_n2o, l_ch4, l_so2, l_cfc11, l_cfc12, &
     l_cfc113, l_cfc114, l_hcfc22, l_hfc125, l_hfc134a, l_co, l_nh3, &
     l_tio, l_vo, l_h2, l_he, l_na, l_k, l_li, l_rb, l_cs, l_all_gases)
+  ! Map the gas k-terms and weights to the sub-bands
+  call map_sub_bands(spec)
 end if
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)

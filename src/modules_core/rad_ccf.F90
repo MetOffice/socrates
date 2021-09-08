@@ -23,8 +23,8 @@ MODULE rad_ccf
 !   Standard Astronomical Unit (mean Earth-Sun distance)
   REAL (RealK), PARAMETER :: solar_t_effective = 5.785E+03_RealK
 !   Effective solar temperature
-  REAL (RealK), PARAMETER :: solar_radius      = 6.96E+08_RealK
-!   Radius of the Sun
+  REAL (RealK), PARAMETER :: solar_radius      = 6.957E+08_RealK
+!   Radius of the Sun (IAU recommendation: https://arxiv.org/abs/1510.07674)
   REAL (RealK), PARAMETER :: earth_radius      = 6.37E+06_RealK
 !   Radius of the Earth
   REAL (RealK), PARAMETER :: eccentricity      = 1.67E-02_RealK

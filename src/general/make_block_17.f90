@@ -59,13 +59,15 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
   CHARACTER (LEN=4) :: dim_name
   CHARACTER (LEN=3) :: frequency
   INTEGER :: ncid, varid, dimid_time, dimid_wlen, time_len, wlen_len
-  INTEGER :: band, sub_band, number_term
+  INTEGER :: band, sub_band, number_term, index_absorb
   INTEGER :: sub_bands(Sp%Dim%nd_band)
   INTEGER :: n_times, yearstart=imdi, monthstart, daystart
   INTEGER, ALLOCATABLE :: calyear(:), calmonth(:), calday(:), seconds(:)
   LOGICAL :: l_monthly
   REAL (RealK), ALLOCATABLE :: tsi(:), ssi(:,:), wbinsize(:), wbinbnds(:,:)
-  REAL (RealK) :: wavelength(2, Sp%Dim%nd_k_term, Sp%Dim%nd_band)
+  REAL (RealK) :: wavelength(2, &
+                             MAX(Sp%Dim%nd_k_term, Sp%Dim%nd_sub_band_gas), &
+                             Sp%Dim%nd_band)
   REAL (RealK) :: wave_inc
 
 
@@ -73,31 +75,53 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
     sub_bands=0
     sub_bands(1:Sp%Basic%n_band)=1
     DO
-      WRITE(*, '(/a)') 'Enter band to be sub-divided (0 to finish): '
+      WRITE(*, '(/a)') &
+        'Enter band to be sub-divided (0 to finish, -1 to use gas sub-bands): '
       READ(*, *, IOSTAT=ios) band
       IF (band == 0) EXIT
-      number_term = Sp%Gas%i_band_k(band, Sp%Gas%index_absorb(1, band))
-      sub_bands(band)=number_term
-      WRITE(*, '(a,i5,a)') &
-        'There are ', number_term, ' major gas k-terms in this band.'
-      WRITE(*, '(a)') 'Do you want to divide equally in wavelength (E),'
-      WRITE(*, '(a)') 'or provide band limits (L) for each k-term?'
-      READ(*, '(a)') char
-      IF ( (char.eq.'e').OR.(char.eq.'E') ) THEN
-        wave_inc = ( Sp%Basic%wavelength_long(band) - &
-                     Sp%Basic%wavelength_short(band) ) / number_term
-        DO i=1, number_term
-          wavelength(1, i, band) = Sp%Basic%wavelength_short(band) + &
-                                   wave_inc*(i-1)
-          wavelength(2, i, band) = Sp%Basic%wavelength_short(band) + &
-                                   wave_inc*(i)
+      IF (band == -1) THEN
+        DO band=1, Sp%Basic%n_band
+          index_absorb = Sp%Gas%index_absorb(1, band)
+          IF (Sp%Gas%n_sub_band_gas(band, index_absorb) > 1) THEN
+            sub_bands(band) = Sp%Gas%n_sub_band_gas(band, index_absorb)
+            wavelength(:, 1:sub_bands(band), band) = &
+              Sp%Gas%wavelength_sub_band(:,1:sub_bands(band),band,index_absorb)
+          END IF
         END DO
+        EXIT
+      END IF
+      index_absorb = Sp%Gas%index_absorb(1, band)
+      IF (Sp%Gas%n_sub_band_gas(band, index_absorb) > 1) THEN
+        sub_bands(band) = Sp%Gas%n_sub_band_gas(band, index_absorb)
+        wavelength(:, 1:sub_bands(band), band) = &
+          Sp%Gas%wavelength_sub_band(:, 1:sub_bands(band), band, index_absorb)
       ELSE
-        WRITE(*, '(a)') 'Enter band limits (metres): '
-        DO i=1, number_term
-          READ(*, *, IOSTAT=ios) wavelength(1, i, band), &
-                                        wavelength(2, i, band)
-        END DO 
+        number_term = Sp%Gas%i_band_k(band, index_absorb)
+        sub_bands(band)=number_term
+        WRITE(*, '(a,i5,a)') &
+          'There are ', number_term, ' major gas k-terms in this band.'
+        WRITE(*, '(a)') 'Do you want to divide equally in wavelength (E),'
+        WRITE(*, '(a)') 'provide band limits (L) for each k-term,'
+        WRITE(*, '(a)') 'or use a single sub-band for the band (S)?'
+        READ(*, '(a)') char
+        IF ( (char.eq.'s').OR.(char.eq.'S') ) THEN
+          sub_bands(band)=1
+        ELSE IF ( (char.eq.'e').OR.(char.eq.'E') ) THEN
+          wave_inc = ( Sp%Basic%wavelength_long(band) - &
+                       Sp%Basic%wavelength_short(band) ) / number_term
+          DO i=1, number_term
+            wavelength(1, i, band) = Sp%Basic%wavelength_short(band) + &
+                                     wave_inc*(i-1)
+            wavelength(2, i, band) = Sp%Basic%wavelength_short(band) + &
+                                     wave_inc*(i)
+          END DO
+        ELSE
+          WRITE(*, '(a)') 'Enter band limits (metres): '
+          DO i=1, number_term
+            READ(*, *, IOSTAT=ios) wavelength(1, i, band), &
+                                          wavelength(2, i, band)
+          END DO 
+        END IF
       END IF
     END DO
     
@@ -109,7 +133,7 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
     IF (ALLOCATED(Sp%Var%wavelength_sub_band)) &
        DEALLOCATE(Sp%Var%wavelength_sub_band)
     ALLOCATE(Sp%Var%index_sub_band( 2, Sp%Dim%nd_sub_band ))
-    ALLOCATE(Sp%Var%wavelength_sub_band( 2, Sp%Dim%nd_sub_band ))
+    ALLOCATE(Sp%Var%wavelength_sub_band( 0:2, Sp%Dim%nd_sub_band ))
     
     sub_band=1
     DO band=1, Sp%Basic%n_band
@@ -124,7 +148,13 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
       ELSE
         DO i=1, sub_bands(band)
           Sp%Var%index_sub_band(1, sub_band) = band
-          Sp%Var%index_sub_band(2, sub_band) = i
+          index_absorb = Sp%Gas%index_absorb(1, band)
+          IF (Sp%Gas%n_sub_band_gas(band, index_absorb) > 1) THEN
+            Sp%Var%index_sub_band(2, sub_band) = &
+              Sp%Gas%sub_band_k(i, band, index_absorb)
+          ELSE
+            Sp%Var%index_sub_band(2, sub_band) = i
+          END IF
           Sp%Var%wavelength_sub_band(1, sub_band) = wavelength(1, i, band)
           Sp%Var%wavelength_sub_band(2, sub_band) = wavelength(2, i, band)
           sub_band = sub_band + 1
@@ -455,6 +485,11 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
           start=(/1, j/), count=(/wlen_len, 1/) ))
         ! Scale the values to the correct units:
         VSol%irrad = ssi(1,:) * scale_irr
+
+        ! Uncomment to output a solar spectrum file for the first time
+        ! IF (k==1) THEN
+        !   CALL write_solar_spectrum('cmip6_solar_spectrum', VSol, ierr)
+        ! END IF
 
         ! Calculate the normalised solar flux in each sub-band
         CALL make_block_2_1(SubSp, VSol, filter,.FALSE.,.TRUE.,.FALSE.,ierr)

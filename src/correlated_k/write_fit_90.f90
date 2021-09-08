@@ -8,7 +8,7 @@
 !
 SUBROUTINE write_fit_90 &
 (iu_k_out, l_continuum, l_cont_gen, l_self_broadening, &
- i_band, i_index, i_index_1, i_index_2, &
+ i_band, i_gas, i_index, i_index_1, i_index_2, &
  p_fit, t_fit, &
  n_points, amount, transmittance, trans_calc, &
  n_k, k, w_k, i_scale, &
@@ -37,6 +37,8 @@ SUBROUTINE write_fit_90 &
 !
   INTEGER, Intent(IN) :: i_band
 !   Number of band
+  INTEGER, Intent(IN) :: i_gas
+!   Identifier for absorber
   INTEGER, Intent(IN) :: i_index
 !   Index number of absorber
   INTEGER, Intent(IN) :: i_index_1
@@ -99,15 +101,15 @@ SUBROUTINE write_fit_90 &
   ELSE
     IF (l_self_broadening) THEN
       WRITE(iu_k_out, '(a13, i5, //a)') &
-        '*FILE TYPE = ', it_file_line_fit_self, &
+        '*FILE TYPE = ', it_file_line_fit_self_id, &
         'Fitted gaseous transmissions and k-terms.'
     ELSE
       WRITE(iu_k_out, '(a13, i5, //a)') &
-        '*FILE TYPE = ', it_file_line_fit, &
+        '*FILE TYPE = ', it_file_line_fit_id, &
         'Fitted gaseous transmissions and k-terms.'
     END IF
-    WRITE(iu_k_out, '(6x, a8, i5, a21, i5)') &
-      'in band ', i_band, ': for absorber index ', i_index
+    WRITE(iu_k_out, '(6x, a8, i5, a26, i5)') &
+      'in band ', i_band, ': for absorber identifier ', i_gas
   ENDIF
   IF (i_scale_function == ip_scale_t_lookup) THEN
     WRITE(iu_k_out, '(6x, a15, 1pe10.3, a3)') &

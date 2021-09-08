@@ -257,6 +257,10 @@ PROGRAM l_run_cdl
   control%l_flux_direct_clear_sph_band = .FALSE.
   control%l_flux_down_clear_band = .FALSE.
   control%l_flux_up_clear_band = .FALSE.
+  control%l_actinic_flux = .FALSE.
+  control%l_actinic_flux_clear = .FALSE.
+  control%l_actinic_flux_band = .FALSE.
+  control%l_actinic_flux_clear_band = .FALSE.
   control%l_aerosol_absorption_band = .FALSE.
   control%l_aerosol_scattering_band = .FALSE.
   control%l_aerosol_asymmetry_band = .FALSE.

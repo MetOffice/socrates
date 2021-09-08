@@ -9,17 +9,26 @@ python RFMIP_create_submission_files.py --physics_index 1 || pyerr=1
 # python RFMIP_create_submission_files.py --physics_index 2 || pyerr=1
 # python RFMIP_plot.py
 
+ierr=0
 if [ $pyerr -eq 0 ]; then
-    for f in `ls *_gn.nc`
-    do
-        ierr=0
-        nccmp --data --metadata $f KGO/$f || ierr=1
-        if [ $ierr -gt 0 ]; then
-            echo "$f did not compare"
-        else
-            echo "$f compared: Pass"
-        fi
-    done
+    which nccmp &>/dev/null || ierr=1
+    if [ $ierr -gt 0 ]; then
+        echo "Install nccmp to compare to KGOs"
+	ierr=0
+    else
+        for f in `ls *_gn.nc`
+        do
+            diff_err=0
+            (nccmp --data --metadata $f KGO/$f && \
+             echo "$f matched ifort KGO: Pass") || \
+            (nccmp --data --metadata $f KGO/gfortran_$f && \
+             echo "$f matched gfortran KGO: Pass") || diff_err=1
+            if [ $diff_err -gt 0 ]; then
+                echo "$f did not compare"
+                ierr=1
+            fi
+        done
+    fi
 fi
 
 if [[ $ierr -gt 0 || $pyerr -gt 0 ]] ; then

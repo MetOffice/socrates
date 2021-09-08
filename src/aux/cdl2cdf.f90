@@ -16,48 +16,54 @@ program cdl2cdf
   integer :: i, j                    ! Loop variables
   character (LEN=filenamelength) :: cdl_name, cdf_name
 
-  integer :: nd_cdl_dimen  = 7       ! Array size for netCDF dimensions
-  integer :: nd_cdl_dimen_size = 768 ! Array size for number of values
-                                     !  in a netCDF-dimension
-  integer :: nd_cdl_data = 768*768   ! Array size for netCDF data
-  integer :: nd_cdl_var =7           ! Number of netCDF variables
+  ! Array size for netCDF dimensions
+  integer, parameter :: nd_cdl_dimen = 7
+
+  ! Array size for number of values in a netCDF-dimension
+  integer, parameter :: nd_cdl_dimen_size = 3072
+
+  ! Array size for netCDF data
+  integer, parameter :: nd_cdl_data = 3072*3072
+
+  ! Number of netCDF variables
+  integer, parameter :: nd_cdl_var = 7
 
   integer :: n_dimension       ! Number of netCDF dimesions
   integer :: n_var             ! Number of netCDF variables
 
   character :: &
-       dimension_name(7)*24 ,& ! Names of dimensions
-       dimension_type(7)*6  ,& ! Types of dimensions
-       dimension_long(7)*40 ,& ! Long names of dimensions
-       dimension_unit(7)*20 ,& ! Units of dimensions
-       var_name(7)*24       ,& ! Name of variable
-       var_type(7)*6        ,& ! Type of variable
-       var_long(7)*40       ,& ! Long name of variable
-       var_unit(7)*20          ! Unit of variable
+       dimension_name(nd_cdl_dimen)*24 ,& ! Names of dimensions
+       dimension_type(nd_cdl_dimen)*6  ,& ! Types of dimensions
+       dimension_long(nd_cdl_dimen)*40 ,& ! Long names of dimensions
+       dimension_unit(nd_cdl_dimen)*20 ,& ! Units of dimensions
+       var_name(nd_cdl_var)*24         ,& ! Name of variable
+       var_type(nd_cdl_var)*6          ,& ! Type of variable
+       var_long(nd_cdl_var)*40         ,& ! Long name of variable
+       var_unit(nd_cdl_var)*20            ! Unit of variable
 
   ! Values of integral dimensions
-  integer :: dimension_array_int(768, 7)
+  integer :: dimension_array_int(nd_cdl_dimen_size, nd_cdl_dimen)
 
   ! Values of floating point dimensions
-  real(RealK) :: dimension_array_fl(768, 7)
+  real(RealK) :: dimension_array_fl(nd_cdl_dimen_size, nd_cdl_dimen)
 
   ! Sizes of dimensions
-  integer :: dimension_size(7)
+  integer :: dimension_size(nd_cdl_dimen)
 
   ! Number of data elements
-  integer :: n_data(7)
+  integer :: n_data(nd_cdl_var)
 
   ! Number of dimensions used by variable
-  integer :: n_dimension_var(7)
+  integer :: n_dimension_var(nd_cdl_var)
 
   ! List of dimensions used in the variable
-  integer :: list_dimension_var(7, 7)
+  integer :: list_dimension_var(nd_cdl_dimen, nd_cdl_var)
 
   ! Integral data fields
-  integer :: data_int(768*768, 7)
+  integer :: data_int(nd_cdl_data, nd_cdl_var)
 
   ! Floating point data fields
-  real(RealK) :: data_fl(768*768, 7)
+  real(RealK) :: data_fl(nd_cdl_data, nd_cdl_var)
 
 
   ! Initialize the character strings

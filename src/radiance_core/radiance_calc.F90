@@ -91,9 +91,11 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !       Number of generalised continua
     , i_abs                                                                    &
 !       Local index of absorber, including continuum
-    , n_abs
+    , n_abs                                                                    &
 !       Total number of absorbers, including continua
-
+    , i_gas_overlap
+!       Gas overlap method for band
+  
 ! Dimensions:
   INTEGER                                                                      &
       nd_abs                                                                   &
@@ -175,8 +177,10 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !       Flag for moist aerosol
     , l_clear_band                                                             &
 !       Flag to calculate clear-sky fluxes for this band
-    , l_water
+    , l_water                                                                  &
 !       Flag for water vapour present in spectral file
+    , l_actinic
+!       Flag to calculate actinic flux
 
   REAL (RealK) ::                                                              &
       solar_irrad_band(dimen%nd_profile)                                       &
@@ -298,10 +302,16 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !       diagnostic bands or returned, but retained for
 !       future use)
 
-  LOGICAL                                                                      &
-      l_initial
-!       Flag to run the routine incrementing diagnostics in
-!       its initializing mode
+  LOGICAL ::                                                                   &
+      l_initial                                                                &
+!       Initialise rather than increment broadband diagnostics
+    , l_initial_band(spectrum%dim%nd_band)                                     &
+!       Initialise rather than increment band-by-band diagnostics
+    , l_initial_channel(dimen%nd_channel)                                      &
+!       Initialise rather than increment channel diagnostics
+    , l_initial_channel_tile(dimen%nd_channel)
+!       Initialise rather than increment channel diagnostics on tiles
+  
 
 ! Coefficients for the transfer of energy between
 ! Partially cloudy layers:
@@ -493,7 +503,9 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       l_diff_alb=l_diff_alb.OR.                                                &
         (control%i_gas_overlap_band(i_band) == ip_overlap_k_eqv).OR.           &
         (control%i_gas_overlap_band(i_band) == ip_overlap_k_eqv_scl).OR.       &
-        (control%i_gas_overlap_band(i_band) == ip_overlap_k_eqv_mod)
+        (control%i_gas_overlap_band(i_band) == ip_overlap_k_eqv_mod).OR.       &
+        (control%i_gas_overlap_band(i_band) == ip_overlap_hybrid .AND.         &
+         spectrum%gas%i_overlap(i_band) == ip_overlap_k_eqv_scl)
     END DO
     IF ( (control%isolir == ip_infra_red).AND.l_diff_alb ) THEN
 ! DEPENDS ON: diff_albedo_basis
@@ -751,21 +763,32 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
     ! path_div is passed as an argument so must always be allocated
     ALLOCATE(sph%common%path_div(dimen%nd_profile,dimen%nd_layer))
   END IF
-  
-! Solve the equation of transfer in each band and
-! increment the fluxes.
+
+! Set flag for calculation of actinic flux
+  l_actinic = spectrum%photol%n_pathway > 0 .OR. &
+    control%l_actinic_flux .OR. &
+    control%l_actinic_flux_band .OR. &
+    control%l_actinic_flux_clear .OR. &
+    control%l_actinic_flux_clear_band
+
+! On first setting, diagnostics should be initialised
+  l_initial=.TRUE.
+  l_initial_band(:)=.TRUE.
+  l_initial_channel(:)=.TRUE.
+  l_initial_channel_tile(:)=.TRUE.
+
+! Solve the equation of transfer in each band and increment the fluxes.
   DO i_band=control%first_band, control%last_band
-
-!   Set the flag to initialize the diagnostic arrays.
-    IF (i_band == control%first_band) THEN
-      l_initial=.TRUE.
-    ELSE
-      l_initial=(control%map_channel(i_band) > control%map_channel(i_band-1))
-    END IF
-
 
 !   Determine whether clear-sky fluxes are required for this band
     l_clear_band = control%l_clear .OR. control%l_clear_band(i_band)
+
+!   Determine the gas overlap method for the band
+    IF (control%i_gas_overlap_band(i_band) == ip_overlap_hybrid) THEN
+      i_gas_overlap = spectrum%gas%i_overlap(i_band)
+    ELSE
+      i_gas_overlap = control%i_gas_overlap_band(i_band)
+    END IF
 
 !   Rescale amounts of continua.
     l_grey_cont = .FALSE.
@@ -928,7 +951,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
 
 !   Preliminary calculations for source terms:
-    IF (control%i_gas_overlap_band(i_band) == ip_overlap_mix_ses2) THEN
+    IF (i_gas_overlap == ip_overlap_mix_ses2) THEN
 
 !     Interpolate absorption coefficients onto model grid
 ! DEPENDS ON: inter_k
@@ -1137,7 +1160,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
       n_gas=spectrum%gas%n_band_absorb(i_band)
 
-      IF (control%i_gas_overlap_band(i_band) == ip_overlap_single) THEN
+      IF (i_gas_overlap == ip_overlap_single) THEN
 
 !       There will be no gaseous absorption in this band
 !       unless the selected gas appears.
@@ -1171,9 +1194,9 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
 !       Generalised continuum absorption requires the complete scaling of
 !       ESFT terms to be performed here.
-        IF (control%i_gas_overlap_band(i_band) == ip_overlap_k_eqv     .OR.    &
-            control%i_gas_overlap_band(i_band) == ip_overlap_k_eqv_mod .OR.    &
-            control%i_gas_overlap_band(i_band) == ip_overlap_mix_ses2) THEN
+        IF (i_gas_overlap == ip_overlap_k_eqv     .OR.                         &
+            i_gas_overlap == ip_overlap_k_eqv_mod .OR.                         &
+            i_gas_overlap == ip_overlap_mix_ses2) THEN
           cmessage =                                                           &
             '*** Error: The selected gaseous overlap method is invalid.'
           ierr=i_err_fatal
@@ -1198,7 +1221,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       DO j=1, n_gas
         i_gas_band=spectrum%gas%index_absorb(j, i_band)
 !       Reset the pointer if there is just one gas.
-        IF (control%i_gas_overlap_band(i_band) == ip_overlap_single) THEN
+        IF (i_gas_overlap == ip_overlap_single) THEN
 !         Only the selected gas is active in the band.
           i_gas_band=control%i_gas
         END IF      
@@ -1216,8 +1239,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
 !   Check that that the selected overlap method is compatible with the
 !   generalised continuum implementation.
-    IF (control%i_gas_overlap_band(i_band) == ip_overlap_single .AND.          &
-        n_abs > 1) THEN
+    IF (i_gas_overlap == ip_overlap_single .AND. n_abs > 1) THEN
       cmessage = '*** Error: The selected gaseous overlap method is invalid.'
       ierr=i_err_fatal
       GO TO 9999
@@ -1241,7 +1263,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
         i_gas_band=spectrum%gas%index_absorb(j, i_band)
 
 !       Reset the pointer if there is just one gas.
-        IF (control%i_gas_overlap_band(i_band) == ip_overlap_single) THEN
+        IF (i_gas_overlap == ip_overlap_single) THEN
 !         Only the selected gas is active in the band.
           i_gas_band=control%i_gas
         END IF          
@@ -1302,8 +1324,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
         ELSE IF (spectrum%gas%i_scale_k(i_band, i_gas_band)                    &
             == ip_scale_term) THEN
-          IF ((control%i_gas_overlap_band(i_band) /= ip_overlap_k_eqv) .AND.   &
-              (control%i_gas_overlap_band(i_band) /= ip_overlap_k_eqv_mod)) THEN
+          IF ((i_gas_overlap /= ip_overlap_k_eqv) .AND.                        &
+              (i_gas_overlap /= ip_overlap_k_eqv_mod)) THEN
             DO k=1, n_abs_esft(j)
               CALL scale_absorb(ierr, atm%n_profile, atm%n_layer               &
                 , atm%gas_mix_ratio(1, 1, i_gas_band), atm%p, atm%t            &
@@ -1429,12 +1451,11 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
     IF (.NOT.l_abs_band) THEN
 
-!     There is no gaseous absorption. Solve for the
-!     radiances directly.
+!     There is no gaseous absorption. Solve for the radiances directly.
 
 ! DEPENDS ON: solve_band_without_gas
       CALL solve_band_without_gas(ierr                                         &
-        , control, atm, cld, bound, radout, i_band                             &
+        , control, dimen, spectrum, atm, cld, bound, radout, i_band            &
 !                 Atmospheric properties
         , atm%n_profile, atm%n_layer, atm%mass                                 &
 !                 Angular integration
@@ -1477,14 +1498,13 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
         , atm%n_viewing_level, i_rad_layer, frac_rad_layer                     &
 !                 Viewing Geometry
         , atm%n_direction, atm%direction                                       &
-!                 Weighting factor for the band
-        , control%weight_band(i_band), l_initial                               &
 !                 Radiances
         , i_direct                                                             &
-!                 Flags for clear-sky fluxes
-        , l_clear_band, control%i_solver_clear                                 &
-!                 Special Surface Fluxes
-        , control%l_blue_flux_surf, spectrum%solar%weight_blue(i_band)         &
+!                 Flags for initialising diagnostics
+        , l_initial, l_initial_band                                            &
+        , l_initial_channel, l_initial_channel_tile                            &
+!                 Flags for fluxes
+        , l_actinic, l_clear_band, control%i_solver_clear                      &
 !                 Dimensions of arrays
         , dimen%nd_profile, dimen%nd_layer, dimen%nd_layer_clr                 &
         , dimen%id_cloud_top, dimen%nd_column                                  &
@@ -1502,12 +1522,12 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !     Gases are included.
 
 !     Treat the gaseous overlaps as directed by the overlap switch.
-      SELECT CASE (control%i_gas_overlap_band(i_band))
+      SELECT CASE (i_gas_overlap)
 
       CASE (ip_overlap_single)
 ! DEPENDS ON: solve_band_one_gas
         CALL solve_band_one_gas(ierr                                           &
-          , control, atm, cld, bound, radout, i_band                           &
+          , control, dimen, spectrum, atm, cld, bound, radout, i_band          &
 !                 Atmospheric properties
           , atm%n_profile, atm%n_layer, atm%mass                               &
 !                 Angular integration
@@ -1553,14 +1573,13 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , atm%n_viewing_level, i_rad_layer, frac_rad_layer                   &
 !                 Viewing Geometry
           , atm%n_direction, atm%direction                                     &
-!                 Weighting factor for the band
-          , control%weight_band(i_band), l_initial                             &
 !                 Radiances
           , i_direct                                                           &
-!                 Flags for clear-sky calculations
-          , l_clear_band, control%i_solver_clear                               &
-!                 Special Surface Fluxes
-          , control%l_blue_flux_surf, spectrum%solar%weight_blue(i_band)       &
+!                 Flags for initialising diagnostics
+          , l_initial, l_initial_band                                          &
+          , l_initial_channel, l_initial_channel_tile                          &
+!                 Flags for flux calculations
+          , l_actinic, l_clear_band, control%i_solver_clear                    &
 !                 Dimensions of arrays
           , dimen%nd_profile, dimen%nd_layer, dimen%nd_layer_clr               &
           , dimen%id_cloud_top, dimen%nd_column                                &
@@ -1574,10 +1593,10 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , dimen%nd_source_coeff, dimen%nd_point_tile, dimen%nd_tile          &
           )
 
-      CASE (ip_overlap_random)
+      CASE (ip_overlap_random, ip_overlap_exact_major)
 ! DEPENDS ON: solve_band_random_overlap
         CALL solve_band_random_overlap(ierr                                    &
-          , control, atm, cld, bound, radout, i_band                           &
+          , control, dimen, spectrum, atm, cld, bound, radout, i_band          &
 !                 Atmospheric properties
           , atm%n_profile, atm%n_layer, atm%mass                               &
 !                 Angular integration
@@ -1592,7 +1611,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Treatment of scattering
           , control%i_scatter_method_band(i_band)                              &
 !                 Options for solver
-          , control%i_solver                                                   &
+          , control%i_solver, i_gas_overlap                                    &
 !                 Gaseous properties
           , n_abs, index_abs, n_abs_esft                                       &
           , k_abs_layer, w_abs_esft                                            &
@@ -1619,18 +1638,21 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , w_free, cloud_overlap                                              &
           , n_column_slv, list_column_slv                                      &
           , i_clm_lyr_chn, i_clm_cld_typ, area_column                          &
+!                 Additional variables required for mcica
+          , l_cloud_cmp, n_cloud_profile, i_cloud_profile                      &
+          , i_cloud_type, dimen%nd_cloud_component                             &
+          , control%i_cloud_representation                                     &
 !                 Levels for calculating radiances
           , atm%n_viewing_level, i_rad_layer, frac_rad_layer                   &
 !                 Viewing Geometry
           , atm%n_direction, atm%direction                                     &
-!                 Weighting factor for the band
-          , control%weight_band(i_band), l_initial                             &
 !                 Radiances
           , i_direct                                                           &
-!                 Flags for clear-sky calculations
-          , l_clear_band, control%i_solver_clear                               &
-!                 Special Surface Fluxes
-          , control%l_blue_flux_surf, spectrum%solar%weight_blue(i_band)       &
+!                 Flags for initialising diagnostics
+          , l_initial, l_initial_band                                          &
+          , l_initial_channel, l_initial_channel_tile                          &
+!                 Flags for flux calculations
+          , l_actinic, l_clear_band, control%i_solver_clear                    &
 !                 Dimensions of arrays
           , dimen%nd_profile, dimen%nd_layer, dimen%nd_layer_clr               &
           , dimen%id_cloud_top, dimen%nd_column                                &
@@ -1649,7 +1671,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
         nd_esft_max = MAX(control%n_esft_red, nd_k_term)
 ! DEPENDS ON: solve_band_random_overlap_resort_rebin
         CALL solve_band_random_overlap_resort_rebin(ierr                       &
-          , control, atm, cld, bound, radout, i_band                           &
+          , control, dimen, spectrum, atm, cld, bound, radout, i_band          &
 !                 Atmospheric properties
           , atm%n_profile, atm%n_layer, atm%mass                               &
 !                 Angular integration
@@ -1696,14 +1718,13 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , atm%n_viewing_level, i_rad_layer, frac_rad_layer                   &
 !                 Viewing Geometry
           , atm%n_direction, atm%direction                                     &
-!                 Weighting factor for the band
-          , control%weight_band(i_band), l_initial                             &
 !                 Radiances
           , i_direct                                                           &
-!                 Flags for clear-sky calculations
-          , l_clear_band, control%i_solver_clear                               &
-!                 Special Surface Fluxes
-          , control%l_blue_flux_surf, spectrum%solar%weight_blue(i_band)       &
+!                 Flags for initialising diagnostics
+          , l_initial, l_initial_band                                          &
+          , l_initial_channel, l_initial_channel_tile                          &
+!                 Flags for flux calculations
+          , l_actinic, l_clear_band, control%i_solver_clear                    &
 !                 Dimensions of arrays
           , dimen%nd_profile, dimen%nd_layer, dimen%nd_layer_clr               &
           , dimen%id_cloud_top, dimen%nd_column                                &
@@ -1720,7 +1741,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       CASE (ip_overlap_k_eqv_scl)
 ! DEPENDS ON: solve_band_k_eqv_scl
         CALL solve_band_k_eqv_scl(ierr                                         &
-          , control, dimen, atm, cld, bound, radout                            &
+          , control, dimen, spectrum, atm, cld, bound, radout                  &
 !                 Atmospheric properties
           , atm%n_profile, atm%n_layer, atm%mass                               &
 !                 Angular integration
@@ -1770,14 +1791,13 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , atm%n_viewing_level, i_rad_layer, frac_rad_layer                   &
 !                 Viewing Geometry
           , atm%n_direction, atm%direction                                     &
-!                 Weighting factor for the band
-          , control%weight_band(i_band), l_initial                             &
 !                 Radiances
           , i_direct                                                           &
-!                 Flags for clear-sky calculations
-          , l_clear_band, control%i_solver_clear                               &
-!                 Special Surface Fluxes
-          , control%l_blue_flux_surf, spectrum%solar%weight_blue(i_band)       &
+!                 Flags for initialising diagnostics
+          , l_initial, l_initial_band                                          &
+          , l_initial_channel, l_initial_channel_tile                          &
+!                 Flags for flux calculations
+          , l_actinic, l_clear_band, control%i_solver_clear                    &
 !                 Dimensions of arrays
           , dimen%nd_profile, dimen%nd_layer, dimen%nd_layer_clr               &
           , dimen%id_cloud_top, dimen%nd_column                                &
@@ -1794,7 +1814,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       CASE (ip_overlap_k_eqv, ip_overlap_k_eqv_mod)
 ! DEPENDS ON: solve_band_k_eqv
         CALL solve_band_k_eqv(ierr                                             &
-          , control, dimen, atm, cld, bound, radout                            &
+          , control, dimen, spectrum, atm, cld, bound, radout                  &
 !                 Atmospheric properties
           , atm%n_profile, atm%n_layer, i_top, atm%p, atm%t, atm%mass          &
 !                 Angular integration
@@ -1809,7 +1829,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !                 Treatment of scattering
           , control%i_scatter_method_band(i_band), spectrum%gas%i_scat         &
 !                 Options for solver
-          , control%i_solver, control%i_gas_overlap_band(i_band)               &
+          , control%i_solver, i_gas_overlap                                    &
 !                 Gaseous properties
           , i_band, n_gas                                                      &
           , spectrum%gas%index_absorb, spectrum%gas%i_band_k                   &
@@ -1851,14 +1871,13 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , atm%n_viewing_level, i_rad_layer, frac_rad_layer                   &
 !                 Viewing Geometry
           , atm%n_direction, atm%direction                                     &
-!                 Weighting factor for the band
-          , control%weight_band(i_band), l_initial                             &
 !                 Radiances
           , i_direct                                                           &
-!                 Flags for clear-sky calculations
-          , l_clear_band, control%i_solver_clear                               &
-!                 Special Surface Fluxes
-          , control%l_blue_flux_surf, spectrum%solar%weight_blue(i_band)       &
+!                 Flags for initialising diagnostics
+          , l_initial, l_initial_band                                          &
+          , l_initial_channel, l_initial_channel_tile                          &
+!                 Flags for flux calculations
+          , l_actinic, l_clear_band, control%i_solver_clear                    &
 !                 Dimensions of arrays
           , dimen%nd_profile, dimen%nd_layer, dimen%nd_layer_clr               &
           , dimen%id_cloud_top, dimen%nd_column                                &
@@ -1876,7 +1895,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       CASE (ip_overlap_mix_ses2)
 ! DEPENDS ON: solve_band_ses
         CALL solve_band_ses(ierr                                               &
-          , control, dimen, atm, cld, bound, radout                            &
+          , control, dimen, spectrum, atm, cld, bound, radout                  &
 !                 Atmospheric properties
           , atm%n_profile, atm%n_layer, atm%mass                               &
 !                 Angular integration
@@ -1931,14 +1950,13 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , atm%n_viewing_level, i_rad_layer, frac_rad_layer                   &
 !                 Viewing Geometry
           , atm%n_direction, atm%direction                                     &
-!                 Weighting factor for the band
-          , control%weight_band(i_band), l_initial                             &
 !                 Radiances
           , i_direct                                                           &
-!                 Flags for clear-sky calculations
-          , l_clear_band, control%i_solver_clear                               &
-!                 Special Surface Fluxes
-          , control%l_blue_flux_surf, spectrum%solar%weight_blue(i_band)       &
+!                 Flags for initialising diagnostics
+          , l_initial, l_initial_band                                          &
+          , l_initial_channel, l_initial_channel_tile                          &
+!                 Flags for flux calculations
+          , l_actinic, l_clear_band, control%i_solver_clear                    &
 !                 Dimensions of arrays
           , dimen%nd_profile, dimen%nd_layer, dimen%nd_layer_clr               &
           , dimen%id_cloud_top, dimen%nd_column                                &
@@ -2150,7 +2168,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !   output fluxes between separate diagnostic bands.
     IF (control%isolir == ip_infra_red) THEN
 ! DEPENDS ON: adjust_ir_radiance
-      CALL adjust_ir_radiance(control, dimen, atm, radout, &
+      CALL adjust_ir_radiance(control, spectrum, atm, radout, &
         planck, i_band, l_clear_band)
     END IF
 

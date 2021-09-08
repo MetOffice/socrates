@@ -172,7 +172,8 @@
       DO j=1, n_column_profile
         i_type=i_data_type(j)
 !       Discard specified columns.
-        IF (i_type /= IP_discard) THEN
+        IF (.NOT.(i_type == IP_discard .AND.
+     &            i_data_group(j) == IP_physical_data)) THEN
           DO i=1, len(file_name)
             file_name(i:i)=' '
           ENDDO

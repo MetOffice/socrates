@@ -2,7 +2,7 @@
 .SH NAME
 Ccorr_k \- Generate gaseous absorption and water vapour continuum data
 .SH USAGE
-Ccorr_k \fB\-D\fR \fIhitran\-par\-file\fR | \fB\-X\fR \fIhitran\-xsc\-file\fR
+Ccorr_k \fB\-D\fR \fIhitran\-par\-file\fR | \fB\-X\fR \fIhitran\-xsc\-file\fR | \fB\-UVX\fR \fIuvxsc\-file\fR
         [\fB\-CIA\fR \fIhitran\-cia\-file\fR]
         \fB\-s\fR \fIspectral\-file\fR [\fB\-I\fR \fIinstrument\-file\fR]
         \fB\-R\fR \fIfirst\-band\fR \fIlast\-band\fR \fB\-F\fR \fIpt\-file\fR  [\fB\-r\fR \fIref\-pt\-file\fR]
@@ -34,6 +34,10 @@ Pathname of HITRAN line database. This is a .par file and may be in either 100 o
 .TP
 \fB\-X\fR \fIhitran\-xsc\-file\fR
 Pathname of HITRAN cross-section database. This is a .xsc file.
+
+.TP
+\fB\-UVX\fR \fIuvxsc\-file\fR
+Pathname of UV cross-section database. This is a .uvxsc file (a bespoke extension to the .xsc format to accommodate large wavenumbers).
 
 .TP
 \fB\-CIA\fR \fIhitran\-cia\-file\fR

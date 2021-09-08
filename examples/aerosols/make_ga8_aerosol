@@ -283,7 +283,8 @@ Cscatter_average -s $lw_specfile -P 1 -w -p 250 \
 
 # AODs for LW file
 rm -f *.aod
-./make_sp_aod_wavel
+echo 'Creating sp_aod_wavel...'
+./make_sp_aod_wavel > make_sp_aod_wavel_log
 
 echo "AODs for soluble"
 Cscatter_average -s sp_aod_wavel -P 1 -w -u \
@@ -395,7 +396,8 @@ Cscatter_average -s sp_aod_wavel -P 1 -w -u \
 # ------------------------------------------------------------------
 
 rm -f sp_sw_ga8 sp_sw_ga8_k
-prep_spec << EOF
+echo 'Creating sp_sw_ga8...'
+prep_spec << EOF > prep_sp_sw_ga8_log
 ../../data/spectra/ga7/sp_sw_ga7
 n
 sp_sw_ga8
@@ -485,7 +487,8 @@ EOF
 # ------------------------------------------------------------------
 
 rm -f sp_lw_ga8 sp_lw_ga8_k
-prep_spec <<EOF
+echo 'Creating sp_lw_ga8...'
+prep_spec <<EOF > prep_sp_lw_ga8_log
 ../../data/spectra/ga7/sp_lw_ga7
 n
 sp_lw_ga8
@@ -654,17 +657,22 @@ EOF
 (diff -q sp_sw_ga8_ifort sp_sw_ga8 && \
  echo 'Matched ifort SW output') || \
 (diff -q sp_sw_ga8_gfortran sp_sw_ga8 && \
- echo 'Matched gfortran SW output') || ierr=1
+ echo 'Matched gfortran SW output') || \
+(diff -q sp_sw_ga8_nyuki sp_sw_ga8 && \
+ echo 'Matched nyuki (gfortran) SW output') || ierr=1
 
 (diff -q sp_lw_ga8_ifort sp_lw_ga8 && \
  echo 'Matched ifort LW output') || \
 (diff -q sp_lw_ga8_gfortran sp_lw_ga8 && \
- echo 'Matched gfortran LW output') || ierr=1
+ echo 'Matched gfortran LW output') || \
+(diff -q sp_lw_ga8_nyuki sp_lw_ga8 && \
+ echo 'Matched nyuki (gfortran) LW output') || ierr=1
 
 if [ $ierr -gt 0 ] ; then
     exit 1
 else
     rm -f sp_sw_ga8 sp_sw_ga8_k sp_lw_ga8 sp_lw_ga8_k sp_aod_wavel
+    rm -f make_sp_aod_wavel_log prep_sp_sw_ga8_log prep_sp_lw_ga8_log
     rm -f *.mon *.avg *.aod
     echo OK
     exit 0

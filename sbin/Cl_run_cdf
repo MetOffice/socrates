@@ -141,16 +141,21 @@ if [ "$n_channel" ]
    then
    n_band=$(($range_2-$range_1+1))
    bnd_per_ch=$(($n_band/$n_channel))
-   case $n_channel in
-      1) ;;
-      $n_band) ;;
-      $(($n_band/$bnd_per_ch))) i=0 ; \
-	 while [[ $i -lt $n_band ]] ; \
-	 do echo $(($i/$bnd_per_ch + 1)) >> /tmp/lrcdl.$$ ; \
-            i=$(($i+1)) ; \
-	 done ;;
-      *) echo "Cannot determine channel map" ; exit ;;
-   esac
+   if [ $n_band -eq $n_channel*$bnd_per_ch ]
+   then
+       case $n_channel in
+          1) ;;
+          $n_band) ;;
+          $(($n_band/$bnd_per_ch))) i=0 ; \
+       	     while [[ $i -lt $n_band ]] ; \
+       	     do echo $(($i/$bnd_per_ch + 1)) >> /tmp/lrcdl.$$ ; \
+                i=$(($i+1)) ; \
+       	     done ;;
+          *) echo "Mapping error" ; exit ;;
+       esac
+   else
+       echo "Mapping sub-bands to channels."
+   fi
 fi
 if [ "$filter" ]
    then echo "y" >> /tmp/lrcdl.$$

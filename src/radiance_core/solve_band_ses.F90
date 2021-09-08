@@ -12,7 +12,7 @@
 !
 !- ---------------------------------------------------------------------
 SUBROUTINE solve_band_ses(ierr                                          &
-    , control, dimen, atm, cld, bound, radout                           &
+    , control, dimen, spectrum, atm, cld, bound, radout                 &
 !                 Atmospheric Column
     , n_profile, n_layer, d_mass                                        &
 !                 Angular Integration
@@ -63,14 +63,13 @@ SUBROUTINE solve_band_ses(ierr                                          &
     , n_viewing_level, i_rad_layer, frac_rad_layer                      &
 !                 Viewing Geometry
     , n_direction, direction                                            &
-!                 Weighting factor for the band
-    , weight_band, l_initial                                            &
 !                 Calculated radiances
     , i_direct                                                          &
-!                 Flags for Clear-sky Fluxes
-    , l_clear, i_solver_clear                                           &
-!                 Special Surface Fluxes
-    , l_blue_flux_surf, weight_blue                                     &
+!                   Flags for initialising diagnostics
+    , l_initial, l_initial_band                                         &
+    , l_initial_channel, l_initial_channel_tile                         &
+!                 Flags for Fluxes
+    , l_actinic, l_clear, i_solver_clear                                &
 !                 Dimensions of Arrays
     , nd_profile, nd_layer, nd_layer_clr, id_ct, nd_column              &
     , nd_flux_profile, nd_radiance_profile, nd_j_profile                &
@@ -84,9 +83,10 @@ SUBROUTINE solve_band_ses(ierr                                          &
     )
 
 
-  USE realtype_rd, ONLY: RealK
-  USE def_control, ONLY: StrCtrl
-  USE def_dimen,   ONLY: StrDim
+  USE realtype_rd,  ONLY: RealK
+  USE def_control,  ONLY: StrCtrl
+  USE def_dimen,    ONLY: StrDim
+  USE def_spectrum, ONLY: StrSpecData
   USE def_atm,     ONLY: StrAtm
   USE def_cld,     ONLY: StrCld
   USE def_bound,   ONLY: StrBound
@@ -106,6 +106,9 @@ SUBROUTINE solve_band_ses(ierr                                          &
 
 ! Dimensions:
   TYPE(StrDim),       INTENT(IN)    :: dimen
+
+! Spectral data:
+  TYPE(StrSpecData),  INTENT(IN)    :: spectrum
 
 ! Atmospheric properties:
   TYPE(StrAtm),       INTENT(IN)    :: atm
@@ -225,12 +228,6 @@ SUBROUTINE solve_band_ses(ierr                                          &
 !       Accuracy for adaptive truncation
     , euler_factor
 !       Factor applied to the last term of an alternating series
-  REAL (RealK), INTENT(IN) ::                                           &
-      weight_band
-!       Weighting factor for the current band
-  LOGICAL, INTENT(INOUT) ::                                             &
-      l_initial
-!       Flag to initialize diagnostics
 
 !                 Treatment of scattering
   INTEGER, INTENT(IN) ::                                                &
@@ -399,7 +396,21 @@ SUBROUTINE solve_band_ses(ierr                                          &
       i_direct(nd_radiance_profile, 0: nd_layer)
 !       Direct solar irradiance on levels
 
-!                 Flags for clear-sky calculations
+!                   Flags for initialising diagnostics
+  LOGICAL, INTENT(INOUT) ::                                             &
+      l_initial                                                         &
+!       Initialise rather than increment broadband diagnostics
+    , l_initial_band(nd_band)                                           &
+!       Initialise rather than increment band-by-band diagnostics
+    , l_initial_channel(dimen%nd_channel)                               &
+!       Initialise rather than increment channel diagnostics
+    , l_initial_channel_tile(dimen%nd_channel)
+!       Initialise rather than increment channel diagnostics on tiles
+    
+!                   Flags for flux calculations
+  LOGICAL, INTENT(IN) ::                                                &
+      l_actinic
+!       Flag for calculation of actinic flux
   LOGICAL, INTENT(IN) ::                                                &
       l_clear
 !       Calculate net clear-sky properties
@@ -407,15 +418,7 @@ SUBROUTINE solve_band_ses(ierr                                          &
       i_solver_clear
 !       Clear solver used
 
-!                 Special Diagnostics:
-  LOGICAL, INTENT(IN) ::                                                &
-      l_blue_flux_surf
-!       Flag to calculate the blue flux at the surface
-  REAL (RealK), INTENT(IN) ::                                           &
-      weight_blue
-!       Weights for blue fluxes in this band
-
-!                 Variables required for McICA
+!                   Variables required for McICA
   INTEGER, INTENT(IN) ::                                                &
       n_cloud_profile(id_ct: nd_layer)                                  &
 !       Number of cloudy profiles in each layer
@@ -439,8 +442,10 @@ SUBROUTINE solve_band_ses(ierr                                          &
       j, l, ic, ig
 !       Loop variable
   INTEGER                                                               &
-      iex
+      iex                                                               &
 !       Index of ESFT term
+    , iex_minor(nd_species)
+!       Index of ESFT term for minor gas (dummy here)
   REAL (RealK) ::                                                       &
       k_gas_abs(nd_profile, nd_layer)                                   &
 !       Gaseous absorptive extinction
@@ -461,10 +466,14 @@ SUBROUTINE solve_band_ses(ierr                                          &
 !       Partial direct flux at the surface
     , flux_total_part(nd_profile, 2*nd_layer+2)                         &
 !       Partial total flux
+    , actinic_flux_part(nd_flux_profile, nd_layer)                      &
+!       Partial actinic flux
     , flux_direct_clear_part(nd_profile, 0: nd_layer)                   &
 !       Partial clear-sky direct flux
-    , flux_total_clear_part(nd_profile, 2*nd_layer+2)
+    , flux_total_clear_part(nd_profile, 2*nd_layer+2)                   &
 !       Partial clear-sky total flux
+    , actinic_flux_clear_part(nd_flux_profile, nd_layer)
+!       Clear partial actinic flux
   REAL (RealK) ::                                                       &
       i_direct_part(nd_radiance_profile, 0: nd_layer)                   &
 !       Partial solar irradiances
@@ -477,8 +486,10 @@ SUBROUTINE solve_band_ses(ierr                                          &
   REAL (RealK) ::                                                       &
       weight_incr                                                       &
 !       Weight applied to increments
-    , weight_blue_incr
+    , weight_blue_incr                                                  &
 !       Weight applied to blue increments
+    , weight_sub_band_incr
+!       Weight applied to sub-band increments
 
   REAL (RealK) ::                                                       &
       contrib_funci_part(nd_flux_profile, nd_layer)
@@ -487,9 +498,6 @@ SUBROUTINE solve_band_ses(ierr                                          &
       contrib_funcf_part(nd_flux_profile, nd_layer)
 !       Contribution (or weighting) function
 
-  LOGICAL :: l_initial_band
-!       Flag to initialise band-by-band diagnostics
-  
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
@@ -498,8 +506,6 @@ SUBROUTINE solve_band_ses(ierr                                          &
 
 
   IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
-
-  l_initial_band = .TRUE.
 
 ! Set the appropriate boundary terms for the total
 ! upward and downward fluxes.
@@ -641,6 +647,7 @@ SUBROUTINE solve_band_ses(ierr                                          &
         , n_direction, direction                                        &
 !                   Calculated fluxes
         , flux_direct_part, flux_total_part                             &
+        , l_actinic, actinic_flux_part                                  &
 !                   Calculated radiances
         , radiance_part                                                 &
 !                   Calculated rate of photolysis
@@ -649,6 +656,7 @@ SUBROUTINE solve_band_ses(ierr                                          &
         , l_clear, i_solver_clear                                       &
 !                   Clear-sky fluxes calculated
         , flux_direct_clear_part, flux_total_clear_part                 &
+        , actinic_flux_clear_part                                       &
 !                   Contribution function
         , contrib_funci_part, contrib_funcf_part                        &
 !                   Dimensions of arrays
@@ -712,6 +720,7 @@ SUBROUTINE solve_band_ses(ierr                                          &
         , n_direction, direction                                        &
 !                   Calculated flxues
         , flux_direct_part, flux_total_part                             &
+        , l_actinic, actinic_flux_part                                  &
 !                   Calculated radiances
         , radiance_part                                                 &
 !                   Calculated rates of photolysis
@@ -720,6 +729,7 @@ SUBROUTINE solve_band_ses(ierr                                          &
         , l_clear, i_solver_clear                                       &
 !                   Clear-sky fluxes calculated
         , flux_direct_clear_part, flux_total_clear_part                 &
+        , actinic_flux_clear_part                                       &
 !                   Contribution function
         , contrib_funci_part, contrib_funcf_part                        &
 !                   Dimensions of arrays
@@ -739,24 +749,30 @@ SUBROUTINE solve_band_ses(ierr                                          &
 !   its own weighting factor, hence for each increment the
 !   weighting is the product of these two factors: similarly
 !   for the blue flux.
-    weight_incr=weight_band*w_esft(iex, i_band)
-    IF (l_blue_flux_surf)                                               &
-      weight_blue_incr=weight_blue*w_esft(iex, i_band)
+    weight_incr=control%weight_band(i_band)*w_esft(iex, i_band)
+    weight_sub_band_incr = control%weight_band(i_band)
+    iex_minor = 0
+    IF (control%l_blue_flux_surf)                                       &
+      weight_blue_incr = spectrum%solar%weight_blue(i_band)             &
+                       * w_esft(iex, i_band)
 ! DEPENDS ON: augment_radiance
-    CALL augment_radiance(control, radout, i_band                       &
+    CALL augment_radiance(control, spectrum, atm, radout                &
+      , i_band, iex, iex_minor                                          &
       , n_profile, n_layer, n_viewing_level, n_direction                &
-      , l_clear, l_initial, l_initial_band                              &
-      , weight_incr, weight_blue_incr                                   &
+      , l_clear, l_initial, l_initial_band, l_initial_channel           &
+      , weight_incr, weight_blue_incr, weight_sub_band_incr             &
 !                   Actual radiances
       , i_direct                                                        &
 !                   Increments to radiances
-      , flux_direct_part, flux_total_part                               &
+      , flux_direct_part, flux_total_part, actinic_flux_part            &
       , i_direct_part, radiance_part, photolysis_part                   &
       , flux_direct_clear_part, flux_total_clear_part                   &
+      , actinic_flux_clear_part, k_esft                                 &
       , sph, contrib_funci_part, contrib_funcf_part                     &
 !                   Dimensions
-      , nd_flux_profile, nd_radiance_profile, nd_j_profile              &
-      , nd_layer, nd_viewing_level, nd_direction                        &
+      , nd_profile, nd_flux_profile, nd_radiance_profile, nd_j_profile  &
+      , nd_layer, nd_viewing_level, nd_direction, dimen%nd_channel      &
+      , nd_species, nd_esft_term                                        &
       )
 
 !   Add in the increments from surface tiles
@@ -775,9 +791,11 @@ SUBROUTINE solve_band_ses(ierr                                          &
         END IF
       END IF
 ! DEPENDS ON: augment_tiled_radiance
-      CALL augment_tiled_radiance(control, radout, i_band               &
+      CALL augment_tiled_radiance(control, spectrum, radout             &
+        , i_band, iex, iex_minor                                        &
         , n_point_tile, n_tile, list_tile                               &
-        , l_initial, weight_incr, weight_blue_incr                      &
+        , l_initial_channel_tile                                        &
+        , weight_incr, weight_blue_incr, weight_sub_band_incr           &
 !                   Surface characteristics
         , rho_alb_tile                                                  &
 !                   Increments to radiances
@@ -786,14 +804,9 @@ SUBROUTINE solve_band_ses(ierr                                          &
         , planck%flux_tile, planck%flux(:,n_layer)                      &
 !                   Dimensions
         , nd_flux_profile, nd_point_tile, nd_tile                       &
-        , nd_brdf_basis_fnc                                             &
+        , nd_brdf_basis_fnc, dimen%nd_channel, nd_species               &
         )
     END IF
-
-!   After the first call to these routines quantities should be
-!   incremented rather than initialized, until the flag is reset.
-    l_initial=.FALSE.
-    l_initial_band = .FALSE.
 
   END DO
 

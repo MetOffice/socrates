@@ -220,7 +220,5 @@ rm *.avg
 rm sp_sw_260_jm2
 rm sp_sw_260_jm2_k
 rm -f fit_sw_drop5_260 mon_sw_drop5_260
-rm -f h2o_s260_l*
-rm -f h2o_s260_s*
 
 exit 0

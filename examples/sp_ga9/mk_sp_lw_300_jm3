@@ -246,9 +246,5 @@ rm *.avg
 rm sp_lw_300_jm2
 rm sp_lw_300_jm2_k
 rm -f fit_lw_drop5_300 mon_lw_drop5_300
-rm -f h2o_l300_l*
-rm -f h2o_nir300_l*
-rm -f h2o_l300_s*
-rm -f h2o_nir300_s*
 
 exit 0

@@ -1,8 +1,8 @@
 #
 # Pathnames for compilers and global options for naming files
 #
-FORTCOMP        = gfortran -O -c
-LINK            = gfortran -O
+FORTCOMP        = gfortran -c -fcheck=all,no-recursion -fbacktrace -g
+LINK            = gfortran -fcheck=all,no-recursion -fbacktrace -g
 LIBLINK         = ar rvu
 INCCDF_PATH     = /project/ukmo/rhel7/fortran/opt/gfortran/packages/gnu/8.1.0/netcdf/4.6.1/include
 LIBCDF_PATH     = /project/ukmo/rhel7/fortran/opt/gfortran/packages/gnu/8.1.0/netcdf/4.6.1/lib
@@ -12,4 +12,3 @@ OMPARG          = -fopenmp
 LIBSUFFIX       = a
 
 .SUFFIXES: $(SUFFIXES) .f90
-

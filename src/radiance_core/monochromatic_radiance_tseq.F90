@@ -43,11 +43,11 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
     , n_column_slv, list_column_slv                                     &
     , i_clm_lyr_chn, i_clm_cld_typ, area_column                         &
 !                 Fluxes Calculated
-    , flux_direct, flux_total                                           &
+    , flux_direct, flux_total, l_actinic, actinic_flux                  &
 !                 Flags for Clear-sky Calculation
     , l_clear, i_solver_clear                                           &
 !                 Clear-sky Fluxes Calculated
-    , flux_direct_clear, flux_total_clear                               &
+    , flux_direct_clear, flux_total_clear, actinic_flux_clear           &
 !                 Dimensions of Arrays
     , nd_profile, nd_layer, nd_layer_clr, id_ct, nd_column              &
     , nd_cloud_type, nd_region, nd_overlap_coeff                        &
@@ -64,6 +64,7 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
   USE rad_pcf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
+  USE calc_actinic_flux_mod, ONLY: calc_actinic_flux
 
   IMPLICIT NONE
 
@@ -217,8 +218,12 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
   REAL (RealK), INTENT(OUT) ::                                          &
       flux_direct(nd_profile, 0: nd_layer)                              &
 !       Direct flux
-    , flux_total(nd_profile, 2*nd_layer+2)
+    , flux_total(nd_profile, 2*nd_layer+2)                              &
 !       Total flux
+    , actinic_flux(nd_profile, nd_layer)
+!       Actinic flux
+  LOGICAL, INTENT(IN) :: l_actinic
+!       Flag for calculation of actinic flux
 
 !                 Flags for clear-sky calculations
   LOGICAL, INTENT(IN) ::                                                &
@@ -232,8 +237,10 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
   REAL (RealK), INTENT(OUT) ::                                          &
       flux_direct_clear(nd_profile, 0: nd_layer)                        &
 !       Clear-sky direct flux
-    , flux_total_clear(nd_profile, 2*nd_layer+2)
+    , flux_total_clear(nd_profile, 2*nd_layer+2)                        &
 !       Clear-sky total flux
+    , actinic_flux_clear(nd_profile, nd_layer)
+!       Clear-sky actinic flux
 
 
 
@@ -248,7 +255,7 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
     , i
 !       Loop variable
 ! Full clear-sky single-scattering properties
-  REAL  (RealK), ALLOCATABLE ::                                         &
+  REAL (RealK), ALLOCATABLE ::                                          &
       tau_clr_f(:, :)                                                   &
 !       Clear-sky optical depth
     , tau_clr_dir_f(:, :)                                               &
@@ -257,7 +264,8 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
 !       Clear-sky albedo of single scattering
     , phase_fnc_clr_f(:, :, :)
 !       Clear-sky phase function
-
+  REAL(RealK), ALLOCATABLE :: tau_abs(:, :)
+!       Temporary array for the optical depth due to absorption
 
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
@@ -323,6 +331,22 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
       , nd_profile, nd_layer, nd_source_coeff                           &
       )
 
+!   Calculate the actinic flux
+    IF (l_actinic) THEN
+      ALLOCATE(tau_abs(nd_profile, nd_layer))
+      DO i=1, n_layer
+        DO l=1, n_profile
+          tau_abs(l, i) = tau_clr_f(l, i)*(1.0_RealK-omega_clr_f(l, i))
+        END DO
+      END DO
+      CALL calc_actinic_flux(control, sph%allsky, sph%common, &
+        n_profile, n_layer, tau_abs, flux_total, flux_direct, sec_0, &
+        l_scale_solar, adjust_solar_ke, &
+        actinic_flux, &
+        nd_profile, nd_layer)
+      DEALLOCATE(tau_abs)
+    END IF
+
 !   Release temporary storage.
     DEALLOCATE(tau_clr_f)
     DEALLOCATE(tau_clr_dir_f)
@@ -358,6 +382,13 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
           flux_total_clear(l, i)=flux_total(l, i)
         END DO
       END DO
+      IF (l_actinic) THEN
+        DO i=1, n_layer
+          DO l=1, n_profile
+            actinic_flux_clear(l, i)=actinic_flux(l, i)
+          END DO
+        END DO
+      END IF
     END IF
 
   ELSE IF (i_cloud == ip_cloud_mcica) THEN
@@ -391,11 +422,11 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
 !                 Cloud geometry
       , n_cloud_top, index_subcol                                       &
 !                 Fluxes calculated
-      , flux_direct, flux_total                                         &
+      , flux_direct, flux_total, l_actinic, actinic_flux                &
 !                 Flags for clear-sky calculations
       , l_clear, i_solver_clear                                         &
 !                 Clear-sky fluxes calculated
-      , flux_direct_clear, flux_total_clear                             &
+      , flux_direct_clear, flux_total_clear, actinic_flux_clear         &
 !                 Dimensions of arrays
       , nd_profile, nd_layer, nd_layer_clr, id_ct                       &
       , nd_max_order, nd_source_coeff                                   &

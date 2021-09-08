@@ -52,6 +52,8 @@ SUBROUTINE make_block_4(Spectrum, type_index, l_interactive, ierr)
 
   SpDim   => Spectrum%Dim
   ALLOCATE(Spectrum%Gas%n_band_absorb(SpDim%nd_band))
+  ALLOCATE(Spectrum%Gas%i_overlap(SpDim%nd_band))
+  Spectrum%Gas%i_overlap = 0
   ALLOCATE(Spectrum%Gas%index_absorb(SpDim%nd_species, SpDim%nd_band))
   SpBasic => Spectrum%Basic
   SpGas   => Spectrum%Gas

@@ -657,6 +657,16 @@ CONTAINS
         Spectrum%Gas%index_absorb(1:n_band_absorb, i_band) = &
             Spectrum%Gas%index_absorb(map(1:n_band_absorb), i_band)
         trans_major_gas = trans_column_gas(map(1))
+        IF (n_band_absorb > 1) THEN
+          IF (-2.0_RealK*LOG(trans_column_gas(map(2))) &
+            > -LOG(trans_major_gas)) THEN
+            Spectrum%Gas%i_overlap(i_band) = 3
+          ELSE
+            Spectrum%Gas%i_overlap(i_band) = 4
+          END IF
+        ELSE
+          Spectrum%Gas%i_overlap(i_band) = 3
+        END IF
       ENDDO
 
     END IF

@@ -31,7 +31,7 @@ MODULE input_head_pcf
 !   Maximum number of input profiles
   INTEGER, Parameter :: NPD_data_column      = 35
 !   Maximum number of columns of data
-  INTEGER, Parameter :: NPD_phys_type        = 60
+  INTEGER, Parameter :: NPD_phys_type        = 62
 !   Maximum number of types of data
   INTEGER, Parameter :: NPD_unit             = 18
 !   Number of physical units
@@ -179,6 +179,10 @@ MODULE input_head_pcf
 !   Contribution function (intensity)
   INTEGER, Parameter :: IP_contrib_funcf                         = 60
 !   Contribution function (flux)
+  INTEGER, Parameter :: IP_actinic_flux                          = 61
+!   Actinic flux
+  INTEGER, Parameter :: IP_photolysis_rate                       = 62
+!   Photolysis rate
 
 !
   CHARACTER  (LEN=len_col_header), Parameter, &
@@ -197,7 +201,8 @@ MODULE input_head_pcf
     'SAZIM     ', 'STOA      ', 'SURF      ', 'POLAR     ', &
     'AZIM      ', 'RADN      ', 'SRFCHR    ', 'OPWT      ', &
     'OPICE     ', 'OPSS      ', 'ISOS      ', 'GEOM      ', &
-    'PHOTOL    ', 'PLEV      ', 'CFI       ', 'CFF       '/) 
+    'PHOTOL    ', 'PLEV      ', 'CFI       ', 'CFF       ', &
+    'AFLX      ', 'PHRATE    ' /) 
 !   Headers for physical data
 !
   CHARACTER  (LEN=len_file_suffix), Parameter, &
@@ -216,7 +221,8 @@ MODULE input_head_pcf
     'sazim       ', 'stoa        ', 'surf        ', 'vwpol       ', &
     'vwazim      ', 'radn        ', 'surf        ', 'op_water    ', &
     'op_ice      ', 'ss          ', 'isos        ', 'view        ', &
-    'photol      ', 'pl          ', 'cfi         ', 'cff         ' /) 
+    'photol      ', 'pl          ', 'cfi         ', 'cff         ', &
+    'aflx        ', 'ph_rate     '  /) 
 !   File suffixes for physical data
 !
 !
@@ -250,8 +256,9 @@ MODULE input_head_pcf
     ' Surface characteristics      ', ' Optical data for droplets    ', &
     ' Optical data for ice crystals', ' Single scattering properties ', &
     ' Isotropic source             ', ' Viewing Geometry             ', &
-    ' Rate of photolysis           ', ' Pressure on Levels           ' ,&
-    ' Contribution function (inty) ', ' Contribution function (flux) '/)
+    ' Rate of photolysis           ', ' Pressure on Levels           ', &
+    ' Contribution function (inty) ', ' Contribution function (flux) ', &
+    ' Actinic flux                 ', ' Photolysis rate              '/)
 !   Long titles for physical data
 !
 !
@@ -268,7 +275,7 @@ MODULE input_head_pcf
     'OCS       ', 'Na        ', 'K         ', 'FeH       ', &
     'CrH       ', 'Li        ', 'Rb        ', 'Cs        ', &
     'PH3       ', 'C2H2      ', 'HCN       ', 'H2S       ', &
-    'Ar        ', 'AIR       ' /) 
+    'Ar        ', 'AIR       ', 'O         ', 'N         ' /) 
 !   Headers for gaseous data
 !
 !
@@ -283,7 +290,7 @@ MODULE input_head_pcf
     'ocs         ', 'na          ', 'k           ', 'feh         ', &
     'crh         ', 'li          ', 'rb          ', 'cs          ', &
     'ph3         ', 'c2h2        ', 'hcn         ', 'h2s         ', &
-    'ar          ', 'air         ' /) 
+    'ar          ', 'air         ', 'o           ', 'n           ' /) 
 !   File suffixes for gaseous data
 !
 !
@@ -307,7 +314,8 @@ MODULE input_head_pcf
     ' Rubidium                     ', ' Cesium                       ', &
     ' Phosphine                    ', ' Acetylene                    ', &
     ' Hydrogen cyanide             ', ' Hydrogen sulphide            ', &
-    ' Argon                        ', ' Dry air                      ' /)
+    ' Argon                        ', ' Dry air                      ', &
+    ' Atomic Oxygen                ', ' Atomic Nitrogen              ' /)
 !   Long titles for gaseous data
 !
 !

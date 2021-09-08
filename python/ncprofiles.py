@@ -11,7 +11,7 @@ This version has been modified to work with python'''
 
 ext     = '.t'                         # Template file extension
                                        
-stoa    = 1365.0                       # Solar Irradiance
+stoa    = 1361.0                       # Solar Irradiance
 szen    = 0.0                          # Solar Zenith Angle
                                        
 lwalb   = 0.0                          # Surface Albedos

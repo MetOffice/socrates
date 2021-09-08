@@ -22,6 +22,7 @@ SOURCE90_GEN =	d_planck_90.f90 \
 		make_block_17.f90 \
 		make_block_18.f90 \
 		make_block_19.f90 \
+		make_block_20.f90 \
 		map_heap_func.f90 \
 		open_file_out_90.f90 \
 		out_spectrum.f90 \
@@ -38,7 +39,8 @@ SOURCE90_GEN =	d_planck_90.f90 \
 		solar_intensity.f90 \
                 solar_intensity_90.f90 \
 		sum_unity.f90 \
-		trapezoid_90.f90
+		trapezoid_90.f90 \
+		write_solar_spectrum.f90
 
 SOURCE77_GEN = 	back_substitute.f \
 		calc_thermal_coeff.f \

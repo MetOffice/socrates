@@ -93,6 +93,18 @@ MODULE def_hitran_record
   CHARACTER (LEN = 15), PARAMETER :: xsc_data_frmt = &
     "(10(1pe10.3))"
 
+! Bespoke format for UV cross-section headers 
+  CHARACTER (LEN = 53), PARAMETER :: uvxsc_header_frmt = &
+    "(a20,2f16.4,i7,f7.2,f6.1,1pe16.9,1x,a5,a15,4x,a3,i3)"
+
+  CHARACTER (LEN = 15), PARAMETER :: uvxsc_data_frmt = &
+    "(10(1pe16.9))"
+
+! Pointers to either xsc or uvxsc formats depending on input options
+! (defaults set here, options set in corr_k.f90)
+  CHARACTER (LEN = 53) :: xsc_header_format = xsc_header_frmt
+  CHARACTER (LEN = 15) :: xsc_data_format = xsc_data_frmt
+  
   TYPE StrXscHead
     CHARACTER(LEN=20)     :: chemical_symbol
     REAL (RealK)          :: wavenumber_min ! cm-1

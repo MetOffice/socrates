@@ -1,7 +1,7 @@
 #
 # Full list of c-k programs
 #
-TARGET_CK: corr_k tune_weights convert_elsey_shine
+TARGET_CK: corr_k tune_weights convert_elsey_shine dat2xsc
 
 corr_k: corr_k.o cklib.$(LIBSUFFIX)
 	$(LINK) $(OMPARG) -L$(LIBCDF_PATH) -o corr_k corr_k.o \
@@ -21,3 +21,9 @@ jpl2xsc: jpl2xsc.o cklib.$(LIBSUFFIX)
 
 convert_elsey_shine: convert_elsey_shine.o cklib.$(LIBSUFFIX)
 	$(LINK) -o convert_elsey_shine convert_elsey_shine.o cklib.$(LIBSUFFIX)
+
+dat2xsc: dat2xsc.o cklib.$(LIBSUFFIX)
+	$(LINK) -o dat2xsc dat2xsc.o cklib.$(LIBSUFFIX)
+
+ft2qy: ft2qy.o cklib.$(LIBSUFFIX)
+	$(LINK) -o ft2qy ft2qy.o cklib.$(LIBSUFFIX)

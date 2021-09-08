@@ -105,6 +105,7 @@ PROGRAM prep_spec
     
 !   Setting up of the basic spectrum is now complete.
     Spectrum%Dim%nd_type = npd_type
+    Spectrum%Dim%nd_sub_band_gas = 1
     ALLOCATE(Spectrum%Basic%l_present(0:Spectrum%Dim%nd_type))
     Spectrum%Basic%l_present(:)   = .FALSE.
     Spectrum%Basic%l_present(0:1) = .TRUE.
@@ -141,7 +142,7 @@ PROGRAM prep_spec
 
   DO
 !   Now decide which blocks are to be written.
-    WRITE(*, '(/a/,14(6x, a/),/)')                                      &
+    WRITE(*, '(/a/,15(6x, a/),/)')                                      &
       'Select from the following types of data:',                       &
       '0.   Block 0: Change number of bands.',                          &
       '2.   Block 2: Solar spectrum in each band.',                     &
@@ -155,6 +156,7 @@ PROGRAM prep_spec
       '15.  Block 15: Parameters for aerosol optical depths.',          &
       '17.  Block 17: Spectral variability data in sub-bands.',         &
       '19.  Block 19: Continuum k-terms and T scaling data.',           &
+      '20.  Block 20: Photolysis pathways.',                            &
       '-1.  To write spectral file and exit.',                          &
       '-2.  To quit without writing spectral file.'
     READ(*, *) i_block
@@ -203,6 +205,8 @@ PROGRAM prep_spec
       CALL make_block_17(Spectrum, SolarSpec, ierr)
     CASE(19)
       CALL make_block_19(Spectrum, ierr)
+    CASE(20)
+      CALL make_block_20(Spectrum, ierr)
     CASE DEFAULT
       WRITE(*, '(a)') '+++ Invalid block number.'
     END SELECT

@@ -41,10 +41,16 @@ else
   exit 1
 fi
 
+echo 'Running mk_sp_sw_260_jm2'
+echo -n 'Started: '; date
+
 if [ ! $SW_DATA ] ; then
   SW_DATA=.
 fi
 
+procs=24
+
+solspec='lean_12'
 pt_file="$RAD_DATA/gases/pt_ses_new"
 o3_pt_file="$RAD_DATA/gases/pt_o3_ser"
 o2_pt_file="$RAD_DATA/gases/pt_o2_jpl"
@@ -72,9 +78,10 @@ if [ ! -s h2o_s260_l ] || [ ! -s $SW_DATA/h2o_lbl_swf.nc ] ; then
   rm -f h2o_s260_l*
   Ccorr_k -F $pt_file -D $HITRAN_H2O \
     -R 66 260 -c 2500.0 -i 1.0 -l 1 1.0e2 -b 1.0e-3  \
-    -s $specfile +S lean_12 -lk \
+    -s $specfile +S $solspec -lk \
     -k -x $RAD_DATA/continua/caviar_frn \
     -o h2o_s260_l -m h2o_s260_lm -L $SW_DATA/h2o_lbl_swf.nc \
+    -np $procs \
      > h2o_s260_log
 fi
 if [ ! -s h2o_v260_l ] || [ ! -s $SW_DATA/h2o_lbl_vis.nc ] ; then
@@ -82,8 +89,9 @@ if [ ! -s h2o_v260_l ] || [ ! -s $SW_DATA/h2o_lbl_vis.nc ] ; then
   rm -f h2o_v260_l*
   Ccorr_k -F $pt_file -D $HITRAN_H2O \
     -R 30 65 -c 2500.0 -i 1.0 -l 1 1.0e2 -b 1.0e-3  \
-    -s $specfile +S lean_12 -lk \
+    -s $specfile +S $solspec -lk \
     -o h2o_v260_l -m h2o_v260_lm -L $SW_DATA/h2o_lbl_vis.nc \
+    -np $procs \
      > h2o_v260_log
 fi
 
@@ -93,8 +101,9 @@ if [ ! -s h2o_s260_s ] ; then
   Ccorr_k -C 33 1.0e-4 1.0e4 -F $pt_file -D $HITRAN_H2O \
     -P 7 -R 66 260 -c 2500.0 -i 1.0 \
     -e $RAD_DATA/continua/caviar_s296 $RAD_DATA/continua/caviar_s260 \
-    -k -s $specfile +S lean_12 -q -r $ref_pt_file \
+    -k -s $specfile +S $solspec -q -r $ref_pt_file \
     -o h2o_s260_s -m h2o_s260_sm -L $SW_DATA/h2o_lbl_swf.nc \
+    -np $procs \
      > h2o_s260_slog
 fi
 
@@ -103,8 +112,9 @@ if [ ! -s co2_s260_l ] || [ ! -s $SW_DATA/co2_lbl_sw.nc ] ; then
   rm -f co2_s260_l*
   Ccorr_k -F $pt_file -D $HITRAN_CO2 \
     -R 104 260 -c 2500.0 -i 1.0 -l 2 1.0e1 -b 1.0e-3  \
-    -s $specfile +S lean_12 -lk \
+    -s $specfile +S $solspec -lk \
     -o co2_s260_l -m co2_s260_lm -L $SW_DATA/co2_lbl_sw.nc \
+    -np $procs \
      > co2_s260_log
 fi
 
@@ -113,8 +123,9 @@ if [ ! -s o3_u260_l ] || [ ! -s $SW_DATA/o3_lbl_uv.nc ] ; then
   rm -f o3_u260_l*
   Ccorr_k -F $o3_pt_file -X $HITRAN_UV_O3 \
     -R 5 154 -c 2500.0 -i 1.0 -l 3 1.0e-2 -t 1.0e-4  \
-    -s $specfile +S lean_12 -q -r $ref_pt_file \
+    -s $specfile +S $solspec -q -r $ref_pt_file \
     -o o3_u260_l -m o3_u260_lm -L $SW_DATA/o3_lbl_uv.nc \
+    -np $procs \
      > o3_u260_log
 fi
 if [ ! -s o3_s260_l ] || [ ! -s $SW_DATA/o3_lbl_sw.nc ] ; then
@@ -122,8 +133,9 @@ if [ ! -s o3_s260_l ] || [ ! -s $SW_DATA/o3_lbl_sw.nc ] ; then
   rm -f o3_s260_l*
   Ccorr_k -F $pt_file -D $HITRAN_O3 \
     -R 155 260 -c 2500.0 -i 1.0 -l 3 1.0e-2 -b 1.0e-3  \
-    -s $specfile +S lean_12 -lk \
+    -s $specfile +S $solspec -lk \
     -o o3_s260_l -m o3_s260_lm -L $SW_DATA/o3_lbl_sw.nc \
+    -np $procs \
      > o3_s260_log
 fi
 
@@ -132,8 +144,9 @@ if [ ! -s n2o_s260_l ] || [ ! -s $SW_DATA/n2o_lbl_sw.nc ] ; then
   rm -f n2o_s260_l*
   Ccorr_k -F $pt_file -D $HITRAN_N2O \
     -R 155 260 -c 2500.0 -i 1.0 -l 4 5.0e-3 -b 1.0e-3  \
-    -s $specfile +S lean_12 -lk \
+    -s $specfile +S $solspec -lk \
     -o n2o_s260_l -m n2o_s260_lm -L $SW_DATA/n2o_lbl_sw.nc \
+    -np $procs \
      > n2o_s260_log
 fi
 if [ ! -s n2o_u260_l ] || [ ! -s $SW_DATA/n2o_lbl_uv.nc ] ; then
@@ -141,8 +154,9 @@ if [ ! -s n2o_u260_l ] || [ ! -s $SW_DATA/n2o_lbl_uv.nc ] ; then
   rm -f n2o_u260_l*
   Ccorr_k -F $n2o_pt_file -X $HITRAN_UV_N2O \
     -R 1 10 -c 2500.0 -i 1.0 -l 4 5.0e-3 -t 1.0e-3  \
-    -s $specfile +S lean_12 \
+    -s $specfile +S $solspec \
     -o n2o_u260_l -m n2o_u260_lm -L $SW_DATA/n2o_lbl_uv.nc \
+    -np $procs \
      > n2o_u260_log
 fi
 
@@ -151,8 +165,9 @@ if [ ! -s ch4_s260_l ] || [ ! -s $SW_DATA/ch4_lbl_sw.nc ] ; then
   rm -f ch4_s260_l*
   Ccorr_k -F $pt_file -D $HITRAN_CH4 \
     -R 104 260 -c 2500.0 -i 1.0 -l 6 1.0e-2 -b 1.0e-3  \
-    -s $specfile +S lean_12 -lk \
+    -s $specfile +S $solspec -lk \
     -o ch4_s260_l -m ch4_s260_lm -L $SW_DATA/ch4_lbl_sw.nc \
+    -np $procs \
      > ch4_s260_log
 fi
 
@@ -161,8 +176,9 @@ if [ ! -s o2_j260_l ] || [ ! -s $SW_DATA/o2_lbl_jpl.nc ] ; then
   rm -f o2_j260_l*
   Ccorr_k -F $o2_pt_file -X $JPL_UV_O2 \
     -R 7 14 -c 2500.0 -i 1.0 -l 7 2.3e3 -t 1.0e-3  \
-    -s $specfile +S lean_12 \
+    -s $specfile +S $solspec \
     -o o2_j260_l -m o2_j260_lm -L $SW_DATA/o2_lbl_jpl.nc \
+    -np $procs \
      > o2_j260_log
 fi
 if [ ! -s o2_u260_l ] || [ ! -s $SW_DATA/o2_lbl_uv.nc ] ; then
@@ -170,8 +186,9 @@ if [ ! -s o2_u260_l ] || [ ! -s $SW_DATA/o2_lbl_uv.nc ] ; then
   rm -f o2_u260_l*
   Ccorr_k -F $pt_file -D $HITRAN_UV_O2 \
     -R 1 29 -c 2500.0 -i 1.0 -l 7 2.3e3 -b 1.0e-3  \
-    -s $specfile +S lean_12 -lk \
+    -s $specfile +S $solspec -lk \
     -o o2_u260_l -m o2_u260_lm -L $SW_DATA/o2_lbl_uv.nc \
+    -np $procs \
      > o2_u260_log
 fi
 if [ ! -s o2_s260_l ] || [ ! -s $SW_DATA/o2_lbl_sw.nc ] ; then
@@ -179,8 +196,9 @@ if [ ! -s o2_s260_l ] || [ ! -s $SW_DATA/o2_lbl_sw.nc ] ; then
   rm -f o2_s260_l*
   Ccorr_k -F $pt_file -D $HITRAN_O2 \
     -R 67 260 -c 2500.0 -i 1.0 -l 7 2.3e3 -b 1.0e-3  \
-    -s $specfile +S lean_12 -lk \
+    -s $specfile +S $solspec -lk \
     -o o2_s260_l -m o2_s260_lm -L $SW_DATA/o2_lbl_sw.nc \
+    -np $procs \
      > o2_s260_log
 fi
 
@@ -189,8 +207,9 @@ if [ ! -s so2_s260_l ] || [ ! -s $SW_DATA/so2_lbl_sw.nc ] ; then
   rm -f so2_s260_l*
   Ccorr_k -F $pt_file -D $HITRAN_SO2 \
     -R 215 260 -c 2500.0 -i 1.0 -l 9 3.0e-4 -b 1.0e-3  \
-    -s $specfile +S lean_12 -lk \
+    -s $specfile +S $solspec -lk \
     -o so2_s260_l -m so2_s260_lm -L $SW_DATA/so2_lbl_sw.nc \
+    -np $procs \
      > so2_s260_log
 fi
 if [ ! -s so2_u260_l ] || [ ! -s $SW_DATA/so2_lbl_uv.nc ] ; then
@@ -198,8 +217,9 @@ if [ ! -s so2_u260_l ] || [ ! -s $SW_DATA/so2_lbl_uv.nc ] ; then
   rm -f so2_u260_l*
   Ccorr_k -F $so2_pt_file -X $HITRAN_UV_SO2 \
     -R 1 66 -c 2500.0 -i 1.0 -l 9 3.0e-4 -t 1.0e-3  \
-    -s $specfile +S lean_12 -q -r $ref_pt_file \
+    -s $specfile +S $solspec -q -r $ref_pt_file \
     -o so2_u260_l -m so2_u260_lm -L $SW_DATA/so2_lbl_uv.nc \
+    -np $procs \
      > so2_u260_log
 fi
 
@@ -208,8 +228,9 @@ if [ ! -s ocs_s260_l ] || [ ! -s $SW_DATA/ocs_lbl_sw.nc ] ; then
   rm -f ocs_s260_l*
   Ccorr_k -F $pt_file -D $HITRAN_OCS \
     -R 215 260 -c 2500.0 -i 1.0 -l 25 1.0e-3 -b 1.0e-3  \
-    -s $specfile +S lean_12 -lk \
+    -s $specfile +S $solspec -lk \
     -o ocs_s260_l -m ocs_s260_lm -L $SW_DATA/ocs_lbl_sw.nc \
+    -np $procs \
      > ocs_s260_log
 fi
 
@@ -219,126 +240,127 @@ fi
 if [ ! -s fit_sw_drop5_260 ] ; then
   echo 'Type 5 droplets'
   rm -f mon_sw_drop5_260
-  Cscatter_average -s $specfile -P 1 -t -S lean_12 \
+  Cscatter_average -s $specfile -P 1 -t -S $solspec \
     -f 5 fit_sw_drop5_260 mon_sw_drop5_260 1.e3 \
     $RAD_DATA/cloud/scatter_drop_type5
 fi
 if [ ! -s fit_sw_ice8_260 ] ; then
   echo 'Type 8 ice'
   rm -f mon_sw_ice8_260
-  Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+  Cscatter_average -s $specfile -P 1 -w -S $solspec \
     -f 12 fit_sw_ice8_260 mon_sw_ice8_260 920 \
     $RAD_DATA/cloud/scatter_ice_sw_type8
 fi
 
 
 # Aerosols
-
+echo 'Aerosols'
 if [ ! -s soluble_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a soluble_260.avg $RAD_DATA/aerosol/soluble.mon
 fi
 if [ ! -s dustlike_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a dustlike_260.avg $RAD_DATA/aerosol/dustlike.mon
 fi
 if [ ! -s oceanic_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a oceanic_260.avg $RAD_DATA/aerosol/oceanic.mon
 fi
 if [ ! -s soot_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a soot_260.avg $RAD_DATA/aerosol/soot.mon
 fi
 if [ ! -s sulphuric_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a sulphuric_260.avg $RAD_DATA/aerosol/sulphuric.mon
 fi
 if [ ! -s accumsulp_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a accumsulp_260.avg $RAD_DATA/aerosol/accumsulp.mon
 fi
 if [ ! -s aitkensulp_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a aitkensulp_260.avg $RAD_DATA/aerosol/aitkensulp.mon
 fi
 if [ ! -s freshsoot_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a freshsoot_260.avg $RAD_DATA/aerosol/freshsoot.mon
 fi
 if [ ! -s agedsoot_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a agedsoot_260.avg $RAD_DATA/aerosol/agedsoot.mon
 fi
 if [ ! -s seasaltfilm_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a seasaltfilm_260.avg $RAD_DATA/aerosol/seasaltfilm.mon
 fi
 if [ ! -s seasaltjet_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a seasaltjet_260.avg $RAD_DATA/aerosol/seasaltjet.mon
 fi
 if [ ! -s dust_div1_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a dust_div1_260.avg $RAD_DATA/aerosol/dust_div1.mon
 fi
 if [ ! -s dust_div2_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a dust_div2_260.avg $RAD_DATA/aerosol/dust_div2.mon
 fi
 if [ ! -s dust_div3_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a dust_div3_260.avg $RAD_DATA/aerosol/dust_div3.mon
 fi
 if [ ! -s dust_div4_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a dust_div4_260.avg $RAD_DATA/aerosol/dust_div4.mon
 fi
 if [ ! -s dust_div5_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a dust_div5_260.avg $RAD_DATA/aerosol/dust_div5.mon
 fi
 if [ ! -s dust_div6_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a dust_div6_260.avg $RAD_DATA/aerosol/dust_div6.mon
 fi
 if [ ! -s freshbiomass_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a freshbiomass_260.avg $RAD_DATA/aerosol/freshbiomass.mon
 fi
 if [ ! -s agedbiomass_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a agedbiomass_260.avg $RAD_DATA/aerosol/agedbiomass.mon
 fi
 if [ ! -s biogenic_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a biogenic_260.avg $RAD_DATA/aerosol/biogenic.mon
 fi
 if [ ! -s freshocff_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a freshocff_260.avg $RAD_DATA/aerosol/freshocff.mon
 fi
 if [ ! -s agedocff_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a agedocff_260.avg $RAD_DATA/aerosol/agedocff.mon
 fi
 if [ ! -s nitrate_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a nitrate_260.avg $RAD_DATA/aerosol/nitrate.mon
 fi
 if [ ! -s twobindust_1_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a twobindust_1_260.avg $RAD_DATA/aerosol/twobindust_1.mon
 fi
 if [ ! -s twobindust_2_260.avg ] ; then
-Cscatter_average -s $specfile -P 1 -w -S lean_12 \
+Cscatter_average -s $specfile -P 1 -w -S $solspec \
   -a twobindust_2_260.avg $RAD_DATA/aerosol/twobindust_2.mon
 fi
 
 mv sp_sw_260_jm2 sp_sw_260_jm2_old
 mv sp_sw_260_jm2_k sp_sw_260_jm2_old_k
 # Construct spectral file
-prep_spec << EOF
+echo 'Constructing spectral file'
+prep_spec > prep_spec_260_log << EOF
 sp_sw_260_skel
 n
 sp_sw_260_jm2
@@ -448,7 +470,8 @@ EOF
 
 # Rearrange so the major gas is listed first for each band and
 # gases are removed from bands where absorption is very weak.
-tidy_90 <<EOF
+echo 'Ordering gases and removing very weak absorbers'
+tidy_90 > tidy_260_log <<EOF
 sp_sw_260_jm2
 o
 1
@@ -473,4 +496,20 @@ o
 -1
 EOF
 
+# Add the sub-bands in block 17 using the mappings from the
+# major gas k-terms.
+# prep_spec >> prep_spec_260_log << EOF
+# sp_sw_260_jm2
+# a
+# 17
+# -1
+# lean_12
+# a
+# 0
+# 0
+# 0
+# -1
+# EOF
+
+echo -n 'Finished: '; date
 exit 0

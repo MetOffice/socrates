@@ -1332,3 +1332,128 @@ diffuse fluxes at the top and bottom of the layer as before. The direct flux
 divergence has been calculated separately and is held in the additional output
 variable {\tt flux\_direct\_div}. Only the sum of these two quantities has any
 physical meaning and should be used in the calculation of heating rates.
+
+
+\section{Calculation of photolysis rates}
+
+A comprehensive and flexible scheme is available for the calculation of
+photolysis and photoionisation rates along with an adjustment of the direct
+radiative heating for the energy used in the photolysis reactions.
+
+The components of the scheme are described below.
+
+\subsection{Correlated-$k$ mapping technique}
+In order to maintain accuracy whilst reducing computational cost a novel wavelength mapping technique
+is implemented as part of the correlated-$k$ method. Spectral absorption lines can vary dramatically over
+very small wavelength intervals. The correlated-$k$ method essentially just reorders the wavelengths within
+a spectral band in order of increasing strength of absorption and then bins up wavelengths with similar absorption
+coefficients. Radiative transfer calculations are only done for each absorption bin, or {\em $k$-term}.
+The novel technique here is to retain the information on the wavelengths that each $k$-term represents.
+Once the radiative transfer calculations have been done, the calculated fluxes for each $k$-term are mapped
+back to spectral {\em sub-bands} at these wavelengths. The high resolution fluxes are then convolved with the solar spectrum,
+photo-absorption cross-sections and branching ratios (or quantum yields) in order to derive accurate photolysis
+rates for any given photolysis pathway.
+An added benefit to this mapping technique is that spectra can be diagnosed at high-resolution, effectively
+providing line-by-line resolution for the cost of a broad-band calculation.
+
+\subsubsection{Treatment of overlapping gaseous absorption}
+For this mapping technique to work, careful consideration must be given to the treatment of how different gas absorption spectra overlap in wavelength. The Socrates correlated-$k$ scheme treats the discretisation of $k$-terms in wavelength space separately for each gas in the band. Therefore the $k$-terms of each gas will map to different wavelengths. For band-averaged fluxes it is assumed that the absorption coefficients for different gases are uncorrelated so that the $k$-terms can be randomly overlapped. Here, we introduce a more accurate method to calculate fluxes for each of the mapped sub-bands. This new overlap method is termed {\em exact-major overlap}. A major gas is defined for the band that is assumed to have the most significant absorption in the atmospheric column. The $k$-terms of this gas are used to define the mapping to sub-bands for the new technique. For each sub-band the fractional contribution of each minor gas $k$-term (i.e. the $k$-term weight) is determined from the wavelength mapping of the minor gas. The fluxes calculated for each sub-band will then use the correct proportion of minor gas absorption, although the minor gas $k$-terms are still randomly overlapped with each other.
+
+The {\em exact-major overlap} method can be used for bands where there is more than one significant absorber. For other bands the cheaper {\em equivalent-extinction} method can be used. When using equivalent-extinction, the fractional contribution of the minor gas absorption to each sub-band is assumed to be the same as for the band as a whole. In either case, once the flux for the mapped sub-band has been determined, the solar spectrum (including any time-variation), photo-absorption cross-sections and quantum yields are always convolved at the full sub-band wavelength resolution.
+
+\subsection{Calculation of actinic flux}
+The actinic flux (or more correctly, the {\em actinic radiation field}), $A$, is the integrated radiative intensity ($I$) over all directions ($\omega$):
+\begin{equation}
+A = \int_{4\pi}I d\omega
+\end{equation}
+It can be thought of as the radiative energy incident upon a sphere, or molecule, at a given level in the atmosphere. We determine a representative actinic flux for a given model layer from the available two-stream fluxes, that is the up ($U$) and down ($D$) hemispheric diffuse fluxes and the direct intensity of the solar beam ($S$). These are available at the layer boundaries and would be attenuated across the layer, so in order to obtain a representative value of $A$ for the layer it is best to use the total flux divergence ($\Delta F$):
+\begin{eqnarray}
+\frac{dI}{d\tau} & = & -I \\
+&& \nonumber \\
+\int_{4\pi}\frac{dI \cos{\theta}}{d\tau_{vert}}d\omega & = & \int_{4\pi}-I d\omega \\
+&& \nonumber \\
+\frac{-\Delta F}{\Delta \tau_{vert}} & = & A \label{eqn:A_flux-div}
+\end{eqnarray}
+where we start from the Beer-Lambert law for the change in intensity with optical depth to absorption along the slant path ($\tau$), and convert to flux absorbed over a layer with optical depth to absorption in the vertical of $\Delta \tau_{vert}$. Here, $\theta$ is the angle between the slant path and the vertical.
+
+Using equation \ref{eqn:A_flux-div} to calculate the actinic flux is particularly beneficial as the flux divergence is also used to calculate the radiative heating rates. This ensures the energy used for photolysis and radiative heating are calculated in a consistent way. Equation~\ref{eqn:A_flux-div} becomes numerically unstable when the optical depth for absorption in the layer ($\Delta \tau_{vert}$) is small. In this case, we fall back to a calculation using the fluxes at the layer boundaries:
+\begin{eqnarray}
+A & = & \int_{4\pi}I d\omega \nonumber \\
+  & = & S + 2 \pi I^+ + 2 \pi I^- \nonumber \\
+  & = & S + 2 U + 2 D
+\end{eqnarray}
+The actinic flux is calculated in {\tt calc\_actinic\_flux} per $k$-term in units of W m$^{-2}$. It is later mapped to spectral sub-bands where it is converted
+to units of photons m$^{-2}$ s$^{-1}$ by dividing by the energy of a photon at the mid-point wavenumber for the sub-band (see eqn~\ref{eqn:j_sub-band}).
+
+\subsection{Calculation of photolysis and photoionisation rates}
+The rate of photolysis or photoionisation (J in units of s$^{-1}$) for a given molecule that results in a particular set of products is:
+\begin{equation}
+J = \int \sigma Q A d\lambda
+\end{equation}
+where $\sigma$ is the absorption cross-section of the molecule (in m$^2$), Q is the quantum yield (or branching ratio)
+for photolysis resulting in a particular set of products, A is the actinic flux (in photons m$^{-2}$ s$^{-1}$) and the
+integral is over all wavelengths ($\lambda$). We perform this calculation for each mapped sub-band in the
+{\tt augment\_radiance.F90} routine, with operations broken down into those necessary at each level of looping.
+Starting from the variables in the units in which they are available in the code, mass absorption coefficient for the photolysing species $k_{layer}$ (m$^2$kg$^{-1}_{air}$), and actinic flux $F_A$ (W m$^{-2}$), the equation becomes:
+\begin{eqnarray}
+J & = & \sum_{\rm sub-bands} k_{layer} \frac{m}{\zeta N_A} Q F_A \frac{\lambda}{h c} w \label{eqn:j_sub-band} \\
+  && \nonumber \\
+  & = & \frac{m}{\zeta N_A h c} \sum_{\rm k-terms} F_A \sum_{\rm sub-bands} k_{layer} Q \lambda w \label{eqn:j_sub-band2}
+\end{eqnarray}
+where $m$ is the molecular weight of the absorbing species (kg$_{gas}$ mol$^{-1}$), $\zeta$ is the mass mixing ratio (kg$_{gas}$/kg$_{air}$) of the species,
+$N_A$ is Avagadro's number (mol$^{-1}$), $h$ is Planck's constant (J s), $c$ is the speed of light (m s$^{-1}$), and $w$ is the sub-band weight (i.e. fraction of the actinic flux in this sub-band). The sum over sub-bands is done in the internal routine {\tt calc\_photolysis\_incr} while the rest of the calculation is done in {\tt finalise\_photol\_incr} for each $k$-term outside of the loop over the sub-bands for that $k$-term.
+
+The quantum yield (Q) is parametrised at arbitrary wavelength resolution and is read in as part of the
+standard configuration file (or {\em spectral file}). The list of photolysis reactions required can be simply added
+to the spectral file specifying the gas absorber to be photolysed and the threshold wavelength beyond
+which photolysis can occur. In the case of highly energetic photons causing photoionisation it is possible for
+the photoelectron to cause further dissociation/ionisation events. This can be parametrised by providing scaled
+quantum yields that may exceed 1.
+The summation over sub-bands is done by weighting each sub-band by the incoming solar spectrum. The solar
+spectrum may be specified at arbitrary time resolution (year, month, day, second) in an extended spectral
+file.
+
+\subsection{Calculation of residual heating}
+The radiative heating rate is determined from the flux divergence across the layer divided by the heat capacity of the layer. Where photolysis occurs some of the flux absorbed in the layer would be used to dissociate or ionise the molecules. This fraction of the energy is therefore not (immediately) available to increase the temperature of the gas and should instead be handled by the chemistry scheme for possible release in exothermic reactions after advection of the product species.
+The proportion of the flux used for photolysis is determined at the same time as the photolysis rates within each sub-band:
+\begin{eqnarray}
+\Delta F_{J} & = & Q \frac{E_J}{E_{photon}} \frac{\Delta \tau_J}{\Delta \tau_{total}} \Delta F \\
+  && \nonumber \\
+  & = & Q \frac{\lambda}{\lambda_t} \Delta \tau_J F_A \\
+  && \nonumber \\
+  & = & Q \frac{\lambda}{\lambda_t} \Delta M k_{layer} F_A
+\end{eqnarray}
+where $\Delta M$ is the mass of air per unit area in the layer and the energy required for a photolysis event ($E_J$) is determined by the energy of a photon at the threshold wavelength ($\lambda_t$) for the reaction.
+
+The flux divergence used for photolysis is then summed over sub-bands in the same way as the photolysis rates, reusing the terms already calculated in {\tt finalise\_photol\_incr} (compare with eqn~\ref{eqn:j_sub-band2}):
+\begin{equation}
+\Delta F_{J} = \frac{\Delta M}{\lambda_t} \sum_{\rm k-terms} F_A \sum_{\rm sub-bands} k_{layer} Q \lambda w
+\end{equation}
+Once summed over all photolysis pathways, the residual heating is determined by subtracting this from the total flux divergence.
+
+Where the energy needed for photolysis is expected to be released immediately to heat the atmosphere then it is not necessary to include it in the flux divergence used for photolysis. This can be specified per photolysis reaction so that the chemistry scheme need only include those exothermic reactions where the species involved have a lifetime that is long compared to the advection. The spectral file includes a thermalisation indicator per reaction to flag the reactions for which the energy should be immediately thermalised. 
+
+\subsection{Configuration for the far-UV and extreme-UV}
+The scheme developed here has been designed to be applicable over the entire spectral range from X-ray to near-infrared
+wavelengths. This is entirely configurable within the {\em spectral file} which
+contains all the information on the wavelength breakdown, the gas absorbers present, gas absorption
+coefficients, photolysis pathways and quantum yields, the solar spectrum (optionally time varying),
+Rayleigh scattering coefficients, and cloud and aerosol absorption and scattering parameters.
+
+Two initial spectral file configurations have been developed in the {\tt example/sp\_uv} Socrates directory: a high-resolution reference configuration covering the wavelengths 0.5nm-320.5nm with 320 bands and 6867 sub-bands; and a broadband configuration for use in general circulation models (GCMs) covering the wavelengths 0.4nm-10$\mu$m with 26 bands and 2401 sub-bands (this includes 21 bands and 2391 sub-bands between 0.4-320nm).
+
+Both configurations use the same base data for absorption cross-sections, quantum yields etc. At UV and shorter wavelengths we include absorption, photolysis and photoionisation involving the species O$_3$, O$_2$, N$_2$, O, N and H$_2$O. Following \cite{Solomon05} we
+have used absorption cross-sections and quantum yields from \cite{Fennelly92} for the extreme-UV, and \cite{Henke93}
+for the X-ray, for the species O$_2$, N$_2$, O and N. Shortward of 65nm the photoelectron enhancement factors derived 
+by \cite{Solomon05} are used to enhance the quantum yields. In the far-UV, gas absorption coefficients are derived from the
+recommendations in the JPL report 15-10 \cite{jpl15-10}. Quantum yields for the important
+region around the solar H Lyman-$\alpha$ line (121.6nm) are taken from \cite{Lacoursiere99}.
+O$_2$ absorption dominates throughout the far-UV
+with complex absorption spectra over particular wavelength ranges such as the Schumann-Runge bands at 175-205nm.
+The $k$-term mapping technique automatically concentrates sub-bands in these complex parts of the spectrum.
+
+The broadband configuration extends into the near-IR by including the visible and near-IR bands used for the Global Atmosphere 7 (GA7) configuration \cite{Walters19}. The new 26-band configuration can then be used to entirely replace the GA7 configuration in the GCM providing heating rates for total solar absorption throughout the atmosphere. The 26-band configuration uses a total of 92 major gas $k$-terms compared to 41 in the 6-band GA7 configuration with the computational cost of radiation calculations scaling approximately linearly with the number of $k$-terms.
+
+Non-LTE effects may be accounted for in the extreme-UV by applying a heating efficiency of 0.05. In the broadband configuration this is achieved by setting the thermalisation indicator to true for all photolysis reactions that occur in the extreme-UV, and then applying a non-LTE correction reducing the heating rates to 5\% of their initial value for wavelengths shortward of 98.6nm. At these wavelengths absorption leads to photoionisation and the kinetic energy of the released photoelectrons is only partially transferred to atmospheric heating. This treatment follows \cite{Roble87} and is similar to the treatment of extreme-UV heating in WACCM. 
+
+Solar spectral variations have been parametrised for the 2401 sub-bands in the broadband configuration using the monthly variations recommended by \cite{Matthes17}. The scheme therefore provides heating, photolysis and photoionisation rates for the mesosphere and lower thermosphere region directly linked to observed solar activity.

@@ -49,6 +49,7 @@
       USE realtype_rd
       USE def_control, ONLY: StrCtrl
       USE def_bound,   ONLY: StrBound
+      USE def_spherical_geometry, ONLY: StrSphGeo
       USE def_std_io_icf
       USE rad_pcf
       USE rad_ccf, ONLY: pi
@@ -247,10 +248,13 @@
 !           Calculated radiances
      &  , photolysis(nd_j_profile, nd_viewing_level)
 !           Rate of photolysis
-!
-!
+
+
 !     Local variables:
-!
+
+!     Spherical geometry fields
+      TYPE(StrSphGeo) :: sph
+
 !     Spherical variables:
       INTEGER
      &    ls_max_order
@@ -684,6 +688,8 @@
 !                       Surface conditions
      &    , rho_alb(1, IP_surf_alb_diff)
      &    , rho_alb(1, IP_surf_alb_dir), d_planck_flux_surface
+!                       Spherical geometry
+     &    , sph
 !                       Single scattering properties
      &    , tau_noscal, tau, omega, phase_fnc(1, 1, 1)
 !                       Fluxes calculated
@@ -836,16 +842,37 @@
 !     Make any adjustments to fluxes and radiances to convert
 !     to actual values.
       IF (isolir == IP_infra_red) THEN
-        CALL adjust_ir_radiance(n_profile, n_layer, n_viewing_level
-     &    , n_direction, i_angular_integration, i_sph_mode
-     &    , planck_flux, planck_radiance
-     &    , flux_down, flux_up, radiance
-     &    , nd_flux_profile, nd_radiance_profile
-     &    , nd_layer, nd_direction, nd_viewing_level
-     &    )
-      ENDIF
-!
-!
-!
-      RETURN
+        IF ( (i_angular_integration == ip_two_stream).OR.
+     &       (i_angular_integration == ip_ir_gauss) ) THEN
+          DO i=0, n_layer
+            DO l=1, n_profile
+              flux_up(l, i)=flux_up(l, i)+planck_flux(l, i)
+              flux_down(l, i)=flux_down(l, i)+planck_flux(l, i)
+            END DO
+          END DO
+        ELSE IF (i_angular_integration == ip_spherical_harmonic) THEN
+!         Planckian radiances are always used with spherical harmonics,
+!         even when calculating fluxes. The number of levels should
+!         be set appropriately above.
+          IF (i_sph_mode == ip_sph_mode_flux) THEN
+            DO i=0, n_layer
+              DO l=1, n_profile
+                flux_up(l, i)=flux_up(l, i)+pi*planck_radiance(l, i+1)
+                flux_down(l, i)=flux_down(l, i)
+     &            +pi*planck_radiance(l, i+1)
+              END DO
+            END DO
+          ELSE IF (i_sph_mode == ip_sph_mode_rad) THEN
+            DO id=1, n_direction
+              DO i=1, n_viewing_level
+                DO l=1, n_profile
+                  radiance(l, i, id)=radiance(l, i, id)
+     &              +planck_radiance(l, i)
+                END DO
+              END DO
+            END DO
+          END IF
+        END IF
+      END IF
+
       END

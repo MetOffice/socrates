@@ -61,35 +61,29 @@ Band        Lower limit         Upper limit
     8        6.666666667E-06     7.518796992E-06
     9        3.338898164E-06     6.666666667E-06
 *END
-*BLOCK: TYPE =    4: SUBTYPE =    0: VERSION =    0
+*BLOCK: TYPE =    4: SUBTYPE =    0: VERSION =    1
 Gaseous absorbers in each interval
 (The number is the indexing number of the species as set out
  in the summary block 0.)
-A zero indicates that there in no gaseous absorption in the interval.
-Band        Number of active absorbers followed by indexing numbers
-    1           3
+A zero indicates that there is no gaseous absorption in the interval.
+Band, number of absorbers and overlap method, followed by indexing numbers
+    1           3           0
          1    6   12
-    2           3
+    2           3           0
          1    6   12
-    3           7
-         1    2    3    4
-    6   12   10
-    4           4
+    3           7           0
+         1    2    3    4    6   12   10
+    4           4           0
          2    1    3    6
-    5          10
-         1    2    4    6
-   12    7    8    9
-   10   11
-    6          10
-         3    2    1    6
-   12    7    8    9
-   10   11
-    7           7
+    5          10           0
+         1    2    4    6   12    7    8    9   10   11
+    6          10           0
+         3    2    1    6   12    7    8    9   10   11
+    7           7           0
+         1    4    5    6    9   10   11
+    8           4           0
          1    4    5    6
-    9   10   11
-    8           4
-         1    4    5    6
-    9           3
+    9           3           0
          1    6   12
 *END
 *BLOCK: TYPE =    5: SUBTYPE =    0: version =    1

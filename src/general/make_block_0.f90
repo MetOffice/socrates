@@ -11,7 +11,7 @@ SUBROUTINE make_block_0 &
 (Spectrum, type_index, l_interactive, ierr)
 !
 ! Description:
-!   This routine constructs the basic summmary inofrmation for
+!   This routine constructs the basic summmary information for
 !   a spectral file.
 !
 ! Method:
@@ -50,9 +50,8 @@ SUBROUTINE make_block_0 &
 !   Types of continuum gases
 !
 !- End of Header
-!
-!
-!
+
+
   WRITE(iu_stdout, '(/A/)') 'Enter number of spectral bands.' 
   DO
     READ(iu_stdin, *, IOSTAT=ios) Spectrum%Basic%n_band
@@ -69,8 +68,8 @@ SUBROUTINE make_block_0 &
     ENDIF
   ENDDO
   Spectrum%Dim%nd_band = Spectrum%Basic%n_band
-!
-!
+
+
   WRITE(iu_stdout, '(/A/)') 'Enter number of absorbing gases.' 
   DO
     READ(iu_stdin, *, IOSTAT=ios) Spectrum%Gas%n_absorb
@@ -88,7 +87,7 @@ SUBROUTINE make_block_0 &
     ENDIF
   ENDDO
   Spectrum%Dim%nd_species = MAX(Spectrum%Gas%n_absorb, 1)
-!
+
 ! Prepare the list of gaeous absorbers.
   ALLOCATE(Spectrum%Gas%type_absorb(Spectrum%Dim%nd_species))
   IF (Spectrum%Gas%n_absorb > 0) THEN
@@ -117,7 +116,7 @@ SUBROUTINE make_block_0 &
       ENDDO
     ENDDO
   ENDIF
-!
+
   WRITE(*, '(/A/)') &
     'Enter the number of generalised continua to be included.'
   DO
@@ -135,7 +134,7 @@ SUBROUTINE make_block_0 &
     END IF
   END DO
   Spectrum%Dim%nd_cont = Spectrum%ContGen%n_cont
-!
+
 ! Prepare list of continuum gas pairs.
   ALLOCATE(Spectrum%ContGen%index_cont_gas_1(Spectrum%ContGen%n_cont))
   ALLOCATE(Spectrum%ContGen%index_cont_gas_2(Spectrum%ContGen%n_cont))
@@ -169,7 +168,7 @@ SUBROUTINE make_block_0 &
       END DO
     END DO
   END IF
-!
+
   WRITE(iu_stdout, '(/A/)') 'Enter number of aerosols.' 
   DO
     READ(iu_stdin, *, IOSTAT=ios) Spectrum%Aerosol%n_aerosol
@@ -186,7 +185,7 @@ SUBROUTINE make_block_0 &
       RETURN
     ENDIF
   ENDDO
-!
+
 ! Prepare the list of aerosols.
   Spectrum%Dim%nd_aerosol_species = Spectrum%Aerosol%n_aerosol
   ALLOCATE(Spectrum%Aerosol%type_aerosol(Spectrum%Dim%nd_aerosol_species))
@@ -214,8 +213,5 @@ SUBROUTINE make_block_0 &
       ENDDO
     ENDDO
   ENDIF
-!
-!
-!
-  RETURN
+
 END SUBROUTINE make_block_0

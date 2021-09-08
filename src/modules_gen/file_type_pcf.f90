@@ -73,5 +73,9 @@ MODULE file_type_pcf
 !           File of fits to generalised continuum data
   INTEGER, Parameter :: it_file_line_fit_self           = 26
 !           File of fits to line data that includes self-broadening
+  INTEGER, Parameter :: it_file_line_fit_id             = 27
+!           File of fits to line data using the gas identifier rather than index
+  INTEGER, Parameter :: it_file_line_fit_self_id        = 28
+!           File of fits to line data including self-broadening using the gas id
 
 END MODULE file_type_pcf

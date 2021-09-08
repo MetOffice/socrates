@@ -21,9 +21,9 @@ USE realtype_rd
 IMPLICIT NONE
 
 
-INTEGER, PARAMETER :: n_dim = 30
+INTEGER, PARAMETER :: n_dim = 36
 !   Number of dimensions in StrSpecDim
-INTEGER, PARAMETER :: n_int = 17
+INTEGER, PARAMETER :: n_int = 18
 !   Number of (non-allocatable) integers
 INTEGER, PARAMETER :: n_real = 1
 !   Number of (non-allocatable) reals
@@ -37,67 +37,79 @@ TYPE StrSpecDim
 !   Size allocated for all reals
   INTEGER :: nd_alloc_log = n_log
 !   Size allocated for all logicals
-  INTEGER :: nd_type = 1
+  INTEGER :: nd_type = 0
 !   Size allocated for spectral blocks
-  INTEGER :: nd_band = 1
+  INTEGER :: nd_band = 0
 !   Size allocated for spectral bands
-  INTEGER :: nd_exclude = 1
+  INTEGER :: nd_exclude = 0
 !   Size allocated for excluded bands
-  INTEGER :: nd_k_term = 1
+  INTEGER :: nd_k_term = 0
 !   Size allocated for k-terms
-  INTEGER :: nd_species = 1
+  INTEGER :: nd_species = 0
 !   Size allocated for gaseous species
-  INTEGER :: nd_scale_variable = 1
+  INTEGER :: nd_scale_variable = 0
 !   Size allocated for scaling variables
-  INTEGER :: nd_continuum = 1
+  INTEGER :: nd_continuum = 0
 !   Size allocated for continua
-  INTEGER :: nd_drop_type = 1
+  INTEGER :: nd_drop_type = 0
 !   Size allocated for drop types
-  INTEGER :: nd_ice_type = 1
+  INTEGER :: nd_ice_type = 0
 !   Size allocated for ice crystal types
-  INTEGER :: nd_aerosol_species = 1
+  INTEGER :: nd_aerosol_species = 0
 !   Size allocated for aerosol species
-  INTEGER :: nd_aerosol_mr = 1
+  INTEGER :: nd_aerosol_mr = 0
 !   Size allocated for aerosol mixing ratios
-  INTEGER :: nd_thermal_coeff = 1
+  INTEGER :: nd_thermal_coeff = 0
 !   Size allocated for thermal coefficients
-  INTEGER :: nd_cloud_parameter = 1
+  INTEGER :: nd_cloud_parameter = 0
 !   Size allocated for cloud parameters
-  INTEGER :: nd_humidity = 1
+  INTEGER :: nd_humidity = 0
 !   Size allocated for humidities
-  INTEGER :: nd_aod_wavel = 1
+  INTEGER :: nd_aod_wavel = 0
 !   Number of wavelengths for aerosol optical depths
-  INTEGER :: nd_phase_term = 1
+  INTEGER :: nd_phase_term = 0
 !   Size allocated for terms in the phase function
-  INTEGER :: nd_tmp = 1
+  INTEGER :: nd_tmp = 0
 !   Number of reference temperatures for k-terms
-  INTEGER :: nd_pre = 1
+  INTEGER :: nd_pre = 0
 !   Number of reference pressures for k-terms
-  INTEGER :: nd_mix = 1
+  INTEGER :: nd_mix = 0
 !   Number of eta for mixture absorbing species
-  INTEGER :: nd_band_mix_gas = 1
+  INTEGER :: nd_band_mix_gas = 0
 !   Number of bands where mixed species exist
-  INTEGER :: nd_sub_band = 1
-!   Size allocated for spectral sub-bands (for spectral variability)
-  INTEGER :: nd_times = 1
+  INTEGER :: nd_sub_band_k = 0
+!   Size allocated for spectral sub-bands for each major gas k-term
+  INTEGER :: nd_k_sub_band = 0
+!   Size allocated for minor gas k-terms for each spectral sub-band
+  INTEGER :: nd_sub_band_gas = 0
+!   Size allocated for spectral sub-bands in each band
+  INTEGER :: nd_sub_band = 0
+!   Size allocated for total spectral sub-bands
+  INTEGER :: nd_times = 0
 !   Size allocated for times (for spectral variability)
-  INTEGER :: nd_cont = 1
+  INTEGER :: nd_cont = 0
 !   Size allocated for generalised continua
-  INTEGER :: nd_t_lookup_cont = 1
+  INTEGER :: nd_t_lookup_cont = 0
 !   Number of temperatures in generalised continuum look-up tables
-  INTEGER :: nd_k_term_cont = 1
+  INTEGER :: nd_k_term_cont = 0
 !   Size allocated for continuum k-terms
-  INTEGER :: nd_species_sb = 1
+  INTEGER :: nd_species_sb = 0
 !   Size allocated for gaseous species with self-broadening
-  INTEGER :: nd_gas_frac = 1
+  INTEGER :: nd_gas_frac = 0
 !   Size allocated for gas fractions (for self-broadening)
+  INTEGER :: nd_pathway = 0
+!   Number of reaction pathways for photolysis rates
+  INTEGER :: nd_t_lookup_photol = 0
+!   Number of temperatures in quantum yield look-up tables
+  INTEGER :: nd_wl_lookup_photol = 0
+!   Number of wavelengths in quantum yield look-up tables
 END TYPE StrSPecDim
 
 
 TYPE StrSpecBasic
   LOGICAL, ALLOCATABLE      :: l_present(:)
 !   Blocks of spectral data in the file
-  INTEGER                   :: n_band
+  INTEGER                   :: n_band = 0
 !   Number of spectral bands used
   REAL (RealK), ALLOCATABLE :: wavelength_long(:)
 !   Lower wavelength limits for the band
@@ -121,25 +133,25 @@ END TYPE StrSpecSolar
 
 
 TYPE StrSpecRayleigh
-  INTEGER :: i_rayleigh_scheme
+  INTEGER :: i_rayleigh_scheme = 0
 !   Type of Rayleigh scattering
   REAL (RealK), ALLOCATABLE :: rayleigh_coeff(:)
 !   Rayleigh scattering coefficients in each band for total gas
-  INTEGER :: n_gas_rayleigh
+  INTEGER :: n_gas_rayleigh = 0
 !   Total number of Rayleigh scattering gases
   INTEGER, ALLOCATABLE      :: index_rayleigh(:)
 !   Index of gases for which Rayleigh scattering coefficients are tabulated
-  REAL (RealK), ALLOCATABLE :: rayleigh_coeff_gas(:,:)
+  REAL (RealK), ALLOCATABLE :: rayleigh_coeff_gas(:, :)
 !   Rayleigh scattering coefficients for each gas in each band
 END TYPE StrSpecRayleigh
 
 
 TYPE StrSpecGas
-  INTEGER  :: n_absorb
+  INTEGER  :: n_absorb = 0
 !   Total number of gaseous absorbers
-  INTEGER  :: n_absorb_sb
+  INTEGER  :: n_absorb_sb = 0
 !   Number of gaseous absorbers with self-broadening
-  INTEGER  :: n_gas_frac
+  INTEGER  :: n_gas_frac = 0
 !   Number of gas fractions in look-up table
   INTEGER, ALLOCATABLE      :: n_band_absorb(:)
 !   Number of gaseous absorbers in each band
@@ -172,6 +184,8 @@ TYPE StrSpecGas
 !   Type of scaling function
   INTEGER, ALLOCATABLE      :: i_scat(:, :, :)
 !   Method of scattering treatment for each k-term
+  INTEGER, ALLOCATABLE      :: i_overlap(:)
+!   Method of gas overlap treatment for each band
 
   LOGICAL, ALLOCATABLE      :: l_self_broadening(:)
 !   Flag for self-broadening of gaseous absorbers
@@ -202,11 +216,20 @@ TYPE StrSpecGas
 !   Flag for Doppler broadening for each species
   REAL (RealK), ALLOCATABLE :: doppler_cor(:)
 !   Doppler correction terms
+
+  INTEGER, ALLOCATABLE      :: n_sub_band_gas(:, :)
+!   Number of sub-bands to map gas k-terms to wavelength
+  INTEGER, ALLOCATABLE      :: sub_band_k(:, :, :)
+!   Gas k-term associated with each sub-band
+  REAL (RealK), ALLOCATABLE :: sub_band_w(:, :, :)
+!   Sub-band weights
+  REAL (RealK), ALLOCATABLE :: wavelength_sub_band(:, :, :, :)
+!   Wavelength limits for sub-bands
 END TYPE StrSpecGas
 
 
 TYPE StrSpecPlanck
-  INTEGER                   :: n_deg_fit
+  INTEGER                   :: n_deg_fit = 0
 !   Degree of the fit to the Planckian function
   REAL (RealK), ALLOCATABLE :: thermal_coeff(:, :)
 !   Coefficients in polynomial fit to source function
@@ -215,7 +238,7 @@ TYPE StrSpecPlanck
 !   has been evaluated.
   REAL (RealK)              :: t_ref_planck
 !   Reference temperature for the Plackian function
-  LOGICAL                   :: l_planck_tbl
+  LOGICAL                   :: l_planck_tbl = .FALSE.
 !   Flag for using a look-up table instead of a polynomial
 END TYPE StrSpecPlanck
 
@@ -225,7 +248,7 @@ TYPE StrSpecCont
 !   Number of continua in each band
   INTEGER, ALLOCATABLE      :: index_continuum(:, :)
 !   List of continua in each band
-  INTEGER                   :: index_water
+  INTEGER                   :: index_water = 0
 !   Index of water vapour of continua in each band
   INTEGER, ALLOCATABLE      :: i_scale_fnc_cont(:, :)
 !   Types of scaling functions for continua
@@ -245,7 +268,7 @@ END TYPE StrSpecCont
 
 
 TYPE StrSpecContGen
-  INTEGER                   :: n_cont
+  INTEGER                   :: n_cont = 0
 !   Number of continua
   INTEGER, ALLOCATABLE      :: n_band_cont(:)
 !   Number of active continua in each band
@@ -268,7 +291,7 @@ TYPE StrSpecContGen
 !   Absorption coefficients of k-terms at tau = 1
   REAL (RealK), ALLOCATABLE :: w_cont(:, :, :)
 !   Weights of continuum k-terms
-  INTEGER                   :: n_t_lookup_cont
+  INTEGER                   :: n_t_lookup_cont = 0
 !   Number of temperatures in look-up table
   REAL (RealK), ALLOCATABLE :: t_lookup_cont(:)
 !   Temperatures in continuum look-up table
@@ -300,9 +323,9 @@ TYPE StrSpecAerosol
   LOGICAL, ALLOCATABLE      :: l_aero_spec(:)
 !   Flags for species of aerosol present
 
-  INTEGER                   :: n_aerosol
+  INTEGER                   :: n_aerosol = 0
 !   Number of aerosol species present in spectral file
-  INTEGER                   :: n_aerosol_mr
+  INTEGER                   :: n_aerosol_mr = 0
 !   Number of aerosol species present in mixing ratio array
   INTEGER, ALLOCATABLE      :: type_aerosol(:)
 !   Actual types of aerosols in the spectral file
@@ -323,7 +346,7 @@ TYPE StrSpecAerosol
 !   Humdities of each component
 
 ! Fields for aerosol optical depth:
-  INTEGER                   :: n_aod_wavel
+  INTEGER                   :: n_aod_wavel = 0
 !   Number of wavelengths
   INTEGER, ALLOCATABLE      :: i_aod_type(:)
 !   Relationship between aerosol component and type
@@ -354,13 +377,13 @@ END TYPE StrSpecIce
 
 
 TYPE StrSpecVar
-  INTEGER                   :: n_sub_band
+  INTEGER                   :: n_sub_band = 0
 !   Number of sub-bands used
-  INTEGER                   :: n_times
+  INTEGER                   :: n_times = 0
 !   Number of times at which the solar spectrum is given
-  INTEGER                   :: n_repeat_times
+  INTEGER                   :: n_repeat_times = 0
 !   Number of times over which to periodically repeat data into the future
-  INTEGER                   :: n_rayleigh_coeff
+  INTEGER                   :: n_rayleigh_coeff = 0
 !   Number of Rayleigh coefficients that vary
   INTEGER, ALLOCATABLE      :: index_sub_band(:, :)
 !   Index of k-terms associated with each sub-band
@@ -378,6 +401,50 @@ TYPE StrSpecVar
 END TYPE StrSpecVar
 
 
+TYPE StrSpecPhotol
+  LOGICAL, ALLOCATABLE      :: l_thermalise(:)
+!   Indicates whether energy used for photolysis is immediately thermalised
+  INTEGER                   :: n_pathway = 0
+!   Number of reaction pathways for photolysis rates
+  INTEGER, ALLOCATABLE      :: pathway_absorber(:)
+!   Absorber index for each reaction pathway
+  INTEGER, ALLOCATABLE      :: pathway_products(:)
+!   Photolysis products
+  INTEGER, ALLOCATABLE      :: n_t_lookup_photol(:)
+!   Number of temperatures in lookup table for each pathway
+  INTEGER, ALLOCATABLE      :: n_wl_lookup_photol(:)
+!   Number of wavelengths in lookup table for each pathway
+  INTEGER, ALLOCATABLE      :: qy_sub(:, :)
+!   Mapping from sub-bands to the lookup table for each pathway
+  REAL (RealK), ALLOCATABLE :: t_lookup_photol(:, :)
+!   Look-up temperatures for each pathway
+  REAL (RealK), ALLOCATABLE :: wl_lookup_photol(:, :)
+!   Look-up wavelengths for each pathway
+  REAL (RealK), ALLOCATABLE :: quantum_yield(:, :, :)
+!   Quantum yield for each pathway, wavelength, and temperature
+  REAL (RealK), ALLOCATABLE :: threshold_wavelength(:)
+!   Wavelength corresponding to the threshold energy for each pathway
+END TYPE StrSpecPhotol
+
+
+TYPE StrSpecMap
+  INTEGER, ALLOCATABLE      :: n_sub_band_k(:, :)
+!   Number of sub-bands for each major gas k-term
+  INTEGER, ALLOCATABLE      :: list_sub_band_k(:, :, :)
+!   List of sub-bands for each major gas k-term
+  REAL (RealK), ALLOCATABLE :: weight_sub_band_k(:, :, :)
+!   Weight of sub-bands for each major gas k-term
+  INTEGER, ALLOCATABLE      :: n_k_sub_band(:, :)
+!   Number of minor gas k-terms for each sub-band
+  INTEGER, ALLOCATABLE      :: list_k_sub_band(:, :, :)
+!   List of minor gas k-terms for each sub-band
+  REAL (RealK), ALLOCATABLE :: weight_k_sub_band(:, :, :)
+!   Weight of minor gas k-terms for each sub-band
+  REAL (RealK), ALLOCATABLE :: weight_k_major(:, :, :, :)
+!   Weight of minor gas k-terms for each major gas k-term
+END TYPE StrSpecMap
+
+
 TYPE StrSpecData
   TYPE (StrSpecDim)               :: Dim
   TYPE (StrSpecBasic)             :: Basic
@@ -391,6 +458,8 @@ TYPE StrSpecData
   TYPE (StrSpecAerosol)           :: Aerosol
   TYPE (StrSpecIce)               :: Ice
   TYPE (StrSpecVar)               :: Var
+  TYPE (StrSpecPhotol)            :: Photol
+  TYPE (StrSpecMap)               :: Map
 END TYPE StrSpecData
 
 
@@ -557,6 +626,11 @@ IF (.NOT. ALLOCATED(Sp%Gas%i_scat)) &
 Sp%Dim%nd_alloc_int = &
 Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%i_scat)
 
+IF (.NOT. ALLOCATED(Sp%Gas%i_overlap)) &
+  ALLOCATE(Sp%Gas%i_overlap( Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%i_overlap)
+
 IF (.NOT. ALLOCATED(Sp%Gas%l_self_broadening)) THEN
   ALLOCATE(Sp%Gas%l_self_broadening( Sp%Dim%nd_species ))
   Sp%Gas%l_self_broadening=.FALSE.
@@ -645,6 +719,33 @@ IF (.NOT. ALLOCATED(Sp%Gas%doppler_cor)) &
   ALLOCATE(Sp%Gas%doppler_cor( Sp%Dim%nd_species ))
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%doppler_cor)
+
+IF (.NOT. ALLOCATED(Sp%Gas%n_sub_band_gas)) THEN
+  ALLOCATE(Sp%Gas%n_sub_band_gas( Sp%Dim%nd_band, Sp%Dim%nd_species ))
+  Sp%Gas%n_sub_band_gas = 1
+END IF
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%n_sub_band_gas)
+
+IF (.NOT. ALLOCATED(Sp%Gas%sub_band_k)) THEN
+  ALLOCATE(Sp%Gas%sub_band_k( Sp%Dim%nd_sub_band_gas, &
+                              Sp%Dim%nd_band, Sp%Dim%nd_species ))
+  Sp%Gas%sub_band_k = 0
+END IF
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%sub_band_k)
+
+IF (.NOT. ALLOCATED(Sp%Gas%sub_band_w)) &
+  ALLOCATE(Sp%Gas%sub_band_w( Sp%Dim%nd_sub_band_gas, &
+                              Sp%Dim%nd_band, Sp%Dim%nd_species ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%sub_band_w)
+
+IF (.NOT. ALLOCATED(Sp%Gas%wavelength_sub_band)) &
+  ALLOCATE(Sp%Gas%wavelength_sub_band( 2, Sp%Dim%nd_sub_band_gas, &
+                                       Sp%Dim%nd_band, Sp%Dim%nd_species ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%wavelength_sub_band)
 
 
 ! Planck
@@ -937,7 +1038,7 @@ Sp%Dim%nd_alloc_int = &
 Sp%Dim%nd_alloc_int + SIZE(Sp%Var%index_sub_band)
 
 IF (.NOT. ALLOCATED(Sp%Var%wavelength_sub_band)) &
-  ALLOCATE(Sp%Var%wavelength_sub_band( 2, Sp%Dim%nd_sub_band ))
+  ALLOCATE(Sp%Var%wavelength_sub_band( 0:2, Sp%Dim%nd_sub_band ))
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Var%wavelength_sub_band)
 
@@ -961,6 +1062,109 @@ IF (.NOT. ALLOCATED(Sp%Var%rayleigh_coeff)) &
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Var%rayleigh_coeff)
 
+
+! Photolysis
+IF (.NOT. ALLOCATED(Sp%Photol%l_thermalise)) THEN
+  ALLOCATE(Sp%Photol%l_thermalise( Sp%Dim%nd_pathway ))
+  Sp%Photol%l_thermalise = .FALSE.
+END IF
+Sp%Dim%nd_alloc_log = &
+Sp%Dim%nd_alloc_log + SIZE(Sp%Photol%l_thermalise)
+
+IF (.NOT. ALLOCATED(Sp%Photol%pathway_absorber)) &
+  ALLOCATE(Sp%Photol%pathway_absorber( Sp%Dim%nd_pathway ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Photol%pathway_absorber)
+
+IF (.NOT. ALLOCATED(Sp%Photol%pathway_products)) &
+  ALLOCATE(Sp%Photol%pathway_products( Sp%Dim%nd_pathway ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Photol%pathway_products)
+
+IF (.NOT. ALLOCATED(Sp%Photol%n_t_lookup_photol)) &
+  ALLOCATE(Sp%Photol%n_t_lookup_photol( Sp%Dim%nd_pathway ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Photol%n_t_lookup_photol)
+
+IF (.NOT. ALLOCATED(Sp%Photol%n_wl_lookup_photol)) &
+  ALLOCATE(Sp%Photol%n_wl_lookup_photol( Sp%Dim%nd_pathway ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Photol%n_wl_lookup_photol)
+
+IF (.NOT. ALLOCATED(Sp%Photol%qy_sub)) &
+  ALLOCATE(Sp%Photol%qy_sub( Sp%Dim%nd_sub_band, &
+                             Sp%Dim%nd_pathway ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Photol%qy_sub)
+
+IF (.NOT. ALLOCATED(Sp%Photol%t_lookup_photol)) &
+  ALLOCATE(Sp%Photol%t_lookup_photol( Sp%Dim%nd_t_lookup_photol, &
+                                      Sp%Dim%nd_pathway ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Photol%t_lookup_photol)
+
+IF (.NOT. ALLOCATED(Sp%Photol%wl_lookup_photol)) &
+  ALLOCATE(Sp%Photol%wl_lookup_photol( Sp%Dim%nd_wl_lookup_photol, &
+                                       Sp%Dim%nd_pathway ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Photol%wl_lookup_photol)
+
+IF (.NOT. ALLOCATED(Sp%Photol%quantum_yield)) &
+  ALLOCATE(Sp%Photol%quantum_yield( Sp%Dim%nd_t_lookup_photol, &
+                                    Sp%Dim%nd_wl_lookup_photol, &
+                                    Sp%Dim%nd_pathway ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Photol%quantum_yield)
+
+IF (.NOT. ALLOCATED(Sp%Photol%threshold_wavelength)) &
+  ALLOCATE(Sp%Photol%threshold_wavelength( Sp%Dim%nd_pathway ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Photol%threshold_wavelength)
+
+
+! Sub-band mapping
+IF (.NOT. ALLOCATED(Sp%Map%n_sub_band_k)) THEN
+  ALLOCATE(Sp%Map%n_sub_band_k( Sp%Dim%nd_k_term, Sp%Dim%nd_band ))
+  Sp%Map%n_sub_band_k = 0
+END IF
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Map%n_sub_band_k)
+
+IF (.NOT. ALLOCATED(Sp%Map%list_sub_band_k)) &
+  ALLOCATE(Sp%Map%list_sub_band_k( Sp%Dim%nd_sub_band_k, Sp%Dim%nd_k_term, &
+                                   Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Map%list_sub_band_k)
+
+IF (.NOT. ALLOCATED(Sp%Map%weight_sub_band_k)) &
+  ALLOCATE(Sp%Map%weight_sub_band_k( Sp%Dim%nd_sub_band_k, Sp%Dim%nd_k_term, &
+                                     Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Map%weight_sub_band_k)
+
+IF (.NOT. ALLOCATED(Sp%Map%n_k_sub_band)) &
+  ALLOCATE(Sp%Map%n_k_sub_band( Sp%Dim%nd_species, Sp%Dim%nd_sub_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Map%n_k_sub_band)
+
+IF (.NOT. ALLOCATED(Sp%Map%list_k_sub_band)) &
+  ALLOCATE(Sp%Map%list_k_sub_band( Sp%Dim%nd_k_sub_band, Sp%Dim%nd_species, &
+                                   Sp%Dim%nd_sub_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Map%list_k_sub_band)
+
+IF (.NOT. ALLOCATED(Sp%Map%weight_k_sub_band)) &
+  ALLOCATE(Sp%Map%weight_k_sub_band( Sp%Dim%nd_k_sub_band, Sp%Dim%nd_species, &
+                                     Sp%Dim%nd_sub_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Map%weight_k_sub_band)
+
+IF (.NOT. ALLOCATED(Sp%Map%weight_k_major)) &
+  ALLOCATE(Sp%Map%weight_k_major( Sp%Dim%nd_k_term, Sp%Dim%nd_species, &
+                                  Sp%Dim%nd_k_term, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Map%weight_k_major)
+
 END SUBROUTINE allocate_spectrum
 !------------------------------------------------------------------------------
 SUBROUTINE deallocate_spectrum(Sp)
@@ -968,6 +1172,44 @@ SUBROUTINE deallocate_spectrum(Sp)
 IMPLICIT NONE
 
 TYPE (StrSpecData), INTENT(INOUT) :: Sp
+
+! Sub-band mapping
+IF (ALLOCATED(Sp%Map%weight_k_major)) &
+   DEALLOCATE(Sp%Map%weight_k_major)
+IF (ALLOCATED(Sp%Map%weight_k_sub_band)) &
+   DEALLOCATE(Sp%Map%weight_k_sub_band)
+IF (ALLOCATED(Sp%Map%list_k_sub_band)) &
+   DEALLOCATE(Sp%Map%list_k_sub_band)
+IF (ALLOCATED(Sp%Map%n_k_sub_band)) &
+   DEALLOCATE(Sp%Map%n_k_sub_band)
+IF (ALLOCATED(Sp%Map%weight_sub_band_k)) &
+   DEALLOCATE(Sp%Map%weight_sub_band_k)
+IF (ALLOCATED(Sp%Map%list_sub_band_k)) &
+   DEALLOCATE(Sp%Map%list_sub_band_k)
+IF (ALLOCATED(Sp%Map%n_sub_band_k)) &
+   DEALLOCATE(Sp%Map%n_sub_band_k)
+
+! Photolysis
+IF (ALLOCATED(Sp%Photol%threshold_wavelength)) &
+   DEALLOCATE(Sp%Photol%threshold_wavelength)
+IF (ALLOCATED(Sp%Photol%quantum_yield)) &
+   DEALLOCATE(Sp%Photol%quantum_yield)
+IF (ALLOCATED(Sp%Photol%wl_lookup_photol)) &
+   DEALLOCATE(Sp%Photol%wl_lookup_photol)
+IF (ALLOCATED(Sp%Photol%t_lookup_photol)) &
+   DEALLOCATE(Sp%Photol%t_lookup_photol)
+IF (ALLOCATED(Sp%Photol%qy_sub)) &
+   DEALLOCATE(Sp%Photol%qy_sub)
+IF (ALLOCATED(Sp%Photol%n_wl_lookup_photol)) &
+   DEALLOCATE(Sp%Photol%n_wl_lookup_photol)
+IF (ALLOCATED(Sp%Photol%n_t_lookup_photol)) &
+   DEALLOCATE(Sp%Photol%n_t_lookup_photol)
+IF (ALLOCATED(Sp%Photol%pathway_products)) &
+   DEALLOCATE(Sp%Photol%pathway_products)
+IF (ALLOCATED(Sp%Photol%pathway_absorber)) &
+   DEALLOCATE(Sp%Photol%pathway_absorber)
+IF (ALLOCATED(Sp%Photol%l_thermalise)) &
+   DEALLOCATE(Sp%Photol%l_thermalise)
 
 ! Spectral variability
 IF (ALLOCATED(Sp%Var%rayleigh_coeff)) &
@@ -1092,6 +1334,14 @@ IF (ALLOCATED(Sp%Planck%thermal_coeff)) &
    DEALLOCATE(Sp%Planck%thermal_coeff)
 
 ! Gas
+IF (ALLOCATED(Sp%Gas%wavelength_sub_band)) &
+   DEALLOCATE(Sp%Gas%wavelength_sub_band)
+IF (ALLOCATED(Sp%Gas%sub_band_w)) &
+   DEALLOCATE(Sp%Gas%sub_band_w)
+IF (ALLOCATED(Sp%Gas%sub_band_k)) &
+   DEALLOCATE(Sp%Gas%sub_band_k)
+IF (ALLOCATED(Sp%Gas%n_sub_band_gas)) &
+   DEALLOCATE(Sp%Gas%n_sub_band_gas)
 IF (ALLOCATED(Sp%Gas%doppler_cor)) &
    DEALLOCATE(Sp%Gas%doppler_cor)
 IF (ALLOCATED(Sp%Gas%l_doppler)) &
@@ -1124,6 +1374,8 @@ IF (ALLOCATED(Sp%Gas%k)) &
    DEALLOCATE(Sp%Gas%k)
 IF (ALLOCATED(Sp%Gas%l_self_broadening)) &
    DEALLOCATE(Sp%Gas%l_self_broadening)
+IF (ALLOCATED(Sp%Gas%i_overlap)) &
+   DEALLOCATE(Sp%Gas%i_overlap)
 IF (ALLOCATED(Sp%Gas%i_scat)) &
    DEALLOCATE(Sp%Gas%i_scat)
 IF (ALLOCATED(Sp%Gas%i_scale_fnc)) &
