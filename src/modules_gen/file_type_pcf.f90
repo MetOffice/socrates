@@ -77,5 +77,11 @@ MODULE file_type_pcf
 !           File of fits to line data using the gas identifier rather than index
   INTEGER, Parameter :: it_file_line_fit_self_id        = 28
 !           File of fits to line data including self-broadening using the gas id
+  INTEGER, Parameter :: it_file_scat_mass               = 29
+!           File of single scattering properties as a function of
+!           mass mixing ratio and mean particle mass
+  INTEGER, Parameter :: it_file_ave_scat_mass           = 30
+!           File of averaged single scattering properties as a
+!           function of mass mixing ratio and mean particle mass
 
 END MODULE file_type_pcf

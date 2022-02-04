@@ -13,9 +13,10 @@ character(len=*), parameter, private :: ModuleName = 'SOCRATES_SET_CLD_DIM'
 contains
 
 subroutine set_cld_dim(cld, control, dimen, spectrum, atm, &
-  profile_list, n_layer_stride, liq_nc, liq_conv_nc, &
+  profile_list, n_layer_stride, &
+  liq_nc, ice_nc, liq_conv_nc, ice_conv_nc, &
   liq_dim, ice_dim, liq_conv_dim, ice_conv_dim, &
-  liq_nc_1d, liq_conv_nc_1d, &
+  liq_nc_1d, ice_nc_1d, liq_conv_nc_1d, ice_conv_nc_1d, &
   liq_dim_1d, ice_dim_1d, liq_conv_dim_1d, ice_conv_dim_1d, &
   l_invert, l_profile_last, l_debug, i_profile_debug)
 
@@ -58,12 +59,12 @@ integer, intent(in), optional :: n_layer_stride
 !   Number of layers in input 1d arrays
 
 real(RealExt), intent(in), dimension(:, :), optional :: &
-  liq_nc, liq_conv_nc, &
+  liq_nc, ice_nc, liq_conv_nc, ice_conv_nc, &
   liq_dim, ice_dim, liq_conv_dim, ice_conv_dim
 real(RealExt), intent(in), dimension(:), optional :: &
-  liq_nc_1d, liq_conv_nc_1d, &
+  liq_nc_1d, ice_nc_1d, liq_conv_nc_1d, ice_conv_nc_1d, &
   liq_dim_1d, ice_dim_1d, liq_conv_dim_1d, ice_conv_dim_1d
-!   Liquid number concentration, liquid and ice effective dimensions
+!   Liquid and ice number concentration and effective dimensions
 
 logical, intent(in), optional :: l_invert
 !   Flag to invert fields in the vertical
@@ -164,7 +165,7 @@ do i=1, cld%n_condensed
       call set_cld_field(cld%condensed_dim_char(:, :, i), &
                          ice_dim, ice_dim_1d)
     else
-      call set_ice_dim()
+      call set_ice_dim(ice_nc, ice_nc_1d)
     end if
     i_param_type = control%i_st_ice
 
@@ -173,7 +174,7 @@ do i=1, cld%n_condensed
       call set_cld_field(cld%condensed_dim_char(:, :, i), &
                          ice_conv_dim, ice_conv_dim_1d)
     else
-      call set_ice_dim()
+      call set_ice_dim(ice_conv_nc, ice_conv_nc_1d)
     end if
     i_param_type = control%i_cnv_ice
 
@@ -303,11 +304,24 @@ contains
   end subroutine set_liq_dim
 
 
-  subroutine set_ice_dim()
+  subroutine set_ice_dim(full_nc, oned_nc)
 
     use rad_pcf, only: &
-      ip_ice_adt, ip_ice_agg_de, ip_ice_agg_de_sun
+      ip_ice_adt, ip_ice_agg_de, ip_ice_agg_de_sun, ip_ice_pade_2_phf
+    use rad_ccf, only: pi
     implicit none
+
+    real(RealExt), intent(in), optional :: full_nc(:, :)
+!     Full field cloud ice number concentration
+    real(RealExt), intent(in), optional :: oned_nc(:)
+!     One-dimensional cloud ice number concentration
+
+    real(RealK) :: cinc(dimen%nd_profile, dimen%id_cloud_top:dimen%nd_layer)
+    real(RealK) :: cinc_incloud
+!     Working cloud ice number concentration
+    real(RealK), parameter :: eps = epsilon(1.0_RealK)
+    real(RealK), parameter :: min_cinc = tiny(1.0_RealK)
+!     Tolerance to prevent divide by zero
 
     ! Parameters for the aggregate parametrization.
     real (RealK), parameter :: a0_agg_cold = 7.5094588e-04_RealK
@@ -319,6 +333,9 @@ contains
     real (RealK), parameter :: s0_agg      = 0.05_RealK
     real (RealK), parameter :: dge2de      = &
       (3.0_RealK/2.0_RealK)*(3.0_RealK/(2.0_RealK*sqrt(3.0_RealK)))
+
+    ! Parameters for the calculation of equivalent spherical radius
+    real (RealK), parameter :: rho_ice = 9.17e+02_RealK
 
     select case (cld%i_condensed_param(i))
 
@@ -361,6 +378,22 @@ contains
           ! Limit and convert to De.
           cld%condensed_dim_char(l, k, i) = dge2de * min( 1.24e-04_RealK, &
             max(8.0e-06_RealK, cld%condensed_dim_char(l, k, i)) )
+        end do
+      end do
+
+    case (ip_ice_pade_2_phf)
+      ! Pade fits based on the equivalent spherical radius.
+      call set_cld_field(cinc, full_nc, oned_nc)
+      do k = dimen%id_cloud_top, atm%n_layer
+        do l = 1, atm%n_profile
+          ! Convert grid-box mean values to in-cloud values
+          cinc_incloud = max( min_cinc, cinc(l, k) / max( eps, &
+            cld%w_cloud(l, k) * cld%frac_cloud(l, k, cld%i_cloud_type(i)) ) )
+          ! Calculate equivalent spherical radius of ice crystals
+          cld%condensed_dim_char(l, k, i) = max( 0.0_RealK, &
+            3.0_RealK * cld%condensed_mix_ratio(l, k, i) * atm%density(l, k) &
+            / (4.0_RealK * pi * rho_ice * cinc_incloud) ) &
+            **(1.0_RealK/3.0_RealK)
         end do
       end do
 

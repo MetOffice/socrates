@@ -29,6 +29,10 @@ SUBROUTINE make_block_12(Spectrum, ierr)
 ! Local variables.
   CHARACTER (LEN=1) :: char_yn
 !   Character response variable
+  CHARACTER (LEN=36) :: char_36
+!   Character response variable
+  LOGICAL :: l_range_set
+!   Flag to indicate validity range has been set
   INTEGER :: n_parameter
 !   Number of parameters
   INTEGER :: ios
@@ -123,7 +127,20 @@ SUBROUTINE make_block_12(Spectrum, ierr)
     goto 8
   ENDIF
 
-  READ(iu_cloud_fit, '(///, 33x, i5, /, 31x, i5)', iostat=ios) &
+  READ(iu_cloud_fit, '(//, a)', iostat=ios) char_36
+  l_range_set = .FALSE.
+  IF (char_36 == 'Min and max characteristic dimension') THEN
+    BACKSPACE(iu_cloud_fit)
+    READ(iu_cloud_fit, '(38x, 2(f12.5))', iostat=ios) &
+      Spectrum%Ice%parm_min_dim(i_ice), Spectrum%Ice%parm_max_dim(i_ice)
+    IF (ios == 0) THEN
+      l_range_set = .TRUE.
+    ELSE
+      ! Recover from error and ask for range to be set explicitly
+      ios = 0
+    END IF
+  END IF
+  READ(iu_cloud_fit, '(33x, i5, /, 31x, i5)', iostat=ios) &
     Spectrum%Ice%i_ice_parm(i_ice), n_parameter
 
   IF (i_input_type == IT_file_cloud_fit_phf) THEN
@@ -147,10 +164,12 @@ SUBROUTINE make_block_12(Spectrum, ierr)
 
   CLOSE(iu_cloud_fit)
 
-  WRITE(iu_stdout, '(/a)') &
-    'Enter the range of validity of the parametrization.'
-  READ(iu_stdin, *) Spectrum%Ice%parm_min_dim(i_ice), &
-                    Spectrum%Ice%parm_max_dim(i_ice)
+  IF (.NOT. l_range_set) THEN
+    WRITE(iu_stdout, '(/a)') &
+      'Enter the range of validity of the parametrization.'
+    READ(iu_stdin, *) Spectrum%Ice%parm_min_dim(i_ice), &
+                      Spectrum%Ice%parm_max_dim(i_ice)
+  END IF
   IF (Spectrum%Ice%parm_min_dim(i_ice) > &
       Spectrum%Ice%parm_max_dim(i_ice)) THEN
     ice_dim_temp=Spectrum%Ice%parm_max_dim(i_ice)

@@ -56,7 +56,7 @@ Cscatter_average -s $specfile -P 1 \
    -t -p 250 \
    -f 5 $fitfile $monfile 1.e3 \
    -a $avgfile \
-   scatter_drop_lw_type5
+   scatter_drop_type5
 
 prep_spec <<EOF2 > /dev/null
 sp_lw_ses
@@ -125,7 +125,7 @@ Cscatter_average -s $specfile -P 1 \
    -t -S $RAD_DATA/solar/kurucz_95_reduced \
    -f 5 $fitfile $monfile 1.e3 \
    -a $avgfile \
-   scatter_drop_sw_type5
+   scatter_drop_type5
 
 prep_spec <<EOF2 > /dev/null
 sp_sw_ses

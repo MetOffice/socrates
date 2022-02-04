@@ -109,6 +109,8 @@ PROGRAM scatter_average_90
 !       Volume fraction in each block of spectral data
   REAL  (RealK) :: dim_char(npd_mie_block)
 !       Characteristic dimensions in each block of spectral data
+  REAL  (RealK) :: particle_density(npd_mie_block)
+!       Particle density in each block of spectral data
   CHARACTER  (LEN=5) :: fit_species
 !   Phase of condensate to be fitted
 !
@@ -147,6 +149,7 @@ PROGRAM scatter_average_90
     SUBROUTINE cloud_fit_90 &
 !
       (l_interactive, fit_species, n_band, n_data, vol_frac, d, &
+       particle_density, &
        absorption_ave, scattering_ave, n_phf_term, phf_fnc_ave, &
        ierr)
 !
@@ -162,6 +165,7 @@ PROGRAM scatter_average_90
       INTEGER, Intent(INOUT) :: ierr
       REAL  (RealK), Intent(IN), Dimension(:) :: vol_frac
       REAL  (RealK), Intent(IN), Dimension(:) :: d
+      REAL  (RealK), Intent(IN), Dimension(:) :: particle_density
 !
       REAL  (RealK), Intent(IN), Dimension(:, :) :: absorption_ave
       REAL  (RealK), Intent(IN), Dimension(:, :) :: scattering_ave
@@ -269,6 +273,11 @@ PROGRAM scatter_average_90
     i_scatter_type(n_block)=ss_data%i_scatter_type
     volume_fraction(n_block)=ss_data%vol_frac
     dim_char(n_block)=ss_data%dim_char
+    IF (i_input_type == it_file_scat_mass) THEN
+      particle_density(n_block)=ss_data%particle_density
+    ELSE
+      particle_density(n_block)=0.0_RealK
+    END IF
 !
     IF (l_write) THEN
 !     Set the output type for the file of results.
@@ -282,6 +291,8 @@ PROGRAM scatter_average_90
         i_output_type=it_file_ave_phf_mie_humid
       ELSE IF (i_input_type == it_file_scat_database) THEN
         i_output_type=it_file_ave_phf_mie_dry
+      ELSE IF (i_input_type == it_file_scat_mass) THEN
+        i_output_type=it_file_ave_scat_mass
       ENDIF
       CALL write_average_90(iu_average, Spectrum%Basic%n_band, &
         n_block, ss_data, i_output_type, &
@@ -335,7 +346,7 @@ PROGRAM scatter_average_90
 !
         CALL cloud_fit_90(l_interactive, fit_species, &
           Spectrum%Basic%n_band, n_block, &
-          volume_fraction, dim_char, &
+          volume_fraction, dim_char, particle_density, &
           absorption_band, scattering_band, &
           n_phf_term_fit, phase_fnc_band, &
           ierr)

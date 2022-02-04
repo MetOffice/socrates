@@ -50,7 +50,7 @@ SUBROUTINE opt_prop_ice_cloud(ierr                                      &
                      ip_slingo_schr_ice_phf, ip_ice_unparametrized,     &
                      ip_ice_t_iwc, ip_ice_iwc_only, ip_ice_fu_solar,    &
                      ip_ice_fu_ir, ip_ice_adt_10, ip_ice_adt,           &
-                     ip_sun_shine_vn2_vis
+                     ip_sun_shine_vn2_vis, ip_ice_pade_2_phf
   USE rad_ccf, ONLY: pi
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
@@ -219,7 +219,80 @@ SUBROUTINE opt_prop_ice_cloud(ierr                                      &
 
   IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
 
+
   IF ( (n_order_phase == 1) .AND.                                       &
+    (i_parametrization_ice == ip_ice_pade_2_phf) .AND.                  &
+    l_rescale .AND. (n_order_forward == 2) ) THEN
+
+    DO i=n_cloud_top, n_layer
+!CDIR NODEP
+      DO ll=1, n_cloud_profile(i)
+        l=i_cloud_profile(ll, i)
+        k_ext_tot_cloud(l, i)=ice_mass_frac(l, i)                       &
+          *(ice_cloud_parameter(1)+dim_char_ice(l, i)                   &
+          *(ice_cloud_parameter(2)+dim_char_ice(l, i)                   &
+          *ice_cloud_parameter(3)))                                     &
+          /(1.0e+00_RealK+dim_char_ice(l, i)                            &
+          *(ice_cloud_parameter(4)+dim_char_ice(l, i)                   &
+          *(ice_cloud_parameter(5)+dim_char_ice(l, i)                   &
+          *ice_cloud_parameter(6))))
+        k_ext_scat_cloud(l, i)=k_ext_tot_cloud(l, i)                    &
+          *(1.0e+00_RealK                                               &
+          -(ice_cloud_parameter(7)+dim_char_ice(l, i)                   &
+          *(ice_cloud_parameter(8)+dim_char_ice(l, i)                   &
+          *ice_cloud_parameter(9)))                                     &
+          /(1.0e+00_RealK+dim_char_ice(l, i)                            &
+          *(ice_cloud_parameter(10)+dim_char_ice(l, i)                  &
+          *ice_cloud_parameter(11))))
+        asymmetry_process(l)                                            &
+          =(ice_cloud_parameter(12)+dim_char_ice(l, i)                  &
+          *(ice_cloud_parameter(13)+dim_char_ice(l, i)                  &
+          *ice_cloud_parameter(14)))                                    &
+          /(1.0e+00_RealK+dim_char_ice(l, i)                            &
+          *(ice_cloud_parameter(15)+dim_char_ice(l, i)                  &
+          *ice_cloud_parameter(16)))
+        phase_fnc_cloud(l, i, 1)                                        &
+          =k_ext_scat_cloud(l, i)*asymmetry_process(l)
+        forward_scatter_cloud(l, i)                                     &
+          =phase_fnc_cloud(l, i, 1)*asymmetry_process(l)
+      END DO
+    END DO
+
+  ELSE IF ( (n_order_phase == 1) .AND.                                  &
+    (i_parametrization_ice == ip_ice_pade_2_phf) .AND.                  &
+    .NOT. l_rescale ) THEN
+
+    DO i=n_cloud_top, n_layer
+!CDIR NODEP
+      DO ll=1, n_cloud_profile(i)
+        l=i_cloud_profile(ll, i)
+        k_ext_tot_cloud(l, i)=ice_mass_frac(l, i)                       &
+          *(ice_cloud_parameter(1)+dim_char_ice(l, i)                   &
+          *(ice_cloud_parameter(2)+dim_char_ice(l, i)                   &
+          *ice_cloud_parameter(3)))                                     &
+          /(1.0e+00_RealK+dim_char_ice(l, i)                            &
+          *(ice_cloud_parameter(4)+dim_char_ice(l, i)                   &
+          *(ice_cloud_parameter(5)+dim_char_ice(l, i)                   &
+          *ice_cloud_parameter(6))))
+        k_ext_scat_cloud(l, i)=k_ext_tot_cloud(l, i)                    &
+          *(1.0e+00_RealK                                               &
+          -(ice_cloud_parameter(7)+dim_char_ice(l, i)                   &
+          *(ice_cloud_parameter(8)+dim_char_ice(l, i)                   &
+          *ice_cloud_parameter(9)))                                     &
+          /(1.0e+00_RealK+dim_char_ice(l, i)                            &
+          *(ice_cloud_parameter(10)+dim_char_ice(l, i)                  &
+          *ice_cloud_parameter(11))))
+        phase_fnc_cloud(l, i, 1)=k_ext_scat_cloud(l, i)                 &
+          *(ice_cloud_parameter(12)+dim_char_ice(l, i)                  &
+          *(ice_cloud_parameter(13)+dim_char_ice(l, i)                  &
+          *ice_cloud_parameter(14)))                                    &
+          /(1.0e+00_RealK+dim_char_ice(l, i)                            &
+          *(ice_cloud_parameter(15)+dim_char_ice(l, i)                  &
+          *ice_cloud_parameter(16)))
+      END DO
+    END DO
+
+  ELSE IF ( (n_order_phase == 1) .AND.                                  &
     (i_parametrization_ice == ip_ice_fu_phf) .AND.                      &
     l_rescale .AND. (n_order_forward == 2) ) THEN
 
@@ -338,6 +411,8 @@ SUBROUTINE opt_prop_ice_cloud(ierr                                      &
        (i_parametrization_ice == ip_ice_t_iwc).OR.                      &
        (i_parametrization_ice == ip_ice_iwc_only).OR.                   &
        (i_parametrization_ice == ip_ice_baran).OR.                      &
+       ( l_henyey_greenstein_pf .AND.                                   &
+         (i_parametrization_ice == ip_ice_pade_2_phf) ).OR.             &
        ( l_henyey_greenstein_pf .AND.                                   &
          (i_parametrization_ice == ip_slingo_schr_ice_phf) ).OR.        &
        ( l_henyey_greenstein_pf .AND.                                   &
@@ -672,6 +747,37 @@ SUBROUTINE opt_prop_ice_cloud(ierr                                      &
             =k_ext_scat_cloud(l, i)*asymmetry_process(l)
         END DO 
 
+      CASE(ip_ice_pade_2_phf)
+
+        DO ll=1, n_cloud_profile(i)
+          l=i_cloud_profile(ll, i)
+          k_ext_tot_cloud(l, i)=ice_mass_frac(l, i)                     &
+            *(ice_cloud_parameter(1)+dim_char_ice(l, i)                 &
+            *(ice_cloud_parameter(2)+dim_char_ice(l, i)                 &
+            *ice_cloud_parameter(3)))                                   &
+            /(1.0e+00_RealK+dim_char_ice(l, i)                          &
+            *(ice_cloud_parameter(4)+dim_char_ice(l, i)                 &
+            *(ice_cloud_parameter(5)+dim_char_ice(l, i)                 &
+            *ice_cloud_parameter(6))))
+          k_ext_scat_cloud(l, i)=k_ext_tot_cloud(l, i)                  &
+            *(1.0e+00_RealK                                             &
+            -(ice_cloud_parameter(7)+dim_char_ice(l, i)                 &
+            *(ice_cloud_parameter(8)+dim_char_ice(l, i)                 &
+            *ice_cloud_parameter(9)))                                   &
+            /(1.0e+00_RealK+dim_char_ice(l, i)                          &
+            *(ice_cloud_parameter(10)+dim_char_ice(l, i)                &
+            *ice_cloud_parameter(11))))
+          asymmetry_process(l)                                          &
+            =(ice_cloud_parameter(12)+dim_char_ice(l, i)                &
+            *(ice_cloud_parameter(13)+dim_char_ice(l, i)                &
+            *ice_cloud_parameter(14)))                                  &
+            /(1.0e+00_RealK+dim_char_ice(l, i)                          &
+            *(ice_cloud_parameter(15)+dim_char_ice(l, i)                &
+            *ice_cloud_parameter(16)))
+          phase_fnc_cloud(l, i, 1)                                      &
+            =k_ext_scat_cloud(l, i)*asymmetry_process(l)
+        END DO
+
       END SELECT
 
 
@@ -765,7 +871,8 @@ SUBROUTINE opt_prop_ice_cloud(ierr                                      &
 
   ELSE IF ( .NOT.l_henyey_greenstein_pf .AND.                           &
        ( (i_parametrization_ice == ip_slingo_schr_ice_phf).OR.          &
-         (i_parametrization_ice == ip_ice_fu_phf) ) ) THEN
+         (i_parametrization_ice == ip_ice_fu_phf).OR.                   &
+         (i_parametrization_ice == ip_ice_pade_2_phf) ) ) THEN
 
     DO i=n_cloud_top, n_layer
 
@@ -841,6 +948,51 @@ SUBROUTINE opt_prop_ice_cloud(ierr                                      &
             +x*ice_cloud_parameter(5*ls+8))))
         END DO
 
+      ELSE IF (i_parametrization_ice == ip_ice_pade_2_phf) THEN
+
+        DO ll=1, n_cloud_profile(i)
+          l=i_cloud_profile(ll, i)
+          k_ext_tot_cloud(l, i)=ice_mass_frac(l, i)                     &
+            *(ice_cloud_parameter(1)+dim_char_ice(l, i)                 &
+            *(ice_cloud_parameter(2)+dim_char_ice(l, i)                 &
+            *ice_cloud_parameter(3)))                                   &
+            /(1.0e+00_RealK+dim_char_ice(l, i)                          &
+            *(ice_cloud_parameter(4)+dim_char_ice(l, i)                 &
+            *(ice_cloud_parameter(5)+dim_char_ice(l, i)                 &
+            *ice_cloud_parameter(6))))
+          k_ext_scat_cloud(l, i)=k_ext_tot_cloud(l, i)                  &
+            *(1.0e+00_RealK                                             &
+            -(ice_cloud_parameter(7)+dim_char_ice(l, i)                 &
+            *(ice_cloud_parameter(8)+dim_char_ice(l, i)                 &
+            *ice_cloud_parameter(9)))                                   &
+            /(1.0e+00_RealK+dim_char_ice(l, i)                          &
+            *(ice_cloud_parameter(10)+dim_char_ice(l, i)                &
+            *ice_cloud_parameter(11))))
+        END DO
+        DO ls=1, n_order_phase
+          DO ll=1, n_cloud_profile(i)
+            l=i_cloud_profile(ll, i)
+            phase_fnc_cloud(l, i, ls)=k_ext_scat_cloud(l, i)            &
+              *(ice_cloud_parameter(5*ls+7)+dim_char_ice(l, i)          &
+              *(ice_cloud_parameter(5*ls+8)+dim_char_ice(l, i)          &
+              *ice_cloud_parameter(5*ls+9)))                            &
+              /(1.0e+00_RealK+dim_char_ice(l, i)                        &
+              *(ice_cloud_parameter(5*ls+10)+dim_char_ice(l, i)         &
+              *ice_cloud_parameter(5*ls+11)))
+          END DO
+        END DO
+        ls=n_order_forward
+        DO ll=1, n_cloud_profile(i)
+          l=i_cloud_profile(ll, i)
+          forward_scatter_cloud(l, i)=k_ext_scat_cloud(l, i)            &
+            *(ice_cloud_parameter(5*ls+7)+dim_char_ice(l, i)            &
+            *(ice_cloud_parameter(5*ls+8)+dim_char_ice(l, i)            &
+            *ice_cloud_parameter(5*ls+9)))                              &
+            /(1.0e+00_RealK+dim_char_ice(l, i)                          &
+            *(ice_cloud_parameter(5*ls+10)+dim_char_ice(l, i)           &
+            *ice_cloud_parameter(5*ls+11)))
+        END DO
+
       END IF
 
 
@@ -898,6 +1050,15 @@ SUBROUTINE opt_prop_ice_cloud(ierr                                      &
                     +x*(ice_cloud_parameter(5*ls+7)                     &
                     +x*ice_cloud_parameter(5*ls+8))))
 
+                CASE(ip_ice_pade_2_phf)
+                  phf_tmp                                               &
+                    =(ice_cloud_parameter(5*ls+7)+dim_char_ice(l, i)    &
+                    *(ice_cloud_parameter(5*ls+8)+dim_char_ice(l, i)    &
+                    *ice_cloud_parameter(5*ls+9)))                      &
+                    /(1.0e+00_RealK+dim_char_ice(l, i)                  &
+                    *(ice_cloud_parameter(5*ls+10)+dim_char_ice(l, i)   &
+                    *ice_cloud_parameter(5*ls+11)))
+
               END SELECT
 
               ks_phf(l)=k_ext_scat_cloud(l, i)*phf_tmp
@@ -942,6 +1103,15 @@ SUBROUTINE opt_prop_ice_cloud(ierr                                      &
                   +x*(ice_cloud_parameter(5*ls+6)                       &
                   +x*(ice_cloud_parameter(5*ls+7)                       &
                   +x*ice_cloud_parameter(5*ls+8))))
+
+              CASE(ip_ice_pade_2_phf)
+                phf_tmp                                                 &
+                  =(ice_cloud_parameter(5*ls+7)+dim_char_ice(l, i)      &
+                  *(ice_cloud_parameter(5*ls+8)+dim_char_ice(l, i)      &
+                  *ice_cloud_parameter(5*ls+9)))                        &
+                  /(1.0e+00_RealK+dim_char_ice(l, i)                    &
+                  *(ice_cloud_parameter(5*ls+10)+dim_char_ice(l, i)     &
+                  *ice_cloud_parameter(5*ls+11)))
 
             END SELECT
 

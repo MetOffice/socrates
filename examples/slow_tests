@@ -52,6 +52,12 @@ cd droplets
 cd ../
 
 echo ---
+echo "Testing Cscatter for generating cloud ice parametrisations:"
+cd ice_crystals
+./run_me || err=1
+cd ../
+
+echo ---
 echo "Testing RFMIP profiles"
 cd rfmip
 ./run_me || err=1

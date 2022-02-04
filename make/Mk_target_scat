@@ -1,7 +1,8 @@
 #
 # Full list of scatterig programs
 #
-TARGET_SCAT: icedb2bin ice_scatter scatter_90 scatter_average_90
+TARGET_SCAT: icedb2bin ice_scatter scatter_90 scatter_average_90 \
+		reduce_casim_ice
 
 icedb2bin: icedb2bin.o scatlib.$(LIBSUFFIX)
 	$(LINK) -o icedb2bin icedb2bin.o scatlib.$(LIBSUFFIX)
@@ -14,4 +15,8 @@ scatter_90: scatter_90.o scatlib.$(LIBSUFFIX)
 
 scatter_average_90: scatter_average_90.o scatlib.$(LIBSUFFIX)
 	$(LINK) -o scatter_average_90 scatter_average_90.o \
+	   scatlib.$(LIBSUFFIX)
+
+reduce_casim_ice: reduce_casim_ice.o scatlib.$(LIBSUFFIX)
+	$(LINK) -o reduce_casim_ice reduce_casim_ice.o \
 	   scatlib.$(LIBSUFFIX)

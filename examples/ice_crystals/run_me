@@ -1,0 +1,204 @@
+#!/bin/bash
+
+# Create ice optical property parametrisations using Pade fits to the
+# equivalent spherical radius. This uses a database provided by Anthony Baran
+# of optical properties against Ice Water Mixing ratio and Number density
+# using 2-moment output from the CASIM microphysics scheme. The optical
+# properties in the database have been calculated using an ensemble model
+# of ice-crystal habits. The optical properties for a given equivalent
+# spherical radius therefore represent the assumed particle shape for that
+# size. For comparison we also calculate the optical properties that would
+# arise if the particles were truly spherical.
+
+# Initialise error status (to test for output differences)
+ierr=0
+
+# Create a parametrisation based on Anthony Baran's ensemble model
+# calculations for CASIM 2-moment output.
+
+ver="con"
+database_path="$RAD_DATA/cloud"
+
+# Reduce the original database to a binned version:
+# reduce_casim_ice \
+#   /data/users/frba/CASIM21/ens_tot_sol_ir_66700_casim_${ver}.dat \
+#   scatter_ice_casim_${ver}
+# database_path=.
+
+
+# Parametrise as type 12
+# ----------------------
+rm -f fit_ice_casim_${ver}_sw_ga7 mon_ice_casim_${ver}_sw_ga7
+Cscatter_average \
+  -s $RAD_DATA/spectra/ga7/sp_sw_ga7 -P 1 -w -S $RAD_DATA/solar/lean_12 \
+  -f 20 fit_ice_casim_${ver}_sw_ga7 mon_ice_casim_${ver}_sw_ga7 917 \
+  ${database_path}/scatter_ice_casim_${ver}
+
+rm -f fit_ice_casim_${ver}_lw_ga7 mon_ice_casim_${ver}_lw_ga7
+Cscatter_average -s $RAD_DATA/spectra/ga7/sp_lw_ga7 -P 1 -w -p 250 \
+  -f 20 fit_ice_casim_${ver}_lw_ga7 mon_ice_casim_${ver}_lw_ga7 917 \
+  ${database_path}/scatter_ice_casim_${ver}
+
+rm -f fit_ice_casim_${ver}_sw_cloud7 mon_ice_casim_${ver}_sw_cloud7
+Cscatter_average \
+  -s $RAD_DATA/spectra/ga7/sp_sw_cloud7 -P 1 -w -S $RAD_DATA/solar/lean_12 \
+  -f 20 fit_ice_casim_${ver}_sw_cloud7 mon_ice_casim_${ver}_sw_cloud7 917 \
+  ${database_path}/scatter_ice_casim_${ver}
+
+rm -f fit_ice_casim_${ver}_lw_cloud7 mon_ice_casim_${ver}_lw_cloud7
+Cscatter_average -s $RAD_DATA/spectra/ga7/sp_lw_cloud7 -P 1 -w -p 250 \
+  -f 20 fit_ice_casim_${ver}_lw_cloud7 mon_ice_casim_${ver}_lw_cloud7 917 \
+  ${database_path}/scatter_ice_casim_${ver}
+
+# Plot the fits:
+# python ../../python/cloud_fits.py mon_ice_casim_${ver}_sw_ga7 1026
+# python ../../python/cloud_fits.py mon_ice_casim_${ver}_lw_ga7 1026
+
+# python ../../python/cloud_optics.py fit_ice_casim_${ver}_sw_ga7
+# python ../../python/cloud_optics.py fit_ice_casim_${ver}_lw_ga7
+
+# Add the fits to the spectral files:
+rm -f sp_sw_ga7_casim_${ver}*
+prep_spec <<EOF > prep_spec_sw_casim_log
+$RAD_DATA/spectra/ga7/sp_sw_ga7
+n
+sp_sw_ga7_casim_${ver}
+12
+9
+r
+12
+10
+r
+12
+12
+fit_ice_casim_${ver}_sw_ga7
+-1
+EOF
+
+rm -f sp_lw_ga7_casim_${ver}*
+prep_spec <<EOF > prep_spec_lw_casim_log
+$RAD_DATA/spectra/ga7/sp_lw_ga7
+n
+sp_lw_ga7_casim_${ver}
+12
+9
+r
+12
+10
+r
+12
+12
+fit_ice_casim_${ver}_lw_ga7
+-1
+EOF
+
+rm -f sp_sw_cloud7_casim_${ver}*
+prep_spec <<EOF > prep_spec_sw_cloud_casim_log
+$RAD_DATA/spectra/ga7/sp_sw_cloud7
+n
+sp_sw_cloud7_casim_${ver}
+12
+9
+r
+12
+12
+fit_ice_casim_${ver}_sw_cloud7
+-1
+EOF
+
+rm -f sp_lw_cloud7_casim_${ver}*
+prep_spec <<EOF > prep_spec_lw_cloud_casim_log
+$RAD_DATA/spectra/ga7/sp_lw_cloud7
+n
+sp_lw_cloud7_casim_${ver}
+12
+9
+r
+12
+12
+fit_ice_casim_${ver}_lw_cloud7
+-1
+EOF
+
+
+# For comparison create a parametrisation for spherical ice-crystals
+# (type 5) using the same distributions (Rockel) used for droplets.
+if [ ! -f convert ] ; then cc -o convert ../droplets/convert.c ; fi
+for RE in 6.0 7.5 9.0 10.5 12.0 13.5 15.0 16.5 18.0 \
+          20.0 22.0 24.0 26.0 28.0 30.0 33.0 36.0 39.0 42.0 \
+          46.0 50.0 55.0 60.0 70.0 90.0 120.0 150.0 180.0
+do
+  if [ ! -s Css${RE}_6.0 ] ; then
+    ./run_scatter ${RE} &
+  fi
+done
+wait
+
+if [ -f scatter_ice_sphere ] ; then rm -f scatter_ice_sphere ; fi
+for RE in 6.0 7.5 9.0 10.5 12.0 13.5 15.0 16.5 18.0 \
+          20.0 22.0 24.0 26.0 28.0 30.0 33.0 36.0 39.0 42.0 \
+          46.0 50.0 55.0 60.0 70.0 90.0 120.0 150.0 180.0
+do
+   cat Css${RE}* >> scatter_ice_sphere
+done
+
+rm -f fit_ice_sphere_sw_ga7 mon_ice_sphere_sw_ga7
+Cscatter_average \
+  -s $RAD_DATA/spectra/ga7/sp_sw_ga7 -P 1 -w -S $RAD_DATA/solar/lean_12 \
+  -f 20 fit_ice_sphere_sw_ga7 mon_ice_sphere_sw_ga7 917 scatter_ice_sphere
+
+rm -f fit_ice_sphere_lw_ga7 mon_ice_sphere_lw_ga7
+Cscatter_average -s $RAD_DATA/spectra/ga7/sp_lw_ga7 -P 1 -w -p 250 \
+  -f 20 fit_ice_sphere_lw_ga7 mon_ice_sphere_lw_ga7 917 scatter_ice_sphere
+
+# Plot the fits:
+# python ../../python/cloud_fits.py mon_ice_sphere_sw_ga7 112
+# python ../../python/cloud_fits.py mon_ice_sphere_lw_ga7 112
+
+# python ../../python/cloud_optics.py fit_ice_sphere_sw_ga7
+# python ../../python/cloud_optics.py fit_ice_sphere_lw_ga7
+
+# Add the fits to the spectral files:
+prep_spec <<EOF > prep_spec_sw_sphere_log
+sp_sw_ga7_casim_${ver}
+a
+12
+5
+fit_ice_sphere_sw_ga7
+-1
+EOF
+
+prep_spec <<EOF > prep_spec_lw_sphere_log
+sp_lw_ga7_casim_${ver}
+a
+12
+5
+fit_ice_sphere_lw_ga7
+-1
+EOF
+
+# Test the ouput parametrisations against KGO
+(diff -q ga7_casim_${ver}/sp_sw_ga7_casim_${ver} sp_sw_ga7_casim_${ver} && \
+ diff -q ga7_casim_${ver}/sp_sw_cloud7_casim_${ver} \
+                          sp_sw_cloud7_casim_${ver} && \
+ echo 'Matched ifort SW output') || \
+(diff -q ga7_casim_${ver}/sp_sw_ga7_gfortran sp_sw_ga7_casim_${ver} && \
+ echo 'Matched gfortran SW output') || \
+ierr=1
+(diff -q ga7_casim_${ver}/sp_lw_ga7_casim_${ver} sp_lw_ga7_casim_${ver} && \
+ diff -q ga7_casim_${ver}/sp_lw_cloud7_casim_${ver} \
+                          sp_lw_cloud7_casim_${ver} && \
+ echo 'Matched ifort LW output') || \
+(diff -q ga7_casim_${ver}/sp_lw_ga7_gfortran sp_lw_ga7_casim_${ver} && \
+ echo 'Matched gfortran LW output') || \
+ierr=1
+
+if [ $ierr -gt 0 ] ; then
+  exit 1
+else
+  rm -f C* convert scatter_ice* fit_ice* mon_ice* prep_spec_*
+  rm -f sp_sw_ga7_casim_${ver}* sp_lw_ga7_casim_${ver}*
+  rm -f sp_sw_cloud7_casim_${ver}* sp_lw_cloud7_casim_${ver}*
+  echo OK
+  exit 0
+fi

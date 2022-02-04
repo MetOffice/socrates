@@ -56,7 +56,6 @@ with open(filename) as f:
                 plt.legend()
                 plt.tight_layout()
                 plt.show()
-    if (plotnum > 0):
-        if (plotrow > 0):
-            plt.tight_layout()
-            plt.show()
+    if (plotrow > 0):
+        plt.tight_layout()
+        plt.show()

@@ -9,6 +9,7 @@
 SUBROUTINE cloud_fit_90 &
 !
 (l_interactive, fit_species, n_band, n_data, vol_frac, d, &
+ particle_density, &
  absorption_ave, scattering_ave, n_phf_term, phf_fnc_ave, &
  ierr)
 !
@@ -48,7 +49,9 @@ SUBROUTINE cloud_fit_90 &
   REAL  (RealK), Intent(IN), Dimension(:) :: vol_frac
 !   Volume fractions for each block
   REAL  (RealK), Intent(IN), Dimension(:) :: d
-!   Sizes of particles
+!   Characteristic dimension of particles
+  REAL  (RealK), Intent(IN), Dimension(:) :: particle_density
+!   Internal density of particles
 !
   REAL  (RealK), Intent(IN), Dimension(:, :) :: absorption_ave
 !   Mean absorption for each block in each band
@@ -75,7 +78,7 @@ SUBROUTINE cloud_fit_90 &
 !
   INTEGER :: i_fit
 !   Fitting scheme selected
-  REAL  (RealK) :: density_particle
+  REAL  (RealK) :: density_particle(n_data)
 !   Density of the scattering particle
 !
   INTEGER :: n_property
@@ -136,7 +139,7 @@ SUBROUTINE cloud_fit_90 &
   WRITE(iu_stdout, '(/a)') &
     'Enter density of particle'
   DO 
-    READ(iu_stdin, *, IOSTAT=ios) density_particle
+    READ(iu_stdin, *, IOSTAT=ios) density_particle(n_data)
     IF (ios == 0) THEN
       EXIT
     ELSE
@@ -151,6 +154,14 @@ SUBROUTINE cloud_fit_90 &
       ENDIF
     ENDIF
   ENDDO
+  DO i = 1, n_data
+    ! Use actual particle density where it is set
+    IF (particle_density(i) > TINY(0.0_RealK)) THEN
+      density_particle(i) = particle_density(i)
+    ELSE
+      density_particle(i) = density_particle(n_data)
+    END IF
+  END DO
 !
 ! Choose the parametrization scheme
   CALL choose_scheme
@@ -167,10 +178,13 @@ SUBROUTINE cloud_fit_90 &
   ALLOCATE(parm_list(n_param))
 !
 ! Write headers to the output file.
-  WRITE(iu_cloud_fit, '(a13, i5, //20x, a)') '*FILE_TYPE = ' &
+  WRITE(iu_cloud_fit, '(a13, i5, /20x, a)') '*FILE_TYPE = ' &
     , IT_file_cloud_fit_phf, 'Parameters fitting single scattering'
-  WRITE(iu_cloud_fit, '(/a32, 1x, i5, a2)') &
-     'Index of parametrization scheme =', i_fit, ': '
+  WRITE(iu_cloud_fit, '(/a38, 2(1pe12.5))') &
+     'Min and max characteristic dimension: ', &
+     MINVAL(d(1:n_data)), MAXVAL(d(1:n_data))
+  WRITE(iu_cloud_fit, '(a33, i5)') &
+     'Index of parametrization scheme =', i_fit
   WRITE(iu_cloud_fit, '(a31, i5, 1x, a14)') &
      'Number of fitting parameters = ', n_param, &
      'for each band.'
@@ -280,7 +294,8 @@ CONTAINS
                     (i_fit /= IP_ice_adt)              .AND. &
                     (i_fit /= IP_ice_adt_10)           .AND. &
                     (i_fit /= IP_Slingo_Schr_ice_PHF)  .AND. &
-                    (i_fit /= IP_ice_Fu_PHF)      ) ) ) THEN
+                    (i_fit /= IP_ice_Fu_PHF)           .AND. &
+                    (i_fit /= IP_ice_pade_2_phf)  ) ) ) THEN
         WRITE(iu_err, '(a)') '+++ Invalid parametrization scheme.'
         IF(l_interactive) THEN
           WRITE(iu_stdout, '(a)') 'Please re-enter.'
@@ -330,7 +345,7 @@ CONTAINS
             property = (/ "Extinction", &
                           "Coalbedo  ", &
                           "Asymmetry " /)
-          CASE (IP_Slingo_Schr_ice_PHF, IP_ice_Fu_PHF)
+          CASE (IP_Slingo_Schr_ice_PHF, IP_ice_Fu_PHF, IP_Ice_Pade_2_PHF)
             n_property = 2 + n_phf_term
             ALLOCATE(property(n_property))
             property(1:2) = (/ "Extinction", &
@@ -423,6 +438,19 @@ CONTAINS
                 last_place  = 5*i-1
                 i_term      = i-2
             END SELECT
+          CASE (IP_Ice_Pade_2_PHF)
+            SELECT CASE (i)
+              CASE(1)
+                first_place = 1
+                last_place  = 6
+              CASE(2)
+                first_place = 7
+                last_place  = 11
+              CASE(3:)
+                first_place = 5*i-3
+                last_place  = 5*i+1
+                i_term      = i-2
+            END SELECT
         END SELECT
     END SELECT
 !
@@ -452,7 +480,7 @@ CONTAINS
               CASE("Extinction")
                 actual = (absorption_ave(i_b, 1:n_data) + &
                           scattering_ave(i_b, 1:n_data) ) / &
-                         (vol_frac(1:n_data) * density_particle)
+                         (vol_frac(1:n_data) * density_particle(1:n_data))
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
                 actual = absorption_ave(i_b, 1:n_data) / &
@@ -480,7 +508,7 @@ CONTAINS
               CASE("Extinction")
                 actual = (absorption_ave(i_b, 1:n_data) + &
                           scattering_ave(i_b, 1:n_data) ) / &
-                         (vol_frac(1:n_data) * density_particle)
+                         (vol_frac(1:n_data) * density_particle(1:n_data))
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
                 actual = absorption_ave(i_b, :) / &
@@ -508,7 +536,7 @@ CONTAINS
               CASE("Extinction")
                 actual = (absorption_ave(i_b, 1:n_data) + &
                           scattering_ave(i_b, 1:n_data) ) / &
-                         (vol_frac(1:n_data) * density_particle)
+                         (vol_frac(1:n_data) * density_particle(1:n_data))
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
                 actual = absorption_ave(i_b, 1:n_data) / &
@@ -536,7 +564,7 @@ CONTAINS
               CASE("Extinction")
                 actual = (absorption_ave(i_b, 1:n_data) + &
                           scattering_ave(i_b, 1:n_data) ) / &
-                         (vol_frac(1:n_data) * density_particle)
+                         (vol_frac(1:n_data) * density_particle(1:n_data))
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
                 actual = absorption_ave(i_b, 1:n_data) / &
@@ -564,7 +592,7 @@ CONTAINS
               CASE("Extinction")
                 actual = (absorption_ave(i_b, 1:n_data) + &
                           scattering_ave(i_b, 1:n_data) ) / &
-                         (vol_frac(1:n_data) * density_particle)
+                         (vol_frac(1:n_data) * density_particle(1:n_data))
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
                 actual = absorption_ave(i_b, 1:n_data) / &
@@ -596,7 +624,7 @@ CONTAINS
               CASE("Extinction")
                 actual = (absorption_ave(i_b, 1:n_data) + &
                           scattering_ave(i_b, 1:n_data) ) / &
-                         (vol_frac(1:n_data) * density_particle)
+                         (vol_frac(1:n_data) * density_particle(1:n_data))
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
                 actual = absorption_ave(i_b, 1:n_data) / &
@@ -624,7 +652,7 @@ CONTAINS
               CASE("Extinction")
                 actual = (absorption_ave(i_b, 1:n_data) + &
                           scattering_ave(i_b, 1:n_data) ) / &
-                         (vol_frac(1:n_data) * density_particle)
+                         (vol_frac(1:n_data) * density_particle(1:n_data))
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
                 actual = absorption_ave(i_b, 1:n_data) / &
@@ -657,7 +685,7 @@ CONTAINS
               CASE("Extinction")
                 actual = (absorption_ave(i_b, 1:n_data) + &
                           scattering_ave(i_b, 1:n_data) ) / &
-                         (vol_frac(1:n_data) * density_particle)
+                         (vol_frac(1:n_data) * density_particle(1:n_data))
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
                 actual = absorption_ave(i_b, 1:n_data) / &
@@ -690,7 +718,7 @@ CONTAINS
               CASE("Extinction")
                 actual = (absorption_ave(i_b, 1:n_data) + &
                           scattering_ave(i_b, 1:n_data) ) / &
-                         (vol_frac(1:n_data) * density_particle)
+                         (vol_frac(1:n_data) * density_particle(1:n_data))
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
                 actual = absorption_ave(i_b, 1:n_data) / &
@@ -723,7 +751,7 @@ CONTAINS
               CASE("Extinction")
                 actual = (absorption_ave(i_b, 1:n_data) + &
                           scattering_ave(i_b, 1:n_data) ) / &
-                         (vol_frac(1:n_data) * density_particle)
+                         (vol_frac(1:n_data) * density_particle(1:n_data))
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
                 actual = absorption_ave(i_b, 1:n_data) / &
@@ -751,7 +779,7 @@ CONTAINS
               CASE("Extinction")
                 actual = (absorption_ave(i_b, 1:n_data) + &
                           scattering_ave(i_b, 1:n_data) ) / &
-                         (vol_frac(1:n_data) * density_particle)
+                         (vol_frac(1:n_data) * density_particle(1:n_data))
                 scaling = REAL(n_data, RealK) / SUM(actual)
               CASE("Coalbedo  ")
                 actual = absorption_ave(i_b, 1:n_data) / &
@@ -771,6 +799,34 @@ CONTAINS
                 ELSE
                   scaling = 1.0
                 ENDIF
+            END SELECT
+            actual = scaling * actual
+!
+          CASE (IP_Ice_Pade_2_PHF)
+!  
+!           Scale the dimension:
+            scaling_d  = REAL(n_data, RealK) / SUM(d(1:n_data))
+            ds = scaling_d * d(1:n_data)
+!           Repeat for the optical propeties
+            SELECT CASE(property(i))
+              CASE("Extinction")
+                actual = (absorption_ave(i_b, 1:n_data) + &
+                          scattering_ave(i_b, 1:n_data) ) / &
+                         (vol_frac(1:n_data) * density_particle(1:n_data))
+                scaling = REAL(n_data, RealK) / SUM(actual)
+              CASE("Coalbedo  ")
+                actual = absorption_ave(i_b, 1:n_data) / &
+                  ( absorption_ave(i_b, 1:n_data) + &
+                    scattering_ave(i_b, 1:n_data))
+                scaling = MAXVAL(actual)
+                IF (scaling > 0.0) THEN
+                  scaling = 1.0 / scaling
+                ELSE
+                  scaling = 1.0
+                ENDIF
+              CASE("Moment   ")
+                actual = phf_fnc_ave(i_b, i_term, 1:n_data)
+                scaling = 1.0_RealK
             END SELECT
             actual = scaling * actual
 !
@@ -1011,6 +1067,70 @@ CONTAINS
               CASE("Moment   ")
                 parm(1:4) = parm(1:4) / scaling
                 parm(5) = 1.0 / scaling_d
+            END SELECT
+!    
+          CASE (IP_Ice_Pade_2_PHF)
+!    
+            SELECT CASE(property(i))
+              CASE("Extinction")
+                parm(1) = parm(1) / scaling
+                parm(2) = parm(2) * scaling_d / scaling
+                parm(3) = parm(3) * scaling_d * scaling_d / scaling
+                parm(4) = parm(4) * scaling_d
+                parm(5) = parm(5) * scaling_d * scaling_d
+                parm(6) = parm(6) * scaling_d * scaling_d * scaling_d
+                ! Check these parameters will not produce NaNs
+                poly(0)   = REAL(1.0, dp)
+                poly(1:3) = REAL(parm(4:6), dp)
+                CALL CubicRoots(poly, roots)
+                DO i_root = 1, 3
+                  IF (ABS(AIMAG(roots(i_root))) < TINY(1.0d0)) THEN
+                    IF (DBLE(roots(i_root)) > MINVAL(d(1:n_data)) .AND. &
+                        DBLE(roots(i_root)) < MAXVAL(d(1:n_data))) THEN
+                      WRITE(iu_err, '(a,i0,a,e12.5)') &
+                        'Warning: Extinction will be NaN for band ',i_b, &
+                        ' with effective radius of',DBLE(roots(i_root))
+                    END IF
+                  END IF
+                END DO
+              CASE("Coalbedo  ")
+                parm(1) = parm(1) / scaling
+                parm(2) = parm(2) * scaling_d / scaling
+                parm(3) = parm(3) * scaling_d * scaling_d / scaling
+                parm(4) = parm(4) * scaling_d
+                parm(5) = parm(5) * scaling_d * scaling_d
+                poly(0)   = REAL(1.0, dp)
+                poly(1:2) = REAL(parm(4:5), dp)
+                CALL QuadraticRoots(poly, roots)
+                DO i_root = 1, 2
+                  IF (ABS(AIMAG(roots(i_root))) < TINY(1.0d0)) THEN
+                    IF (DBLE(roots(i_root)) > MINVAL(d(1:n_data)) .AND. &
+                        DBLE(roots(i_root)) < MAXVAL(d(1:n_data))) THEN
+                      WRITE(iu_err, '(a,i0,a,e12.5)') &
+                        'Warning: Coalbedo will be NaN for band ',i_b, &
+                        ' with effective radius of',DBLE(roots(i_root))
+                    END IF
+                  END IF
+                END DO
+              CASE("Asymmetry ","Moment    ")
+                parm(1) = parm(1) / scaling
+                parm(2) = parm(2) * scaling_d / scaling
+                parm(3) = parm(3) * scaling_d * scaling_d / scaling
+                parm(4) = parm(4) * scaling_d
+                parm(5) = parm(5) * scaling_d * scaling_d
+                poly(0)   = REAL(1.0, dp)
+                poly(1:2) = REAL(parm(4:5), dp)
+                CALL QuadraticRoots(poly, roots)
+                DO i_root = 1, 2
+                  IF (ABS(AIMAG(roots(i_root))) < TINY(1.0d0)) THEN
+                    IF (DBLE(roots(i_root)) > MINVAL(d(1:n_data)) .AND. &
+                        DBLE(roots(i_root)) < MAXVAL(d(1:n_data))) THEN
+                      WRITE(iu_err, '(a,i0,a,e12.5)') &
+                        'Warning: Asymmetry will be NaN for band ',i_b, &
+                        ' with effective radius of',DBLE(roots(i_root))
+                    END IF
+                  END IF
+                END DO
             END SELECT
 !    
         END SELECT

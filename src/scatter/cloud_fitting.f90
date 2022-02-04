@@ -311,6 +311,65 @@ CONTAINS
                 ENDDO
             END SELECT
 !
+          CASE (IP_Ice_Pade_2_PHF)
+!
+            SELECT CASE(property)
+              CASE ("Extinction")
+                fit = (parm(1) + d * (parm(2) + d * parm(3)) ) / &
+                  (1.0_RealK + d * (parm(4) + d * (parm(5) + &
+                  d * parm(6))))
+                ! Check to see if the fit would give NaNs for any intermediate
+                ! values of d between the fitted values. This will happen if
+                ! the cubic equation in the denominator has roots in the fitted
+                ! range of d.
+                poly(0)   = REAL(1.0, dp)
+                poly(1:3) = REAL(parm(4:6), dp)
+                CALL CubicRoots(poly, roots)
+                DO i_root = 1, 3
+                  IF (ABS(AIMAG(roots(i_root))) < TINY(1.0d0)) THEN
+                    IF (DBLE(roots(i_root)) > MINVAL(d) .AND. &
+                        DBLE(roots(i_root)) < MAXVAL(d)) THEN
+                      ! If this fit would produce NaNs then artificially
+                      ! increase the value of the fit for the point closest
+                      ! to the root. This will then give a large residual and
+                      ! the fit should not converge to these values.
+                      fit(MINLOC(ABS(d-roots(i_root)))) = &
+                        fit(MINLOC(ABS(d-roots(i_root)))) / EPSILON(1.0_RealK)
+                    END IF
+                  END IF 
+                END DO
+              CASE ("Coalbedo  ")
+                fit = (parm(1) + d * (parm(2) + d * parm(3)) ) / &
+                  (1.0_RealK + d * (parm(4) + d * parm(5)))
+                poly(0)   = REAL(1.0, dp)
+                poly(1:2) = REAL(parm(4:5), dp)
+                CALL QuadraticRoots(poly, roots)
+                DO i_root = 1, 2
+                  IF (ABS(AIMAG(roots(i_root))) < TINY(1.0d0)) THEN
+                    IF (DBLE(roots(i_root)) > MINVAL(d) .AND. &
+                        DBLE(roots(i_root)) < MAXVAL(d)) THEN
+                      fit(MINLOC(ABS(d-roots(i_root)))) = &
+                        fit(MINLOC(ABS(d-roots(i_root)))) / EPSILON(1.0_RealK)
+                    END IF
+                  END IF 
+                END DO
+              CASE ("Asymmetry ", "Moment    ")
+                fit = (parm(1) + d * (parm(2) + d * parm(3)) ) / &
+                  (1.0_RealK + d * (parm(4) + d * parm(5)))
+                poly(0)   = REAL(1.0, dp)
+                poly(1:2) = REAL(parm(4:5), dp)
+                CALL QuadraticRoots(poly, roots)
+                DO i_root = 1, 2
+                  IF (ABS(AIMAG(roots(i_root))) < TINY(1.0d0)) THEN
+                    IF (DBLE(roots(i_root)) > MINVAL(d) .AND. &
+                        DBLE(roots(i_root)) < MAXVAL(d)) THEN
+                      fit(MINLOC(ABS(d-roots(i_root)))) = &
+                        fit(MINLOC(ABS(d-roots(i_root)))) / EPSILON(1.0_RealK)
+                    END IF
+                  END IF 
+                END DO
+            END SELECT
+!
           CASE DEFAULT
 !
             fit = 0.0_RealK
@@ -648,6 +707,52 @@ CONTAINS
                 gradient_local(:, 3) = d*d
                 gradient_local(:, 4) = d*d*d
             END SELECT
+!
+          CASE (IP_Ice_Pade_2_PHF)
+!
+            ALLOCATE(p(SIZE(d)))
+            ALLOCATE(q(SIZE(d)))
+!
+            SELECT CASE(property)
+              CASE ("Extinction")
+                p = parm(1) + d * (parm(2) + d * parm(3))
+                q = 1.0_RealK + &
+                  d * (parm(4) + d * (parm(5) + parm(6) * d))
+                fit = p / q
+                n_parm_free = 6
+                ALLOCATE(gradient_local(SIZE(d), n_parm_free))
+                gradient_local(:, 1) = 1.0_RealK / q
+                gradient_local(:, 2) = d / q
+                gradient_local(:, 3) = d**2 / q
+                gradient_local(:, 4) = - fit * d / q
+                gradient_local(:, 5) = - fit * d**2 / q
+                gradient_local(:, 6) = - fit * d**3 / q
+              CASE ("Coalbedo  ")
+                p = parm(1) + d * (parm(2) + d * parm(3))
+                q = 1.0_RealK + d * (parm(4) + d * parm(5))
+                fit = p / q
+                n_parm_free = 5
+                ALLOCATE(gradient_local(SIZE(d), n_parm_free))
+                gradient_local(:, 1) = 1.0_RealK / q
+                gradient_local(:, 2) = d / q
+                gradient_local(:, 3) = d**2 / q
+                gradient_local(:, 4) = - fit * d / q
+                gradient_local(:, 5) = - fit * d**2 / q
+              CASE ("Asymmetry ", "Moment    ")
+                p = parm(1) + d * (parm(2) + d * parm(3))
+                q = 1.0_RealK + d * (parm(4) + d * parm(5))
+                fit = p / q
+                n_parm_free = 5
+                ALLOCATE(gradient_local(SIZE(d), n_parm_free))
+                gradient_local(:, 1) = 1.0_RealK / q
+                gradient_local(:, 2) = d / q
+                gradient_local(:, 3) = d**2 / q
+                gradient_local(:, 4) = - fit * d / q
+                gradient_local(:, 5) = - fit * d**2 / q
+            END SELECT
+!
+            DEALLOCATE(p)
+            DEALLOCATE(q)
 !
           CASE DEFAULT
 !

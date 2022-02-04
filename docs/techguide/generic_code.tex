@@ -693,6 +693,23 @@ as described by \cite{Baran13}. The second depends on ice water content only as
 described by \cite{Baran14}. The third is based on the same ensemble of ice
 crystals used by \cite{Baran14}, but reintroduces a temperature dependence.
 
+Where a two moment microphysics scheme is used then both the ice water mass
+mixing ratio and the number concentration of ice crystals are available as
+prognostic variables. This provides the average mass per crystal directly to
+the radiation scheme, reducing the number of assumptions that are required.
+The remaining uncertainty is then the ice crystal habit and the shape of the
+size distribution. External calculations (using for example the Baran ensemble
+model) can provide ice crystal optical properties as a function of average
+crystal mass based on an assumed habit and size distribution. These are
+parametrised using the same Pad\'e approximants used for cloud droplets. The
+effective radius in equation~\ref{p2_xx0} is replaced by an {\it equivalent
+spherical radius} for the average ice crystal mass:
+\begin{equation}
+r_e = \left(\frac{3 I \rho_{air}}{4 \pi \rho_{ice} N}\right)^\frac{1}{3}
+\end{equation}
+\noindent where $I$ is the ice mass mixing ratio, $N$ is the ice crystal number
+concentration, and the density of ice $\rho_{ice}$ = 917 kg m$^{-3}$.
+
 The spectral file may contain data for a number of types of ice crystal,
 and the types used may be selected at runtime. For a given type,
 the form of parametrization is determined by the spectral file. Further

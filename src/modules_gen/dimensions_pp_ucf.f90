@@ -33,7 +33,7 @@ MODULE dimensions_pp_ucf
 !   Size allocated for (complex) refractive indices 
   INTEGER, Parameter ::  npd_wavelength_scat = 500
 !   Size allocated for scattering wavelengths
-  INTEGER, Parameter ::  npd_mie_block = 501
+  INTEGER, Parameter ::  npd_mie_block = 1500
 !   Size allocated for blocks of Mie scattering data
   INTEGER, Parameter ::  npd_thermal_abscissa = 3000000
 !   Size allocated for number of points for integration with

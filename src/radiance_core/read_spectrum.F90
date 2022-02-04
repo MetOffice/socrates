@@ -23,7 +23,8 @@ USE rad_pcf, ONLY: i_err_fatal, ip_rayleigh_total, ip_rayleigh_custom,         &
                    ip_ice_baran, ip_ice_fu_ir, ip_ice_fu_phf, ip_ice_fu_solar, &
                    ip_ice_iwc_only, ip_ice_t_iwc, ip_slingo_schr_ice_phf,      &
                    ip_slingo_schrecker_ice, ip_sun_shine_vn2_ir,               &
-                   ip_sun_shine_vn2_vis, ip_scale_power_law, ip_scale_ses2,    &
+                   ip_sun_shine_vn2_vis, ip_ice_pade_2_phf,                    &
+                   ip_scale_power_law, ip_scale_ses2,                          &
                    ip_scale_power_quad, ip_scale_doppler_quad, ip_scale_null,  &
                    ip_scale_wenyi, ip_scale_dbl_pow_law, ip_scale_lookup,      &
                    ip_scale_dbl_pow_quad, ip_scale_dbl_dop_quad,               &
@@ -2848,7 +2849,8 @@ IF ( (i_parametrization_ice == IP_slingo_schrecker_ice) .OR. &
      (i_parametrization_ice == IP_sun_shine_vn2_ir)     .OR. &
      (i_parametrization_ice == ip_ice_t_iwc)            .OR. &
      (i_parametrization_ice == ip_ice_iwc_only)         .OR. &
-     (i_parametrization_ice == ip_ice_baran) ) THEN
+     (i_parametrization_ice == ip_ice_baran)            .OR. &
+     (i_parametrization_ice == ip_ice_pade_2_phf) ) THEN
   ! Data are parametrized.
   n_parameter=i_dummy
 

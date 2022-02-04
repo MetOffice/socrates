@@ -14,13 +14,24 @@ SUBROUTINE out_spectrum(file_spectral, Spectrum, ierr)
 !
 !
 ! Modules used
-  USE realtype_rd
-  USE def_spectrum
-  USE rad_pcf
-  USE dimensions_spec_ucf
-  USE def_std_io_icf
-!
-!
+  USE def_spectrum, ONLY: StrSpecData, StrSpecBasic, StrSpecSolar, &
+    StrSpecRayleigh, StrSpecGas, StrSpecPlanck, StrSpecCont, StrSpecContGen, &
+    StrSpecDrop, StrSpecAerosol, StrSpecIce, StrSpecVar
+  USE rad_pcf, ONLY: i_normal, i_err_fatal, &
+    ip_scale_lookup, ip_rayleigh_total, ip_rayleigh_custom, &
+    ip_scale_fnc_null, ip_scale_null, n_scale_variable, &
+    ip_slingo_schrecker, ip_ackerman_stephens, ip_drop_pade_2, &
+    ip_slingo_schr_phf, ip_drop_pade_2_phf, ip_ps_size_phf, &
+    ip_clcmp_st_water, &
+    ip_aerosol_param_dry, ip_aerosol_param_moist, name_aerosol_component, &
+    ip_slingo_schrecker_ice, ip_ice_adt, ip_sun_shine_vn2_vis, &
+    ip_sun_shine_vn2_ir, ip_ice_fu_solar, ip_ice_fu_ir, &
+    ip_slingo_schr_ice_phf, ip_ice_fu_phf, ip_ice_adt_10, ip_ice_t_iwc, &
+    ip_ice_iwc_only, ip_ice_baran, ip_ice_pade_2_phf, &
+    ip_clcmp_st_ice
+  USE def_std_io_icf, ONLY: iu_err
+  USE missing_data_mod, ONLY: rmdi
+
   IMPLICIT NONE
 !
 !
@@ -103,7 +114,7 @@ SUBROUTINE out_spectrum(file_spectral, Spectrum, ierr)
     CALL write_block_9_int(Spectrum%Basic, Spectrum%Cont)
   IF (Spectrum%Basic%l_present(10)) THEN
 !   A separate  block is written for each type of drop.
-    DO i=1, npd_drop_type
+    DO i=1, Spectrum%Dim%nd_drop_type
       IF (Spectrum%Drop%l_drop_type(i)) &
         CALL write_block_10_int(i, Spectrum%Basic, Spectrum%Drop)
     ENDDO
@@ -117,7 +128,7 @@ SUBROUTINE out_spectrum(file_spectral, Spectrum, ierr)
   ENDIF
   IF (Spectrum%Basic%l_present(12)) THEN
 !   A separate  block is written for each type of crystal.
-    DO i=1, npd_ice_type
+    DO i=1, Spectrum%Dim%nd_ice_type
       IF (Spectrum%Ice%l_ice_type(i)) &
         CALL write_block_12_int(i, Spectrum%Basic, Spectrum%Ice)
     ENDDO
@@ -333,31 +344,45 @@ CONTAINS
 !
 !
   SUBROUTINE write_block_2_int(SpBasic, SpSolar)
-!
-!
-!
+
     TYPE  (StrSpecBasic) :: SpBasic
     TYPE  (StrSpecSolar) :: SpSolar
-!
+
 !   Local variables
     INTEGER :: i
 !     Loop variable
-!
-!
-    WRITE(iu_spc, '(a19, a16, a16)') &
-      '*BLOCK: TYPE =    2' , ': SUBTYPE =    0' , ': VERSION =    0'
-    WRITE(iu_spc, '(a  )') &
-      'Normalized solar flux in each spectral interval.'
-    WRITE(iu_spc, '(a4, 8x, a15)') 'Band', 'Normalized flux'
-!
-    DO i=1, SpBasic%n_band
-      WRITE(iu_spc, '(i5, 7x, 1pe16.9)') i, SpSolar%solar_flux_band(i)
-    ENDDO
-!
+    INTEGER :: version
+!     Block version
+
+    version = 0
+    IF (ALLOCATED(SpSolar%weight_blue)) THEN
+      IF (SpSolar%weight_blue(1) /= rmdi) version = 1
+    END IF
+    WRITE(iu_spc, '(a19, a16, a12, i4)') &
+        '*BLOCK: TYPE =    2', ': SUBTYPE =    0', ': VERSION = ', version
+
+    IF (version == 0) THEN
+      WRITE(iu_spc, '(a  )') &
+        'Normalized solar flux in each spectral interval.'
+      WRITE(iu_spc, '(a4, 8x, a15)') 'Band', 'Normalized flux'
+      
+      DO i=1, SpBasic%n_band
+        WRITE(iu_spc, '(i5, 7x, 1pe16.9)') i, SpSolar%solar_flux_band(i)
+      ENDDO
+    ELSE IF (version == 1) THEN
+      WRITE(iu_spc, '(a  )') &
+        'Normalized solar flux and blue fraction in each spectral interval.'
+      WRITE(iu_spc, '(a4, 8x, a15, 5x, a11)') &
+        'Band', 'Normalized flux', 'Weight blue'
+      
+      DO i=1, SpBasic%n_band
+        WRITE(iu_spc, '(i5, 7x, 1pe16.9, 4x, 1pe16.9)') &
+          i, SpSolar%solar_flux_band(i), SpSolar%weight_blue(i)
+      ENDDO
+    END IF
+
     WRITE(iu_spc, '(a4)') '*END'
-!
-!
-!
+
   END SUBROUTINE write_block_2_int
 !
 !
@@ -958,7 +983,8 @@ CONTAINS
          (SpIce%i_ice_parm(i_ice) == IP_ice_adt_10) .OR. &
          (SpIce%i_ice_parm(i_ice) == ip_ice_t_iwc) .OR. &
          (SpIce%i_ice_parm(i_ice) == ip_ice_iwc_only) .OR. &
-         (SpIce%i_ice_parm(i_ice) == ip_ice_baran) ) THEN
+         (SpIce%i_ice_parm(i_ice) == ip_ice_baran) .OR. &
+         (SpIce%i_ice_parm(i_ice) == ip_ice_pade_2_phf) ) THEN
 !
       WRITE(iu_spc, '(a19, a16, a16)') &
         '*BLOCK: TYPE =   12', ': SUBTYPE =    0', ': VERSION =    2'

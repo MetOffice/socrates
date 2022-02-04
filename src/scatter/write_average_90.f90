@@ -114,6 +114,15 @@ SUBROUTINE write_average_90 &
         ss_data%vol_frac_dry
     WRITE(iu_average, '(/, 3x, a39, 1x, i3, /)') &
       'Number of terms in the phase function =', n_phf_term
+  ELSE IF ( i_output_type  ==  IT_file_ave_scat_mass ) THEN
+    WRITE(iu_average, &
+      '(/, 3x, a21, 1pe12.5, 1x, a6, /, ' // &
+      ' 3x, a21, 1pe12.5, 1x, a3, /, 3x, a21, 1pe12.5, 1x, a6)') &
+        'Mass mixing ratio  = ', ss_data%mass_mixing_ratio, 'kg/kg:', &
+        'Mean particle mass = ', ss_data%dim_char, 'kg:', &
+        'Air density =        ', ss_data%air_density, 'kg/m3:'
+    WRITE(iu_average, '(/, 3x, a39, 1x, i3, /)') &
+      'Number of terms in the phase function =', n_phf_term
   ENDIF
   WRITE(iu_average, '(/, a4, 8x, a10, 10x, a10, 10x, a10)') &
     'Band', 'Absorption', 'Scattering', 'Phase fnc.'
@@ -126,8 +135,5 @@ SUBROUTINE write_average_90 &
       (phase_fnc(i, j), j=1, n_phf_term)
   ENDDO
   WRITE(iu_average, '(//)')
-!
-!
-!
-  RETURN
-  end
+
+END SUBROUTINE write_average_90

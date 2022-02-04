@@ -38,7 +38,7 @@ SUBROUTINE check_phf_term(ierr                                          &
                      ip_ice_unparametrized, ip_phase_water,             &
                      ip_ps_size_phf, ip_slingo_schr_ice_phf,            &
                      ip_slingo_schr_phf, ip_slingo_schrecker,           &
-                     ip_slingo_schrecker_ice
+                     ip_slingo_schrecker_ice, ip_ice_pade_2_phf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
   USE ereport_mod, ONLY: ereport
@@ -217,9 +217,9 @@ SUBROUTINE check_phf_term(ierr                                          &
 !         Henyey-Greenstein phase function from information
 !         already present.
           CONTINUE
-        ELSE IF ( (i_condensed_param(j) ==                              &
-                     ip_slingo_schr_ice_phf).OR.                        &
-                  (i_condensed_param(j) == ip_ice_fu_phf) ) THEN
+        ELSE IF ( (i_condensed_param(j) == ip_slingo_schr_ice_phf).OR.  &
+                  (i_condensed_param(j) == ip_ice_fu_phf).OR.           &
+                  (i_condensed_param(j) == ip_ice_pade_2_phf) ) THEN
           l_inadequate=(n_order_required >  condensed_n_phf(j))
         ELSE IF (i_condensed_param(j) == ip_ice_unparametrized) THEN
           l_inadequate=(n_order_required > n_phase_term_ice_prsc)

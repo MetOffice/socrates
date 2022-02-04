@@ -24,7 +24,7 @@ MODULE cloud_fit_parm_acf
 !- End of header
 !
 !
-  INTEGER, Parameter :: np_max_iteration_cg = 1000
+  INTEGER, Parameter :: np_max_iteration_cg = 10000
 !   Maximum number of conjugate-gradient iterations
   INTEGER, Parameter :: np_max_line_search  = 100
 !   Maximum number of line searches

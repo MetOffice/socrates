@@ -25,7 +25,7 @@ FUNCTION set_n_cloud_parameter(i_scheme, i_component, n_phase_term)
                      ip_ps_size_phf, ip_slingo_schr_ice_phf,            &
                      ip_slingo_schr_phf, ip_slingo_schrecker,           &
                      ip_slingo_schrecker_ice, ip_sun_shine_vn2_ir,      &
-                     ip_sun_shine_vn2_vis
+                     ip_sun_shine_vn2_vis, ip_ice_pade_2_phf
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
 
@@ -98,6 +98,8 @@ FUNCTION set_n_cloud_parameter(i_scheme, i_component, n_phase_term)
       set_n_cloud_parameter=4
     ELSE IF (i_scheme == ip_ice_baran) THEN
       set_n_cloud_parameter=5
+    ELSE IF (i_scheme == ip_ice_pade_2_phf) THEN
+      set_n_cloud_parameter=11+5*n_phase_term
     END IF
 
   END IF

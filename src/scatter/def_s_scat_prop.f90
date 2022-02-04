@@ -35,6 +35,12 @@ MODULE def_s_scat_prop
 !     Code indicating which data are available
 !
 !   Elements from the size distribution:
+    REAL  (RealK) :: mass_mixing_ratio
+!     Mass mixing ratio of scatterers
+    REAL  (RealK) :: air_density
+!     Air density used for unit conversions
+    REAL  (RealK) :: particle_density
+!     Particle density used for unit conversions
     REAL  (RealK) :: number_density
 !     Number density of scatterers
     REAL  (RealK) :: vol_frac

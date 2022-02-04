@@ -168,7 +168,18 @@ SUBROUTINE read_scatter_block_90(iu_scatter, i_input_type, ss_data, &
       READ(iu_scatter, '(/, 19x, 1pe12.5, a3)') ss_data%vol_frac
       READ(iu_scatter, '(19x, 1pe12.5, a3)') ss_data%dim_char
       READ(iu_scatter, '(//, 41x, i3, ///)') ss_data%n_phf_term
-!
+
+    CASE(IT_file_scat_mass)
+      READ(iu_scatter, '(////, 23x, i5, /, 23x, i5, 4x, a20)') &
+        i_algorithm, ss_data%i_scatter_type, ss_data%name_type
+      READ(iu_scatter, '(/, 30x, 1pe12.5)') ss_data%mass_mixing_ratio
+      READ(iu_scatter, '(/, 30x, 1pe12.5)') ss_data%air_density
+      READ(iu_scatter, '(30x, 1pe12.5)') ss_data%particle_density
+      ss_data%vol_frac = ss_data%mass_mixing_ratio * ss_data%air_density &
+                       / ss_data%particle_density
+      READ(iu_scatter, '(30x, 1pe12.5)') ss_data%dim_char
+      READ(iu_scatter, '(40x, i3, //)') ss_data%n_phf_term
+
     CASE DEFAULT
       WRITE(iu_err, '(/a)')  &
         '*** Error: the input file is of an invalid type.'

@@ -471,8 +471,11 @@ INTEGER, PARAMETER :: ip_ice_t_iwc                = 17
 INTEGER, PARAMETER :: ip_ice_iwc_only             = 18
 !   Fit single scattering properties directly from IWC
 INTEGER, PARAMETER :: ip_ice_baran                = 19
-!  Optical properties derived from ensemble of ice crystals
-!  similar to Baran 2014, with additional temperature dependence. 
+!   Optical properties derived from ensemble of ice crystals
+!   similar to Baran 2014, with additional temperature dependence. 
+INTEGER, PARAMETER :: ip_ice_pade_2_phf           = 20
+!   Pade approximation of the second order (third order for the
+!   extinction) including higher moments of the phase function
 
 ! ------------------------------------------------------------------
 ! phase_pcf, phase3a

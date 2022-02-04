@@ -54,13 +54,13 @@ subroutine runes(n_profile, n_layer, diag, &
   liq_mmr, ice_mmr, liq_conv_mmr, ice_conv_mmr, &
   liq_dim, ice_dim, liq_conv_dim, ice_conv_dim, &
   liq_rsd, ice_rsd, liq_conv_rsd, ice_conv_rsd, &
-  liq_nc, liq_conv_nc, &
+  liq_nc, ice_nc, liq_conv_nc, ice_conv_nc, &
   cloud_frac_1d, conv_frac_1d, &
   liq_frac_1d, ice_frac_1d, liq_conv_frac_1d, ice_conv_frac_1d, &
   liq_mmr_1d, ice_mmr_1d, liq_conv_mmr_1d, ice_conv_mmr_1d, &
   liq_dim_1d, ice_dim_1d, liq_conv_dim_1d, ice_conv_dim_1d, &
   liq_rsd_1d, ice_rsd_1d, liq_conv_rsd_1d, ice_conv_rsd_1d, &
-  liq_nc_1d, liq_conv_nc_1d, &
+  liq_nc_1d, ice_nc_1d, liq_conv_nc_1d, ice_conv_nc_1d, &
   cloud_vertical_decorr, conv_vertical_decorr, &
   cloud_horizontal_rsd, &
   layer_heat_capacity, layer_heat_capacity_1d, &
@@ -241,14 +241,14 @@ real(RealExt), intent(in), dimension (:, :), optional :: &
   liq_mmr, ice_mmr, liq_conv_mmr, ice_conv_mmr, &
   liq_dim, ice_dim, liq_conv_dim, ice_conv_dim, &
   liq_rsd, ice_rsd, liq_conv_rsd, ice_conv_rsd, &
-  liq_nc, liq_conv_nc
+  liq_nc, ice_nc, liq_conv_nc, ice_conv_nc
 real(RealExt), intent(in), dimension (:), optional :: &
   cloud_frac_1d, conv_frac_1d, &
   liq_frac_1d, ice_frac_1d, liq_conv_frac_1d, ice_conv_frac_1d, &
   liq_mmr_1d, ice_mmr_1d, liq_conv_mmr_1d, ice_conv_mmr_1d, &
   liq_dim_1d, ice_dim_1d, liq_conv_dim_1d, ice_conv_dim_1d, &
   liq_rsd_1d, ice_rsd_1d, liq_conv_rsd_1d, ice_conv_rsd_1d, &
-  liq_nc_1d, liq_conv_nc_1d
+  liq_nc_1d, ice_nc_1d, liq_conv_nc_1d, ice_conv_nc_1d
 !   Liquid and ice cloud fractions, gridbox mean mixing ratios,
 !   effective dimensions, relative standard deviation of condensate,
 !   and number concentration
@@ -573,13 +573,17 @@ call set_cld_dim(cld, control, dimen, spec, atm, &
   profile_list    = profile_list, &
   n_layer_stride  = n_layer_stride, &
   liq_nc          = liq_nc, &
+  ice_nc          = ice_nc, &
   liq_conv_nc     = liq_conv_nc, &
+  ice_conv_nc     = ice_conv_nc, &
   liq_dim         = liq_dim, &
   ice_dim         = ice_dim, &
   liq_conv_dim    = liq_conv_dim, &
   ice_conv_dim    = ice_conv_dim, &
   liq_nc_1d       = liq_nc_1d, &
+  ice_nc_1d       = ice_nc_1d, &
   liq_conv_nc_1d  = liq_conv_nc_1d, &
+  ice_conv_nc_1d  = ice_conv_nc_1d, &
   liq_dim_1d      = liq_dim_1d, &
   ice_dim_1d      = ice_dim_1d, &
   liq_conv_dim_1d = liq_conv_dim_1d, &

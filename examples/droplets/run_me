@@ -5,9 +5,8 @@ ierr=0
 rm -f *w_ses convert scatter_drop* 2>/dev/null
 
 cc -o convert convert.c
-for RE in 0.75 1.0 1.5 2.0 3.0 4.5 6.0 7.5 9.0 10.5 12.0 13.5 15.0 16.5 18.0 \
-          20.0 21.0 22.0 24.0 26.0 27.0 28.0 30.0 33.0 36.0 37.5 39.0 42.0 \
-          46.0 50.0 55.0
+for RE in 1.0 1.5 2.0 3.0 4.5 6.0 7.5 9.0 10.5 12.0 13.5 15.0 16.5 18.0 \
+          20.0 22.0 24.0 26.0 28.0 30.0 33.0 36.0 39.0 42.0 46.0 50.0 55.0
 do
   if [ ! -s Css${RE}_0.1 ] ; then
     ./scatter ${RE} &
@@ -21,27 +20,14 @@ for RE in 1.0 1.5 2.0 3.0 4.5 6.0 7.5 9.0 10.5 12.0 13.5 15.0 16.5 18.0 \
 do
    cat Css${RE}* >> scatter_drop_type5
 done
-if [ -f scatter_drop_lw_type5 ] ; then rm -f scatter_drop_lw_type5 ; fi
-for RE in 1.5 3.0 6.0 9.0 12.0 15.0 18.0 21.0 24.0 27.0 30.0 37.5 50.0
-do
-   cat Css${RE}* >> scatter_drop_lw_type5
-done
-if [ -f scatter_drop_sw_type5 ] ; then rm -f scatter_drop_sw_type5 ; fi
-for RE in 0.75 1.5 3.0 6.0 9.0 12.0 15.0 18.0 21.0 24.0 27.0 30.0 37.5 50.0
-do
-   cat Css${RE}* >> scatter_drop_sw_type5
-done
 diff -q $RAD_DATA/cloud/scatter_drop_type5 scatter_drop_type5
-diff -q $RAD_DATA/cloud/scatter_drop_lw_type5 scatter_drop_lw_type5
-diff -q $RAD_DATA/cloud/scatter_drop_sw_type5 scatter_drop_sw_type5
 
 ./scatter_average_ses
-(diff -q sp_lw_ses_ref      sp_lw_ses && echo 'Matched MetO LW output')     || \
+(diff -q sp_lw_ses_ifort    sp_lw_ses && echo 'Matched ifort LW output')    || \
 (diff -q sp_lw_ses_gfortran sp_lw_ses && echo 'Matched gfortran LW output') || \
  ierr=1
-(diff -q sp_sw_ses_ref      sp_sw_ses && echo 'Matched MetO SW output')     || \
+(diff -q sp_sw_ses_ifort    sp_sw_ses && echo 'Matched ifort SW output')    || \
 (diff -q sp_sw_ses_gfortran sp_sw_ses && echo 'Matched gfortran SW output') || \
-(diff -q sp_sw_ses_nyuki    sp_sw_ses && echo 'Matched nyuki SW output')    || \
  ierr=1
 
 if [ $ierr -gt 0 ] ; then
