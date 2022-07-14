@@ -191,8 +191,14 @@ SUBROUTINE augment_radiance(control, sp, atm, bound, radout             &
 
   CHARACTER(LEN=*), PARAMETER :: RoutineName='AUGMENT_RADIANCE'
 
-
+#if defined(CRAY_FORTRAN) && (CRAY_FORTRAN >= 13000000)
+  ! DrHook profiling this subroutine with CCE 13 and later results in
+  ! runtime errors.
+  ! The calipers for AUGMENT_RADIANCE are disabled in these cases until
+  ! the issue is resolved.
+#else
   IF (lhook) CALL dr_hook(RoutineName,zhook_in,zhook_handle)
+#endif
 
   IF (control%l_map_sub_bands) THEN
     ! Increment the fluxes with sub-bands mapping to channels
@@ -900,8 +906,14 @@ SUBROUTINE augment_radiance(control, sp, atm, bound, radout             &
 
   END IF
 
+#if defined(CRAY_FORTRAN) && (CRAY_FORTRAN >= 13000000)
+  ! DrHook profiling this subroutine with CCE 13 and later results in
+  ! runtime errors.
+  ! The calipers for AUGMENT_RADIANCE are disabled in these cases until
+  ! the issue is resolved.
+#else
   IF (lhook) CALL dr_hook(RoutineName,zhook_out,zhook_handle)
-
+#endif
 
 CONTAINS
 
