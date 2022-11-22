@@ -931,6 +931,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
         END DO
       END DO
 
+      k_min=HUGE(k_min)
       DO iex=1, n_abs_esft(i_abs_band)
 
 !       Store the ESFT weight for future use.
@@ -948,8 +949,8 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
 !       Set the optical depths of each layer.
         DO i=1, n_layer
           DO l=1, n_profile
-            tau_gas(l, i)=k_abs_layer(l, i, iex, i_abs_band) &
-              *d_mass(l, i)
+            tau_gas(l, i) = k_abs_layer(l, i, iex, i_abs_band) * d_mass(l, i)
+            k_min(l, i) = MIN(k_min(l, i), k_abs_layer(l, i, iex, i_abs_band))
           END DO
         END DO
 
@@ -983,7 +984,11 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
              +sum_k_flux(l, 2*i+1, j)
           layer_inc_flux=sum_flux(l, 2*i, j) &
              +sum_flux(l, 2*i+1, j)
-          k_eqv(l, i)=k_eqv(l, i)+layer_inc_k_flux/layer_inc_flux
+          IF (layer_inc_flux > 0.0_RealK) THEN
+            k_eqv(l, i) = k_eqv(l, i) + layer_inc_k_flux/layer_inc_flux
+          ELSE
+            k_eqv(l, i) = k_eqv(l, i) + k_min(l, i)
+          END IF
         END DO
       END DO
 
