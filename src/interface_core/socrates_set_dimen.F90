@@ -120,10 +120,11 @@ end if
 if (control%l_cloud) then
   if (present(n_cloud_layer)) then
     dimen%id_cloud_top = dimen%nd_layer + 1 - max(1,n_cloud_layer)
+    dimen%nd_layer_clr = dimen%nd_layer - max(0,n_cloud_layer)
   else
     dimen%id_cloud_top = 1
+    dimen%nd_layer_clr = dimen%nd_layer
   end if
-  dimen%nd_layer_clr = dimen%id_cloud_top - 1
 else
   dimen%id_cloud_top = dimen%nd_layer
   dimen%nd_layer_clr = dimen%nd_layer

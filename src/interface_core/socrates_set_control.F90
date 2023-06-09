@@ -202,6 +202,7 @@ if (present(l_set_defaults)) then
       call set_int_default(control%i_mcica_sampling, ip_mcica_optimal_sampling)
       call set_int_default(control%i_drop_re, ip_re_external)
       if (present(n_cloud_layer)) then
+        control%l_global_cloud_top = .true.
         if (n_cloud_layer < 1) control%i_cloud_representation = ip_cloud_off
       end if
       select case(control%i_cloud_representation)
