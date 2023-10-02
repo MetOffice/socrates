@@ -1673,7 +1673,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , dimen%id_cloud_top, dimen%nd_column                                &
           , dimen%nd_flux_profile, dimen%nd_radiance_profile                   &
           , dimen%nd_j_profile                                                 &
-          , nd_abs, nd_k_term                                                  &
+          , nd_abs, nd_k_term, dimen%nd_k_term_inner                           &
           , dimen%nd_cloud_type, dimen%nd_region, dimen%nd_overlap_coeff       &
           , dimen%nd_max_order, dimen%nd_sph_coeff                             &
           , dimen%nd_brdf_basis_fnc, dimen%nd_brdf_trunc                       &

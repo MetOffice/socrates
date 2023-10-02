@@ -86,6 +86,8 @@ TYPE StrDim
 !   Number of points with surface tiling
   INTEGER :: nd_tile = 1
 !   Number of tiles
+  INTEGER :: nd_k_term_inner = 1
+!   Number of k-terms in inner loops
 
 END TYPE StrDim
 

@@ -447,14 +447,19 @@ SUBROUTINE solve_band_ses(ierr                                          &
 
 
 ! Local variables.
-  INTEGER                                                               &
+  INTEGER ::                                                            &
       j, l, ic, ig
 !       Loop variable
-  INTEGER                                                               &
+  INTEGER ::                                                            &
       iex                                                               &
 !       Index of ESFT term
     , iex_minor(nd_species)
 !       Index of ESFT term for minor gas (dummy here)
+  INTEGER, PARAMETER ::                                                 &
+      n_k_term_inner_dummy = 1                                          &
+!       Number of monochromatic calculations in inner loop (dummy here)
+    , nd_k_term_inner_dummy = 1
+!       Maximum number of k-terms in inner loops (dummy here)
   REAL (RealK) ::                                                       &
       k_gas_abs(nd_profile, nd_layer)                                   &
 !       Gaseous absorptive extinction
@@ -690,7 +695,7 @@ SUBROUTINE solve_band_ses(ierr                                          &
 !                   Options for solver
         , i_solver                                                      &
 !                   Gaseous propreties
-        , k_gas_abs                                                     &
+        , n_k_term_inner_dummy, k_gas_abs                               &
 !                   Options for equivalent extinction
         , .FALSE., dummy_ke                                             &
 !                   Spectral region
@@ -740,7 +745,7 @@ SUBROUTINE solve_band_ses(ierr                                          &
         , nd_cloud_type, nd_region, nd_overlap_coeff                    &
         , nd_max_order, nd_sph_coeff                                    &
         , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level            &
-        , nd_direction, nd_source_coeff                                 &
+        , nd_direction, nd_source_coeff, nd_k_term_inner_dummy          &
         )
 
     END IF

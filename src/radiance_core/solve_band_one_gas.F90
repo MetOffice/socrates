@@ -96,7 +96,6 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
   USE parkind1, ONLY: jprb, jpim
   USE augment_radiance_mod, ONLY: augment_radiance
   USE augment_tiled_radiance_mod, ONLY: augment_tiled_radiance
-  USE gas_optical_properties_mod, ONLY: gas_optical_properties
   USE monochromatic_radiance_mod, ONLY: monochromatic_radiance
 
   IMPLICIT NONE
@@ -396,22 +395,23 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 
 
 ! Local variables.
-  INTEGER                                                               &
-      l
-!       Loop variable
-  INTEGER                                                               &
+  INTEGER ::                                                            &
+      i, l
+!       Loop variables
+  INTEGER ::                                                            &
       i_abs                                                             &
 !       Local indexing number of gas considered (=1 here)
-    , i_abs_pointer(nd_abs)                                             &
-!       Pointer array for monochromatic ESFTs
     , iex                                                               &
 !       Index of ESFT term
     , iex_minor(nd_abs)
 !       Index of ESFT term for minor gas (dummy here)
+  INTEGER, PARAMETER ::                                                 &
+      n_k_term_inner_dummy = 1                                          &
+!       Number of monochromatic calculations in inner loop (dummy here)
+    , nd_k_term_inner_dummy = 1
+!       Maximum number of k-terms in inner loops (dummy here)
   REAL (RealK) ::                                                       &
-      k_esft(nd_profile, nd_layer, nd_abs)                              &
-!       Current ESFT exponents for each absorber
-    , k_gas_abs(nd_profile, nd_layer)                                   &
+      k_gas_abs(nd_profile, nd_layer)                                   &
 !       Gaseous absorptive extinction
     , d_planck_flux_surface(nd_profile)                                 &
 !       Ground source function
@@ -473,12 +473,7 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 
 ! The ESFT terms for the first gas in the band alone are used.
   i_abs=index_abs(1)
-  i_abs_pointer(1)=i_abs
   DO iex=1, n_abs_esft(i_abs)
-
-!   Set the ESFT coefficient.
-    k_esft(1:n_profile, 1:n_layer, i_abs)=                              &
-      k_abs_layer(1:n_profile, 1:n_layer, iex, i_abs)
 
 !   Set the appropriate boundary terms for the total
 !   upward and downward fluxes.
@@ -529,11 +524,12 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 
     END IF
 
-    CALL gas_optical_properties(n_profile, n_layer                      &
-      , 1, i_abs_pointer, k_esft                                        &
-      , k_gas_abs                                                       &
-      , nd_profile, nd_layer, nd_abs                                    &
-      )
+!   Set the absorption for this absorber and k-term.
+    DO i=1, n_layer
+      DO l=1, n_profile
+        k_gas_abs(l, i) = k_abs_layer(l, i, iex, i_abs)
+      END DO
+    END DO
 
 
     CALL monochromatic_radiance(ierr                                    &
@@ -553,7 +549,7 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
 !                 Options for solver
       , i_solver                                                        &
 !                 Gaseous propreties
-      , k_gas_abs                                                       &
+      , n_k_term_inner_dummy, k_gas_abs                                 &
 !                 Options for equivalent extinction
       , .FALSE., dummy_ke                                               &
 !                 Spectral region
@@ -603,7 +599,7 @@ SUBROUTINE solve_band_one_gas(ierr                                      &
       , nd_cloud_type, nd_region, nd_overlap_coeff                      &
       , nd_max_order, nd_sph_coeff                                      &
       , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level              &
-      , nd_direction, nd_source_coeff                                   &
+      , nd_direction, nd_source_coeff, nd_k_term_inner_dummy            &
       )
 
 

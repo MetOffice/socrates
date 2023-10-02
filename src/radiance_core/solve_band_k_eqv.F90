@@ -471,17 +471,10 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
 
 
 ! Local variables.
-  INTEGER                                                               &
-      i                                                                 &
-!       Loop variable
-    , j                                                                 &
-!       Loop variable
-    , k                                                                 &
-!       Loop variable
-    , l
-!       Loop variable
-  INTEGER                                                               &
-      i_gas                                                             &
+  INTEGER ::                                                            &
+      i, j, k, l                                                        &
+!       Loop variables
+    , i_gas                                                             &
 !       Index of main gas
     , i_gas_band                                                        &
 !       Index of active gas
@@ -491,6 +484,11 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
 !       Index of ESFT term for minor gas (dummy here)
     , i_scatter_method
 !       Method of treating scattering
+  INTEGER, PARAMETER ::                                                 &
+      n_k_term_inner_dummy = 1                                          &
+!       Number of monochromatic calculations in inner loop (dummy here)
+    , nd_k_term_inner_dummy = 1
+!       Maximum number of k-terms in inner loops (dummy here)
   REAL (RealK) ::                                                       &
       d_planck_flux_surface(nd_profile)                                 &
 !       Difference in Planckian fluxes between the surface
@@ -1148,7 +1146,7 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
 !                   Options for solver
         , i_solver                                                      &
 !                   Gaseous propreties
-        , k_gas_abs                                                     &
+        , n_k_term_inner_dummy, k_gas_abs                               &
 !                   Options for equivalent extinction
         , .TRUE., adjust_solar_ke                                       &
 !                   Spectral region
@@ -1198,7 +1196,7 @@ SUBROUTINE solve_band_k_eqv(ierr                                        &
         , nd_cloud_type, nd_region, nd_overlap_coeff                    &
         , nd_max_order, nd_sph_coeff                                    &
         , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level            &
-        , nd_direction, nd_source_coeff                                 &
+        , nd_direction, nd_source_coeff, nd_k_term_inner_dummy          &
         )
 
     END IF

@@ -378,6 +378,11 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
 !       Loop variables
   INTEGER :: iex, iex_minor(1)
 !       Dummy integers for k-term
+  INTEGER, PARAMETER ::                                                 &
+      n_k_term_inner_dummy = 1                                          &
+!       Number of monochromatic calculations in inner loop (dummy here)
+    , nd_k_term_inner_dummy = 1
+!       Maximum number of k-terms in inner loops (dummy here)
   REAL (RealK) ::                                                       &
       flux_inc_direct(nd_profile)                                       &
 !       Incident direct flux
@@ -517,7 +522,7 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
 !                 Options for solver
     , i_solver                                                          &
 !                 Gaseous propreties
-    , k_null                                                            &
+    , n_k_term_inner_dummy, k_null                                      &
 !                 Options for equivalent extinction
     , .FALSE., dummy_ke                                                 &
 !                 Spectral region
@@ -566,7 +571,7 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
     , nd_cloud_type, nd_region, nd_overlap_coeff                        &
     , nd_max_order, nd_sph_coeff                                        &
     , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level                &
-    , nd_direction, nd_source_coeff                                     &
+    , nd_direction, nd_source_coeff, nd_k_term_inner_dummy              &
     )
 
 ! Add the increments to the cumulative fluxes.

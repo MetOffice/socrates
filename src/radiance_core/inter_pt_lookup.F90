@@ -135,7 +135,7 @@ SUBROUTINE inter_pt_lookup(nd_profile, nd_layer, nd_pre, nd_tmp         &
      , j_sb
 !       Gas loop index in arrays with self-broadened
 
-  REAL, PARAMETER :: eps = EPSILON(1.0_RealK)
+  REAL (RealK), PARAMETER :: eps = EPSILON(1.0_RealK)
 
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1

@@ -13,7 +13,8 @@
 !- ---------------------------------------------------------------------
 MODULE solve_band_random_overlap_mod
 IMPLICIT NONE
-CHARACTER(LEN=*), PARAMETER, PRIVATE :: ModuleName = 'SOLVE_BAND_RANDOM_OVERLAP_MOD'
+CHARACTER(LEN=*), PARAMETER, PRIVATE :: &
+  ModuleName = 'SOLVE_BAND_RANDOM_OVERLAP_MOD'
 CONTAINS
 SUBROUTINE solve_band_random_overlap(ierr                               &
     , control, dimen, spectrum, atm, cld, bound, radout, i_band         &
@@ -73,7 +74,7 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
     , nd_profile, nd_layer, nd_layer_clr, id_ct, nd_column              &
     , nd_flux_profile, nd_radiance_profile, nd_j_profile                &
     , nd_abs                                                            &
-    , nd_esft_term                                                      &
+    , nd_esft_term, nd_k_term_inner                                     &
     , nd_cloud_type, nd_region, nd_overlap_coeff                        &
     , nd_max_order, nd_sph_coeff                                        &
     , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level                &
@@ -86,12 +87,12 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
   USE def_control,  ONLY: StrCtrl
   USE def_dimen,    ONLY: StrDim
   USE def_spectrum, ONLY: StrSpecData
-  USE def_atm,     ONLY: StrAtm
-  USE def_cld,     ONLY: StrCld
-  USE def_bound,   ONLY: StrBound
-  USE def_out,     ONLY: StrOut
-  USE def_planck,  ONLY: StrPlanck
-  USE def_ss_prop, ONLY: str_ss_prop
+  USE def_atm,      ONLY: StrAtm
+  USE def_cld,      ONLY: StrCld
+  USE def_bound,    ONLY: StrBound
+  USE def_out,      ONLY: StrOut
+  USE def_planck,   ONLY: StrPlanck
+  USE def_ss_prop,  ONLY: str_ss_prop
   USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf, ONLY: ip_solar, ip_infra_red, ip_two_stream, ip_ir_gauss,&
                      ip_overlap_exact_major, ip_spherical_harmonic,     &
@@ -148,6 +149,8 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !       Maximum number of absorbers including continua
     , nd_esft_term                                                      &
 !       Maximum number of ESFT terms
+    , nd_k_term_inner                                                   &
+!       Maximum number of k-terms in inner loops
     , nd_column                                                         &
 !       Number of columns per point
     , nd_cloud_type                                                     &
@@ -422,20 +425,22 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 
 ! Local variables.
   INTEGER ::                                                            &
-      j, k, l                                                           &
+      j, k, l, k_outer, k_inner                                         &
 !       Loop variables
     , i_abs                                                             &
 !       Index of active absorber
-    , i_esft_pointer(nd_abs), iex                                       &
+    , i_esft_pointer(nd_abs, nd_k_term_inner), iex                      &
 !       Pointer to ESFT for gas
     , step                                                              &
 !       Stepsize over which to increment the ESFT pointer
-    , n_term
+    , n_term                                                            &
 !       Total number of monochromatic calculations
+    , n_k_term_inner
+!       Number of monochromatic calculations in inner loop
   REAL (RealK) ::                                                       &
-      k_esft(nd_profile, nd_layer, nd_abs)                              &
+      k_esft(nd_profile, nd_layer, nd_abs, nd_k_term_inner)             &
 !       Current ESFT exponents for each absorber
-    , k_gas_abs(nd_profile, nd_layer)                                   &
+    , k_gas_abs(nd_profile, nd_layer, nd_k_term_inner)                  &
 !       Gaseous absorption
     , d_planck_flux_surface(nd_profile)                                 &
 !       Difference in Planckian fluxes between the surface and
@@ -444,34 +449,34 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !       Incident direct flux
     , flux_inc_down(nd_profile)                                         &
 !       Incident downward flux
-    , product_weight                                                    &
+    , product_weight(nd_k_term_inner)                                   &
 !       Product of ESFT weights
     , dummy_ke(nd_profile, nd_layer)
 
 ! Monochromatic incrementing radiances:
   REAL (RealK) ::                                                       &
-      flux_direct_part(nd_flux_profile, 0: nd_layer)                    &
+      flux_direct_part(nd_flux_profile, 0: nd_layer, nd_k_term_inner)   &
 !       Partial direct flux
     , flux_direct_ground_part(nd_flux_profile)                          &
 !       Partial direct flux at the surface
-    , flux_total_part(nd_flux_profile, 2*nd_layer+2)                    &
+    , flux_total_part(nd_flux_profile, 2*nd_layer+2, nd_k_term_inner)   &
 !       Partial total flux
-    , actinic_flux_part(nd_flux_profile, nd_layer)                      &
+    , actinic_flux_part(nd_flux_profile, nd_layer, nd_k_term_inner)     &
 !       Partial actinic flux
-    , flux_direct_clear_part(nd_flux_profile, 0: nd_layer)              &
+    , flux_direct_clear_part(nd_flux_profile, 0: nd_layer, nd_k_term_inner) &
 !       Partial clear-sky direct flux
-    , flux_total_clear_part(nd_flux_profile, 2*nd_layer+2)              &
+    , flux_total_clear_part(nd_flux_profile, 2*nd_layer+2, nd_k_term_inner) &
 !       Partial clear-sky total flux
-    , actinic_flux_clear_part(nd_flux_profile, nd_layer)
+    , actinic_flux_clear_part(nd_flux_profile, nd_layer, nd_k_term_inner)
 !       Clear partial actinic flux
   REAL (RealK) ::                                                       &
-      i_direct_part(nd_radiance_profile, 0: nd_layer)                   &
+      i_direct_part(nd_radiance_profile, 0: nd_layer, nd_k_term_inner)  &
 !       Partial solar irradiances
     , radiance_part(nd_radiance_profile, nd_viewing_level               &
-        , nd_direction)
+        , nd_direction, nd_k_term_inner)
 !       Partial radiances
   REAL (RealK) ::                                                       &
-      photolysis_part(nd_j_profile, nd_viewing_level)
+      photolysis_part(nd_j_profile, nd_viewing_level, nd_k_term_inner)
 !       Partial rates of photolysis
   REAL (RealK) ::                                                       &
       weight_incr                                                       &
@@ -488,10 +493,10 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !       k-term for the minor gases
 
   REAL (RealK) ::                                                       &
-      contrib_funci_part(nd_flux_profile, nd_layer)
+      contrib_funci_part(nd_flux_profile, nd_layer, nd_k_term_inner)
 !       Contribution (or weighting) function
   REAL (RealK) ::                                                       &
-      contrib_funcf_part(nd_flux_profile, nd_layer)
+      contrib_funcf_part(nd_flux_profile, nd_layer, nd_k_term_inner)
 !       Contribution (or weighting) function
 
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
@@ -505,175 +510,185 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 
   ! Loop through all combinations of terms for all absorbers
   n_term = PRODUCT(n_abs_esft(index_abs(1:n_abs)))
-  DO k=1, n_term
+  DO k_outer=1, int(ceiling(dble(n_term)/nd_k_term_inner))
+    n_k_term_inner = min( nd_k_term_inner , &
+      n_term - (k_outer-1)*nd_k_term_inner )
+    DO k_inner=1, n_k_term_inner
+      k = (k_outer-1)*nd_k_term_inner + k_inner
 
-    ! Set the combination of terms for this iteration of the loop
-    DO j=1, n_abs
-      i_abs = index_abs(j)
-      ! Set the ESFT term for this absorber
-      step = n_term / PRODUCT(n_abs_esft(index_abs(1:j)))
-      i_esft_pointer(i_abs) = MOD((k-1)/step, n_abs_esft(i_abs)) + 1
-      iex = i_esft_pointer(i_abs)
-      k_esft(1:n_profile, 1:n_layer, i_abs) = &
-        k_abs_layer(1:n_profile, 1:n_layer, iex, i_abs)
-      ! The product of the ESFT weights
-      IF (j ==1) THEN
-        iex_major = iex
-        iex_minor(j) = 0
-        product_weight = w_abs_esft(iex, i_abs)
-      ELSE IF (i_gas_overlap == ip_overlap_exact_major &
-        .AND. j <= spectrum%gas%n_band_absorb(i_band)) THEN
-        ! For the exact_major overlap method the fractional contribution of
-        ! each minor gas to the major gas k-term is taken from the wavelength
-        ! mapping. The minor gas k-terms are still randomly overlapped with
-        ! each other.
-        iex_minor(j) = iex
-        product_weight = product_weight * spectrum%map%weight_k_major( &
-          iex, i_abs, iex_major, i_band)
-      ELSE
-        ! k-terms are assumed to be randomly overlapped
-        iex_minor(j) = 0
-        product_weight = product_weight * w_abs_esft(iex, i_abs)
-      END IF
-    END DO
-    ! For the exact_major overlap method some combinations of terms will have
-    ! zero weight allowing the radiative transfer calculations to be skipped.
-    IF (product_weight == 0.0_RealK) CYCLE
+      ! Set the combination of terms for this iteration of the loop
+      DO j=1, n_abs
+        i_abs = index_abs(j)
+        ! Set the ESFT term for this absorber
+        step = n_term / PRODUCT(n_abs_esft(index_abs(1:j)))
+        i_esft_pointer(i_abs, k_inner) = MOD((k-1)/step, n_abs_esft(i_abs)) + 1
+        iex = i_esft_pointer(i_abs, k_inner)
+        k_esft(1:n_profile, 1:n_layer, i_abs, k_inner) = &
+          k_abs_layer(1:n_profile, 1:n_layer, iex, i_abs)
+        ! The product of the ESFT weights
+        IF (j ==1) THEN
+          iex_major = iex
+          iex_minor(j) = 0
+          product_weight(k_inner) = w_abs_esft(iex, i_abs)
+        ELSE IF (i_gas_overlap == ip_overlap_exact_major &
+          .AND. j <= spectrum%gas%n_band_absorb(i_band)) THEN
+          ! For the exact_major overlap method the fractional contribution of
+          ! each minor gas to the major gas k-term is taken from the wavelength
+          ! mapping. The minor gas k-terms are still randomly overlapped with
+          ! each other.
+          iex_minor(j) = iex
+          product_weight(k_inner) = product_weight(k_inner) &
+            * spectrum%map%weight_k_major(iex, i_abs, iex_major, i_band)
+        ELSE
+          ! k-terms are assumed to be randomly overlapped
+          iex_minor(j) = 0
+          product_weight(k_inner) = product_weight(k_inner) &
+            * w_abs_esft(iex, i_abs)
+        END IF
+      END DO
+      ! For the exact_major overlap method some combinations of terms will have
+      ! zero weight allowing the radiative transfer calculations to be skipped.
+      IF (product_weight(k_inner) == 0.0_RealK) CYCLE
 
-    ! Set the appropriate source terms for the two-stream equations.
-    IF ( (i_angular_integration == ip_two_stream).OR.                   &
-         (i_angular_integration == ip_ir_gauss) ) THEN
+      ! Set the appropriate source terms for the two-stream equations.
+      IF ( (i_angular_integration == ip_two_stream).OR.                   &
+           (i_angular_integration == ip_ir_gauss) ) THEN
 
-      IF (isolir == ip_solar) THEN
+        IF (isolir == ip_solar) THEN
 
-!       Solar region.
-        IF (control%l_spherical_solar) THEN
+!         Solar region.
+          IF (control%l_spherical_solar) THEN
+            DO l=1, n_profile
+              d_planck_flux_surface(l) = 0.0e+00_RealK
+              flux_inc_down(l)         = 0.0e+00_RealK
+              flux_inc_direct(l)       = 0.0e+00_RealK
+            END DO
+          ELSE
+            DO l=1, n_profile
+              d_planck_flux_surface(l)=0.0e+00_RealK
+              flux_inc_down(l)=solar_irrad(l)/zen_0(l)
+              flux_inc_direct(l)=solar_irrad(l)/zen_0(l)
+            END DO
+          END IF
+
+        ELSE IF (isolir == ip_infra_red) THEN
+!         Infra-red region.
+
           DO l=1, n_profile
-            d_planck_flux_surface(l) = 0.0e+00_RealK
-            flux_inc_down(l)         = 0.0e+00_RealK
-            flux_inc_direct(l)       = 0.0e+00_RealK
+            flux_inc_direct(l)=0.0e+00_RealK
+            flux_direct_part(l, n_layer, k_inner)=0.0e+00_RealK
+            flux_inc_down(l)=-planck%flux(l, 0)
+            d_planck_flux_surface(l)                                      &
+              =planck%flux_ground(l)-planck%flux(l, n_layer)
+          END DO
+          IF (l_clear) THEN
+            DO l=1, n_profile
+              flux_direct_clear_part(l, n_layer, k_inner)=0.0e+00_RealK
+            END DO
+          END IF
+
+        END IF
+
+      ELSE IF (i_angular_integration == ip_spherical_harmonic) THEN
+
+        IF (isolir == ip_solar) THEN
+          DO l=1, n_profile
+            i_direct_part(l, 0, k_inner)=solar_irrad(l)
+            flux_inc_down(l)=0.0e+00_RealK
           END DO
         ELSE
           DO l=1, n_profile
-            d_planck_flux_surface(l)=0.0e+00_RealK
-            flux_inc_down(l)=solar_irrad(l)/zen_0(l)
-            flux_inc_direct(l)=solar_irrad(l)/zen_0(l)
-          END DO
-        END IF
-
-      ELSE IF (isolir == ip_infra_red) THEN
-!       Infra-red region.
-
-        DO l=1, n_profile
-          flux_inc_direct(l)=0.0e+00_RealK
-          flux_direct_part(l, n_layer)=0.0e+00_RealK
-          flux_inc_down(l)=-planck%flux(l, 0)
-          d_planck_flux_surface(l)                                      &
-            =planck%flux_ground(l)-planck%flux(l, n_layer)
-        END DO
-        IF (l_clear) THEN
-          DO l=1, n_profile
-            flux_direct_clear_part(l, n_layer)=0.0e+00_RealK
+            flux_inc_down(l)=-planck%flux(l, 0)
+            d_planck_flux_surface(l)                                      &
+              =planck%flux_ground(l)-planck%flux(l, n_layer)
           END DO
         END IF
 
       END IF
-
-    ELSE IF (i_angular_integration == ip_spherical_harmonic) THEN
-
-      IF (isolir == ip_solar) THEN
-        DO l=1, n_profile
-          i_direct_part(l, 0)=solar_irrad(l)
-          flux_inc_down(l)=0.0e+00_RealK
-        END DO
-      ELSE
-        DO l=1, n_profile
-          flux_inc_down(l)=-planck%flux(l, 0)
-          d_planck_flux_surface(l)                                      &
-            =planck%flux_ground(l)-planck%flux(l, n_layer)
-        END DO
-      END IF
-
-    END IF
+    END DO ! k_inner
 
     CALL gas_optical_properties(n_profile, n_layer                      &
-      , n_abs, index_abs, k_esft                                        &
+      , n_abs, n_k_term_inner, index_abs, k_esft                        &
       , k_gas_abs                                                       &
-      , nd_profile, nd_layer, nd_abs                                    &
+      , nd_profile, nd_layer, nd_abs, nd_k_term_inner                   &
       )
 
 
     IF (i_cloud == ip_cloud_mcica) THEN
 
-      CALL mcica_sample(ierr                                            &
-        , control, dimen, atm, cld, bound                               &
+      DO k_inner=1, n_k_term_inner
+        CALL mcica_sample(ierr                                            &
+          , control, dimen, atm, cld, bound                               &
 !                   Atmospheric properties
-        , n_profile, n_layer, d_mass                                    &
+          , n_profile, n_layer, d_mass                                    &
 !                   Angular integration
-        , i_angular_integration, i_2stream                              &
-        , l_rescale, n_order_gauss                                      &
-        , n_order_phase, ms_min, ms_max, i_truncation                   &
-        , ls_local_trunc                                                &
-        , accuracy_adaptive, euler_factor                               &
-        , i_sph_algorithm, i_sph_mode                                   &
+          , i_angular_integration, i_2stream                              &
+          , l_rescale, n_order_gauss                                      &
+          , n_order_phase, ms_min, ms_max, i_truncation                   &
+          , ls_local_trunc                                                &
+          , accuracy_adaptive, euler_factor                               &
+          , i_sph_algorithm, i_sph_mode                                   &
 !                   Precalculated angular arrays
-        , ia_sph_mm, cg_coeff, uplm_zero, uplm_sol                      &
+          , ia_sph_mm, cg_coeff, uplm_zero, uplm_sol                      &
 !                   Treatment of scattering
-        , i_scatter_method                                              &
+          , i_scatter_method                                              &
 !                   Options for solver
-        , i_solver                                                      &
+          , i_solver                                                      &
 !                   Gaseous propreties
-        , k_gas_abs                                                     &
-!                   Options for equivalent extinction
-        , .FALSE., dummy_ke                                             &
+          , k_gas_abs(:,:,k_inner)                                        &
+!                     Options for equivalent extinction
+          , .FALSE., dummy_ke                                             &
 !                   Spectral region
-        , isolir                                                        &
+          , isolir                                                        &
 !                   Infra-red properties
-        , planck                                                        &
+          , planck                                                        &
 !                   Conditions at TOA
-        , zen_0, flux_inc_direct, flux_inc_down                         &
-!                   Surface properties
-        , d_planck_flux_surface                                         &
-        , ls_brdf_trunc, n_brdf_basis_fnc, rho_alb                      &
-        , f_brdf, brdf_sol, brdf_hemi                                   &
+          , zen_0, flux_inc_direct, flux_inc_down                         &
+!                     Surface properties
+          , d_planck_flux_surface                                         &
+          , ls_brdf_trunc, n_brdf_basis_fnc, rho_alb                      &
+          , f_brdf, brdf_sol, brdf_hemi                                   &
 !                   Spherical geometry
-        , sph                                                           &
+          , sph                                                           &
 !                   Optical properties
-        , ss_prop                                                       &
+          , ss_prop                                                       &
 !                   Cloudy properties
-        , l_cloud, i_cloud                                              &
+          , l_cloud, i_cloud                                              &
 !                   Cloud geometry
-        , n_cloud_top                                                   &
-        , n_region, k_clr, i_region_cloud, frac_region                  &
-        , w_free, cloud_overlap                                         &
-        , n_column_slv, list_column_slv                                 &
-        , i_clm_lyr_chn, i_clm_cld_typ, area_column                     &
+          , n_cloud_top                                                   &
+          , n_region, k_clr, i_region_cloud, frac_region                  &
+          , w_free, cloud_overlap                                         &
+          , n_column_slv, list_column_slv                                 &
+          , i_clm_lyr_chn, i_clm_cld_typ, area_column                     &
 !                   Additional variables required for McICA
-        , l_cloud_cmp, n_cloud_profile, i_cloud_profile                 &
-        , i_cloud_type, nd_cloud_component, iex_major, i_band           &
-        , i_cloud_representation                                        &
+          , l_cloud_cmp, n_cloud_profile, i_cloud_profile                 &
+          , i_cloud_type, nd_cloud_component, iex_major, i_band           &
+          , i_cloud_representation                                        &
 !                   Levels for the calculation of radiances
-        , n_viewing_level, i_rad_layer, frac_rad_layer                  &
+          , n_viewing_level, i_rad_layer, frac_rad_layer                  &
 !                   Viewing geometry
-        , n_direction, direction                                        &
+          , n_direction, direction                                        &
 !                   Calculated fluxes
-        , flux_direct_part, flux_total_part                             &
-        , l_actinic, actinic_flux_part                                  &
+          , flux_direct_part(:,:,k_inner), flux_total_part(:,:,k_inner)   &
+          , l_actinic, actinic_flux_part(:,:,k_inner)                     &
 !                   Flags for clear-sky calculations
-        , i_solver_clear                                                &
+          , i_solver_clear                                                &
 !                   Clear-sky fluxes calculated
-        , flux_direct_clear_part, flux_total_clear_part                 &
-        , actinic_flux_clear_part                                       &
+          , flux_direct_clear_part(:,:,k_inner)                           &
+          , flux_total_clear_part(:,:,k_inner)                            &
+          , actinic_flux_clear_part(:,:,k_inner)                          &
 !                   Contribution function
-        , contrib_funci_part, contrib_funcf_part                        &
+          , contrib_funci_part(:,:,k_inner)                               &
+          , contrib_funcf_part(:,:,k_inner)                               &
 !                   Dimensions of arrays
-        , nd_profile, nd_layer, nd_layer_clr, id_ct, nd_column          &
-        , nd_flux_profile, nd_radiance_profile, nd_j_profile            &
-        , nd_cloud_type, nd_region, nd_overlap_coeff                    &
-        , nd_max_order, nd_sph_coeff                                    &
-        , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level            &
-        , nd_direction, nd_source_coeff                                 &
-        )
+          , nd_profile, nd_layer, nd_layer_clr, id_ct, nd_column          &
+          , nd_flux_profile, nd_radiance_profile, nd_j_profile            &
+          , nd_cloud_type, nd_region, nd_overlap_coeff                    &
+          , nd_max_order, nd_sph_coeff                                    &
+          , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level            &
+          , nd_direction, nd_source_coeff                                 &
+          )
+      END DO
 
     ELSE
 
@@ -694,7 +709,7 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !                   Options for solver
         , i_solver                                                      &
 !                   Gaseous propreties
-        , k_gas_abs                                                     &
+        , n_k_term_inner, k_gas_abs                                     &
 !                   Options for equivalent extinction
         , .FALSE., dummy_ke                                             &
 !                   Spectral region
@@ -745,78 +760,89 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
         , nd_max_order, nd_sph_coeff                                    &
         , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level            &
         , nd_direction, nd_source_coeff                                 &
+        , nd_k_term_inner                                               &
         )
 
     END IF
 
-!   Increment the fluxes within the band.
-    weight_incr = control%weight_band(i_band)*product_weight
-    weight_sub_band_incr = control%weight_band(i_band)
-    DO j=2, n_abs
-      i_abs=index_abs(j)
-      iex=i_esft_pointer(i_abs)
-      IF (iex_minor(j) > 0) THEN
-        weight_sub_band_incr = weight_sub_band_incr &
-          * spectrum%map%weight_k_major(iex_minor(j), i_abs, iex_major, i_band)
-      ELSE
-        weight_sub_band_incr = weight_sub_band_incr * w_abs_esft(iex, i_abs)
-      END IF
-    END DO
-    IF (control%l_blue_flux_surf) &
-      weight_blue_incr = spectrum%solar%weight_blue(i_band)*product_weight
+    DO k_inner=1, n_k_term_inner
+      k = (k_outer-1)*nd_k_term_inner + k_inner
 
-    CALL augment_radiance(control, spectrum, atm, bound, radout         &
-      , i_band, iex_major, iex_minor                                    &
-      , n_profile, n_layer, n_viewing_level, n_direction                &
-      , l_clear, l_initial, l_initial_band, l_initial_channel           &
-      , weight_incr, weight_blue_incr, weight_sub_band_incr             &
-!                   Actual radiances
-      , i_direct                                                        &
-!                   Increments to radiances
-      , flux_direct_part, flux_total_part, actinic_flux_part            &
-      , i_direct_part, radiance_part, photolysis_part                   &
-      , flux_direct_clear_part, flux_total_clear_part                   &
-      , actinic_flux_clear_part, k_abs_layer                            &
-      , sph, contrib_funci_part, contrib_funcf_part                     &
-!                   Dimensions
-      , nd_profile, nd_flux_profile, nd_radiance_profile, nd_j_profile  &
-      , nd_layer, nd_viewing_level, nd_direction, dimen%nd_channel      &
-      , nd_abs, nd_esft_term                                            &
-      )
-
-!   Add in the increments from surface tiles
-    IF (l_tile) THEN
-      IF ( (i_angular_integration == ip_two_stream).OR.                 &
-           (i_angular_integration == ip_ir_gauss) ) THEN
-        IF (control%l_spherical_solar) THEN
-          DO l=1, n_profile
-            flux_direct_ground_part(l)                                  &
-              = sph%allsky%flux_direct(l, n_layer+1)
-          END DO
+!     Increment the fluxes within the band.
+      weight_incr = control%weight_band(i_band)*product_weight(k_inner)
+      weight_sub_band_incr = control%weight_band(i_band)
+      DO j=2, n_abs
+        i_abs=index_abs(j)
+        iex=i_esft_pointer(i_abs, k_inner)
+        IF (iex_minor(j) > 0) THEN
+          weight_sub_band_incr = weight_sub_band_incr * &
+            spectrum%map%weight_k_major(iex_minor(j), i_abs, iex_major, i_band)
         ELSE
-          DO l=1, n_profile
-            flux_direct_ground_part(l) = flux_direct_part(l, n_layer)
-          END DO          
+          weight_sub_band_incr = weight_sub_band_incr * &
+            w_abs_esft(iex, i_abs)
         END IF
-      END IF
-      CALL augment_tiled_radiance(control, spectrum, radout             &
-        , i_band, iex_major, iex_minor                                  &
-        , n_point_tile, n_tile, list_tile                               &
-        , l_initial_channel_tile                                        &
-        , weight_incr, weight_blue_incr, weight_sub_band_incr           &
-!                   Surface characteristics
-        , rho_alb_tile                                                  &
-!                   Increments to radiances
-        , flux_direct_ground_part                                       &
-        , flux_total_part(1, 2*n_layer+2)                               &
-        , planck%flux_tile, planck%flux(:, n_layer)                     &
-!                   Dimensions
-        , nd_flux_profile, nd_point_tile, nd_tile                       &
-        , nd_brdf_basis_fnc, dimen%nd_channel, nd_abs                   &
-        )
-    END IF
+      END DO
+      IF (control%l_blue_flux_surf) &
+        weight_blue_incr = spectrum%solar%weight_blue(i_band) &
+          * product_weight(k_inner)
 
-  END DO
+      CALL augment_radiance(control, spectrum, atm, bound, radout         &
+        , i_band, iex_major, iex_minor                                    &
+        , n_profile, n_layer, n_viewing_level, n_direction                &
+        , l_clear, l_initial, l_initial_band, l_initial_channel           &
+        , weight_incr, weight_blue_incr, weight_sub_band_incr             &
+!                   Actual radiances
+        , i_direct                                                        &
+!                   Increments to radiances
+        , flux_direct_part(:,:,k_inner), flux_total_part(:,:,k_inner)     &
+        , actinic_flux_part(:,:,k_inner)                                  &
+        , i_direct_part(:,:,k_inner), radiance_part(:,:,:,k_inner)        &
+        , photolysis_part(:,:,k_inner)                                    &
+        , flux_direct_clear_part(:,:,k_inner)                             &
+        , flux_total_clear_part(:,:,k_inner)                              &
+        , actinic_flux_clear_part(:,:,k_inner), k_abs_layer               &
+        , sph, contrib_funci_part(:,:,k_inner)                            &
+        , contrib_funcf_part(:,:,k_inner)                                 &
+!                   Dimensions
+        , nd_profile, nd_flux_profile, nd_radiance_profile, nd_j_profile  &
+        , nd_layer, nd_viewing_level, nd_direction, dimen%nd_channel      &
+        , nd_abs, nd_esft_term                                            &
+        )
+
+!     Add in the increments from surface tiles
+      IF (l_tile) THEN
+        IF ( (i_angular_integration == ip_two_stream).OR.                 &
+             (i_angular_integration == ip_ir_gauss) ) THEN
+          IF (control%l_spherical_solar) THEN
+            DO l=1, n_profile
+              flux_direct_ground_part(l)                                  &
+                = sph%allsky%flux_direct(l, n_layer+1)
+            END DO
+          ELSE
+            DO l=1, n_profile
+              flux_direct_ground_part(l) = flux_direct_part(l, n_layer, k_inner)
+            END DO
+          END IF
+        END IF
+        CALL augment_tiled_radiance(control, spectrum, radout             &
+          , i_band, iex_major, iex_minor                                  &
+          , n_point_tile, n_tile, list_tile                               &
+          , l_initial_channel_tile                                        &
+          , weight_incr, weight_blue_incr, weight_sub_band_incr           &
+!                     Surface characteristics
+          , rho_alb_tile                                                  &
+!                     Increments to radiances
+          , flux_direct_ground_part                                       &
+          , flux_total_part(1, 2*n_layer+2, k_inner)                      &
+          , planck%flux_tile, planck%flux(:, n_layer)                     &
+!                     Dimensions
+          , nd_flux_profile, nd_point_tile, nd_tile                       &
+          , nd_brdf_basis_fnc, dimen%nd_channel, nd_abs                   &
+          )
+      END IF
+
+    END DO ! k_inner
+  END DO ! k_outer
 
   IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 

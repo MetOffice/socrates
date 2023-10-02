@@ -428,10 +428,10 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
 
 
 ! Local variables.
-  INTEGER &
+  INTEGER :: &
       i, ii, j, k, l, ll
 !       Loop variables
-  INTEGER &
+  INTEGER :: &
       i_abs &
 !       Index of main absorber
     , i_abs_band &
@@ -442,6 +442,11 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
 !       Index of ESFT term for minor gas (dummy here)
     , i_scatter_method
 !       Method of treating scattering
+  INTEGER, PARAMETER :: &
+      n_k_term_inner_dummy = 1 &
+!       Number of monochromatic calculations in inner loop (dummy here)
+    , nd_k_term_inner_dummy = 1
+!       Maximum number of k-terms in inner loops (dummy here)
   REAL (RealK) :: &
       d_planck_flux_surface(nd_profile) &
 !       Difference in Planckian fluxes between the surface
@@ -1194,7 +1199,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
 !                   Options for solver
         , i_solver &
 !                   Gaseous propreties
-        , k_gas_abs &
+        , n_k_term_inner_dummy, k_gas_abs &
 !                   Options for equivalent extinction
         , .TRUE., adjust_solar_ke &
 !                   Spectral region
@@ -1244,7 +1249,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
         , nd_cloud_type, nd_region, nd_overlap_coeff &
         , nd_max_order, nd_sph_coeff &
         , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level &
-        , nd_direction, nd_source_coeff &
+        , nd_direction, nd_source_coeff, nd_k_term_inner_dummy &
         )
 
     END IF

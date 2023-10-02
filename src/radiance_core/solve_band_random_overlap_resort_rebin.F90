@@ -16,7 +16,8 @@
 !- ---------------------------------------------------------------------
 MODULE solve_band_random_overlap_resort_rebin_mod
 IMPLICIT NONE
-CHARACTER(LEN=*), PARAMETER, PRIVATE :: ModuleName = 'SOLVE_BAND_RANDOM_OVERLAP_RESORT_REBIN_MOD'
+CHARACTER(LEN=*), PARAMETER, PRIVATE :: &
+  ModuleName = 'SOLVE_BAND_RANDOM_OVERLAP_RESORT_REBIN_MOD'
 CONTAINS
 SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
     , control, dimen, spectrum, atm, cld, bound, radout, i_band                &
@@ -440,6 +441,11 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
 !       rebinning
     , n_esft_red
 !       Number of reduced terms
+  INTEGER, PARAMETER ::                                                        &
+      n_k_term_inner_dummy = 1                                                 &
+!       Number of monochromatic calculations in inner loop (dummy here)
+    , nd_k_term_inner_dummy = 1
+!       Maximum number of k-terms in inner loops (dummy here)
   REAL (RealK) ::                                                              &
       k_gas_abs(nd_profile, nd_layer)                                          &
 !       Gaseous absorption
@@ -716,7 +722,7 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
 !                 Options for solver
       , i_solver                                                               &
 !                 Gaseous propreties
-      , k_gas_abs                                                              &
+      , n_k_term_inner_dummy, k_gas_abs                                        &
 !                 Options for equivalent extinction
       , .FALSE., dummy_ke                                                      &
 !                 Spectral region
@@ -765,7 +771,7 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
       , nd_cloud_type, nd_region, nd_overlap_coeff                             &
       , nd_max_order, nd_sph_coeff                                             &
       , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level                     &
-      , nd_direction, nd_source_coeff                                          &
+      , nd_direction, nd_source_coeff, nd_k_term_inner_dummy                   &
       )
 
 !   Increment the fluxes within the band.
