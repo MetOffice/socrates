@@ -4,9 +4,9 @@
 FORTCOMP        = gfortran -c -fcheck=all,no-recursion -fbacktrace -g -Wtabs -Werror
 LINK            = gfortran -fcheck=all,no-recursion -fbacktrace -g -Wtabs -Werror
 LIBLINK         = ar rvu
-INCCDF_PATH     = ${NETCDF_DIR}/include
-LIBCDF_PATH     = ${NETCDF_DIR}/lib
-LIBCDF_NAME     = netcdff
+INCCDF_PATH     = ${NETCDF_4_8_1_ROOT}/include
+LIBCDF_PATH     = ${NETCDF_4_8_1_ROOT}/lib -L${NETCDF_4_8_1_ROOT}/lib64
+LIBCDF_NAME     = netcdf -lnetcdff
 OMPARG          = -fopenmp
 
 LIBSUFFIX       = a

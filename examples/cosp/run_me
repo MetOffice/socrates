@@ -12,8 +12,12 @@ ierr=0
 
 (diff -q output.txt ifort_17_0_7.txt && \
  echo 'Matched ifort 17.0.7 output') || \
+(diff -q output.txt ifort_19_0_0.txt && \
+ echo 'Matched ifort 19.0.0 output') || \
 (diff -q output.txt gfortran_8_1_0.txt && \
- echo 'Matched gfortran 8.1.0 output') || ierr=1
+ echo 'Matched gfortran 8.1.0 output') || \
+(diff -q output.txt gfortran_13_2_1.txt && \
+ echo 'Matched gfortran 13.2.1 output') || ierr=1
 
 if [ $ierr -gt 0 ] ; then
   exit 1

@@ -1,0 +1,9 @@
+module purge
+module load texstudio
+module load scitools
+module use /project/extrasoftware/modulefiles.rhel7
+module use /data/users/lfric/software/modulefiles.rhel7
+module load gcc/6.1.0
+module load mpi/mpich/3.3/gcc/6.1.0
+module load hdf5/1.10.4/gcc/6.1.0
+module load netcdf/4.6.2/gcc/6.1.0

@@ -656,15 +656,23 @@ EOF
 # Compare final spectral files to KGO
 (diff -q sp_sw_ga8_ifort sp_sw_ga8 && \
  echo 'Matched ifort SW output') || \
+(diff -q sp_sw_ga8_ifort19 sp_sw_ga8 && \
+ echo 'Matched ifort19 SW output') || \
 (diff -q sp_sw_ga8_gfortran sp_sw_ga8 && \
  echo 'Matched gfortran SW output') || \
+(diff -q sp_sw_ga8_gfortran13 sp_sw_ga8 && \
+ echo 'Matched gfortran13 SW output') || \
 (diff -q sp_sw_ga8_nyuki sp_sw_ga8 && \
  echo 'Matched nyuki (gfortran) SW output') || ierr=1
 
 (diff -q sp_lw_ga8_ifort sp_lw_ga8 && \
  echo 'Matched ifort LW output') || \
+(diff -q sp_lw_ga8_ifort19 sp_lw_ga8 && \
+ echo 'Matched ifort19 LW output') || \
 (diff -q sp_lw_ga8_gfortran sp_lw_ga8 && \
  echo 'Matched gfortran LW output') || \
+(diff -q sp_lw_ga8_gfortran13 sp_lw_ga8 && \
+ echo 'Matched gfortran13 LW output') || \
 (diff -q sp_lw_ga8_nyuki sp_lw_ga8 && \
  echo 'Matched nyuki (gfortran) LW output') || ierr=1
 

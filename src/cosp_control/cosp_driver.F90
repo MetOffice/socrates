@@ -71,7 +71,6 @@ implicit none
        dem_s,     & ! 11micron emissivity (stratiform cloud) 
        dem_c        ! 11microm emissivity (convective cloud)
   real(wp),dimension(:,:,:),allocatable,target :: &
-       frac_out,  & ! subcolumn cloud cover (0/1)
        reff         ! subcolumn effective radius
 
 integer :: nlevels
@@ -188,7 +187,7 @@ allocate(lon(n_profile_full),lat(n_profile_full),p(n_profile_full,nlevels),ph(n_
          dtau_s(n_profile_full,nlevels),dtau_c(n_profile_full,nlevels),dem_s(n_profile_full,nlevels),       &
          dem_c(n_profile_full,nlevels),skt(n_profile_full),landmask(n_profile_full),                        &
          mr_ozone(n_profile_full,nlevels),u_wind(n_profile_full),v_wind(n_profile_full),sunlit(n_profile_full),    &
-         frac_out(n_profile_full,ncolumns,nlevels),surfelev(n_profile_full))
+         surfelev(n_profile_full))
 
 call nc_read_input_file(filein,n_profile_full,nlevels,n_hydro,lon,lat,p,ph,zlev,zlev_half,    &
                         t,sh,rh,tca,cca,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain, &
@@ -251,35 +250,6 @@ else
   allocate(clw_sub_full(n_profile_full,nlevels,ncolumns))
 end if ! l_profile_last
 
-
-
-allocate(t_surf(n_profile_full),p_surf(n_profile_full),hgt_surf(n_profile_full))
-allocate(cosp_sunlit(n_profile_full))
-
-allocate(cosp_lon(n_profile_full))
-allocate(cosp_lat(n_profile_full))
-
-allocate(cosp_calipso_low_level_cl_mask(n_profile_full)) ! 2321
-allocate(cosp_calipso_mid_level_cl_mask(n_profile_full)) ! 2322
-allocate(cosp_calipso_high_level_cl_mask(n_profile_full)) ! 2323
-
-allocate(cosp_calipso_low_level_cl(n_profile_full)) ! 2344
-allocate(cosp_calipso_mid_level_cl(n_profile_full)) ! 2345
-allocate(cosp_calipso_high_level_cl(n_profile_full)) ! 2346
-
-allocate(cosp_cloud_weights(n_profile_full)) ! 2330
-allocate(cosp_ctp_tau_histogram(n_profile_full*7*7)) ! 2337
-
-allocate(cosp_calipso_tot_backscatter(n_profile_full*ncolumns*nlevels)) ! 2341
-
-allocate(cosp_calipso_cfad_sr_40(n_profile_full*n_backscatter_bins*n_cloudsat_levels)) ! 2370
-
-allocate(cosp_calipso_cf_40_mask(n_profile_full*n_cloudsat_levels)) ! 2325
-allocate(cosp_calipso_cf_40_liq(n_profile_full*n_cloudsat_levels)) ! 2473
-allocate(cosp_calipso_cf_40_ice(n_profile_full*n_cloudsat_levels)) ! 2474
-allocate(cosp_calipso_cf_40_undet(n_profile_full*n_cloudsat_levels)) ! 2475
-
-
 nclds = nlevels
 ncldy = ncolumns
 
@@ -298,10 +268,6 @@ condensed_re_water = 0.0
 condensed_re_ice = 0.0
 cloud_extinction = 0.0
 cloud_absorptivity = 0.0
-t_surf = 0.0; p_surf = 0.0; hgt_surf = 0.0
-cosp_sunlit = 0.0
-cosp_lon = 0.0
-cosp_lat = 0.0
 
 if (l_profile_last) then
   do i=1, nlevels
@@ -345,6 +311,35 @@ else
   end do ! i
 endif ! l_profile_last
 
+deallocate(p)
+deallocate(zlev_half)
+deallocate(t)
+deallocate(sh)
+deallocate(rh)
+deallocate(tca)
+deallocate(cca)
+deallocate(mr_lsliq)
+deallocate(mr_lsice)
+deallocate(mr_ccliq)
+deallocate(mr_ccice)
+deallocate(mr_ozone)
+deallocate(fl_lsrain)
+deallocate(fl_lssnow)
+deallocate(fl_lsgrpl)
+deallocate(fl_ccrain)
+deallocate(fl_ccsnow)
+deallocate(reff)
+deallocate(dtau_s)
+deallocate(dtau_c)
+deallocate(dem_s)
+deallocate(dem_c)
+
+allocate(t_surf(n_profile_full),p_surf(n_profile_full),hgt_surf(n_profile_full))
+allocate(cosp_sunlit(n_profile_full))
+
+allocate(cosp_lon(n_profile_full))
+allocate(cosp_lat(n_profile_full))
+
 do j=1, n_profile_full
   t_surf(j) = skt(j)
   p_surf(j) = ph(j,1)
@@ -353,6 +348,8 @@ do j=1, n_profile_full
   cosp_lon(j) = lon(j)
   cosp_lat(j) = lat(j)
 end do
+
+deallocate(ph)
 
 d_mass=1.0
 frac_cloud_water=1.0
@@ -387,6 +384,26 @@ d_frac_cloud_water => frac_cloud_water
 d_frac_cloud_ice => frac_cloud_ice
 d_clw_sub_full => clw_sub_full
 
+
+allocate(cosp_calipso_low_level_cl_mask(n_profile_full)) ! 2321
+allocate(cosp_calipso_mid_level_cl_mask(n_profile_full)) ! 2322
+allocate(cosp_calipso_high_level_cl_mask(n_profile_full)) ! 2323
+
+allocate(cosp_calipso_low_level_cl(n_profile_full)) ! 2344
+allocate(cosp_calipso_mid_level_cl(n_profile_full)) ! 2345
+allocate(cosp_calipso_high_level_cl(n_profile_full)) ! 2346
+
+allocate(cosp_cloud_weights(n_profile_full)) ! 2330
+allocate(cosp_ctp_tau_histogram(n_profile_full*7*7)) ! 2337
+
+allocate(cosp_calipso_tot_backscatter(n_profile_full*ncolumns*nlevels)) ! 2341
+
+allocate(cosp_calipso_cfad_sr_40(n_profile_full*n_backscatter_bins*n_cloudsat_levels)) ! 2370
+
+allocate(cosp_calipso_cf_40_mask(n_profile_full*n_cloudsat_levels)) ! 2325
+allocate(cosp_calipso_cf_40_liq(n_profile_full*n_cloudsat_levels)) ! 2473
+allocate(cosp_calipso_cf_40_ice(n_profile_full*n_cloudsat_levels)) ! 2474
+allocate(cosp_calipso_cf_40_undet(n_profile_full*n_cloudsat_levels)) ! 2475
 
 ! 2321
 cosp_diag%cosp_calipso_low_level_cl_mask(1:n_profile_full) &
@@ -613,6 +630,8 @@ foutput='cosp_out.nc'
 call write_cosp2_output(n_profile_full, ncolumns, nlevels, &
                         zlev(1,nlevels:1:-1), &
                         cosp_lon, cosp_lat, cosp_out_ext, foutput)
+
+deallocate(zlev)
 
 deallocate(cosp_lon)
 deallocate(cosp_lat)

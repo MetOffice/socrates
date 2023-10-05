@@ -24,10 +24,13 @@ diff -q $RAD_DATA/cloud/scatter_drop_type5 scatter_drop_type5
 
 ./scatter_average_ses
 (diff -q sp_lw_ses_ifort    sp_lw_ses && echo 'Matched ifort LW output')    || \
+(diff -q sp_lw_ses_ifort19  sp_lw_ses && echo 'Matched ifort19 LW output')  || \
 (diff -q sp_lw_ses_gfortran sp_lw_ses && echo 'Matched gfortran LW output') || \
  ierr=1
 (diff -q sp_sw_ses_ifort    sp_sw_ses && echo 'Matched ifort SW output')    || \
+(diff -q sp_sw_ses_ifort19  sp_sw_ses && echo 'Matched ifort19 SW output')  || \
 (diff -q sp_sw_ses_gfortran sp_sw_ses && echo 'Matched gfortran SW output') || \
+(diff -q sp_sw_ses_gfortran13 sp_sw_ses && echo 'Matched gfortran13 SW output') || \
  ierr=1
 
 if [ $ierr -gt 0 ] ; then

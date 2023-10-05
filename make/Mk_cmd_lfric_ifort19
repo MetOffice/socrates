@@ -4,9 +4,9 @@
 FORTCOMP        = ifort -O -c
 LINK            = ifort -O
 LIBLINK         = ar rvu
-INCCDF_PATH     = /data/users/frhg/netcdf-fortran-4.4.4/build/ifort17/include
-LIBCDF_PATH     = /data/users/frhg/netcdf-fortran-4.4.4/build/ifort17/lib
-LIBCDF_NAME     = netcdff
+INCCDF_PATH     = ${NETCDF_4_8_1_ROOT}/include
+LIBCDF_PATH     = ${NETCDF_4_8_1_ROOT}/lib -L${NETCDF_4_8_1_ROOT}/lib64
+LIBCDF_NAME     = netcdf -lnetcdff
 OMPARG          = -qopenmp
 
 LIBSUFFIX       = a

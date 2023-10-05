@@ -394,32 +394,20 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
       CALL nf(nf90_get_att(ncid, NF90_GLOBAL, 'frequency', frequency))
       ALLOCATE(calyear(time_len))
       ios = nf90_inq_varid(ncid, 'calyear', varid)
-      IF (ios == NF90_NOERR) THEN
-        CALL nf(nf90_get_var(ncid, varid, calyear))
-      ELSE
-        calyear(:) = 1850
-      END IF
+      IF (ios == NF90_NOERR) ios = nf90_get_var(ncid, varid, calyear)
+      IF (ios /= NF90_NOERR) calyear(:) = 1850
       ALLOCATE(calmonth(time_len))
       ios = nf90_inq_varid(ncid, 'calmonth', varid)
-      IF (ios == NF90_NOERR) THEN
-        CALL nf(nf90_get_var(ncid, varid, calmonth))
-      ELSE
-        calmonth(:) = 1
-      END IF
+      IF (ios == NF90_NOERR) ios = nf90_get_var(ncid, varid, calmonth)
+      IF (ios /= NF90_NOERR) calmonth(:) = 1
       ALLOCATE(calday(time_len))
       ios = nf90_inq_varid(ncid, 'calday', varid)
-      IF (ios == NF90_NOERR) THEN
-        CALL nf(nf90_get_var(ncid, varid, calday))
-      ELSE
-        calday(:) = 1
-      END IF
+      IF (ios == NF90_NOERR) ios = nf90_get_var(ncid, varid, calday)
+      IF (ios /= NF90_NOERR) calday(:) = 1
       ALLOCATE(seconds(time_len))
       ios = nf90_inq_varid(ncid, 'seconds', varid)
-      if (ios == NF90_NOERR) THEN
-        CALL nf(nf90_get_var(ncid, varid, seconds))
-      ELSE
-        seconds(:) = 0 ! Defaults to 0 if it fails
-      END IF
+      IF (ios == NF90_NOERR) ios = nf90_get_var(ncid, varid, seconds)
+      IF (ios /= NF90_NOERR) seconds(:) = 0 ! Defaults to 0 if it fails
       
       ! Read the tsi
       ALLOCATE(tsi(time_len))

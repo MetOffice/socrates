@@ -41,7 +41,17 @@ cd $here
 
 # Create the bin directory and copy across files
 mkdir -p bin
-cp make/* bin
+
+cd make
+for FILE in *
+do
+  if [ $FILE -nt $here/bin/$FILE ]
+    then
+      cp $FILE $here/bin/$FILE
+  fi
+done
+cd $here
+
 for SRCDIR in $SRC_LIST
 do
   cd src/$SRCDIR
@@ -68,34 +78,45 @@ done
 # Build the source code in bin
 cd bin
 ./mkdep
-if [ -r Mk_cmd_$host ]
-  then
-    cp Mk_cmd_$host Mk_cmd
-elif [ "$1" = "gfortran" ]
+case "$1" in
+
+  "gfortran" | "ifort" | \
+  "lfric_gfortran6"  | "lfric_ifort17" | \
+  "lfric_gfortran11" | "lfric_ifort19")
+    cp set_prog_env_$1 set_prog_env
+    diff -q Mk_cmd_$1 Mk_cmd || (cp Mk_cmd_$1 Mk_cmd; make clean)
+    shift
+    ;;
+
+  *)
+    if [ -r set_prog_env_$host ]
+      then
+        cp set_prog_env_$host set_prog_env
+    fi
+    if [ -r Mk_cmd_$host ]
+      then
+        cp Mk_cmd_$host Mk_cmd
+    fi
+    if [ ! -r set_prog_env ]
+      then
+        grep "LIBCDF_PATH" Mk_cmd | \
+          sed 's/ *LIBCDF_PATH *= */LIBCDF_PATH=/' > set_prog_env
+        echo 'export LD_LIBRARY_PATH=$LIBCDF_PATH:$LD_LIBRARY_PATH' \
+          >> set_prog_env
+    fi
+    ;;
+esac
+if [ -r /usr/share/Modules/init/bash ]
   then
     . /usr/share/Modules/init/bash
-    module load scitools
-    module load gcc/8.1.0
-    diff -q Mk_cmd_gfortran Mk_cmd || \
-    cp Mk_cmd_gfortran Mk_cmd; make clean
-    shift
-elif [ "$1" = "ifort" ]
-  then
-    . /usr/share/Modules/init/bash
-    module load scitools
-    module load ifort/17.0_64
-    diff -q Mk_cmd_ifort Mk_cmd || \
-    cp Mk_cmd_ifort Mk_cmd; make clean
-    shift
 fi
+. ./set_prog_env
 make $1 && echo "All compiled OK"
 cd $here
 
 echo "Setting path to distribution in set_rad_env"
 sed "s#???#${here}#" sbin/set_rad_env_tmp > set_rad_env
-grep "LIBCDF_PATH" bin/Mk_cmd | \
-sed 's/ *LIBCDF_PATH *= */LIBCDF_PATH=/' >> set_rad_env
-echo 'export LD_LIBRARY_PATH=$LIBCDF_PATH:$LD_LIBRARY_PATH' >> set_rad_env
+cat bin/set_prog_env >> set_rad_env
 
 date
 
