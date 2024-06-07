@@ -112,9 +112,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 ! Local arguments.
 ! General pointers:
   INTEGER                                                                      &
-      i_top                                                                    &
-!       Top level of profiles
-    , i_band                                                                   &
+      i_band                                                                   &
 !       Spectral band
     , n_gas                                                                    &
 !       Number of active gases
@@ -461,6 +459,9 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
   LOGICAL :: l_grey_cont
 !   Flag to add continuum in grey_opt_prop
 
+  LOGICAL, ALLOCATABLE :: l_photol_only(:)
+!   Only use gas for photolysis, ignoring affect on flux
+
   INTEGER :: nd_esft_max
 !   Maximum number of ESFT terms needed in each band (for
 !   arrays when using random overlap with resorting and rebinning)
@@ -577,10 +578,6 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
 
   END IF
-
-! Set the top level of the profiles. This is currently reatined
-! for historical reasons.
-  i_top=1
 
 ! Set the pointer for water vapour to a legal value: this must be done
 ! for cases where water vapour is not included in the spectral file.
@@ -1274,9 +1271,11 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
     ALLOCATE(n_abs_esft(nd_abs))
     ALLOCATE(i_scatter_method_term(nd_k_term, nd_abs))
     ALLOCATE(l_cont_added(spectrum%dim%nd_cont))
+    ALLOCATE(l_photol_only(nd_abs))
 
 !   Get gaseous absorption data for this band.
     l_cont_added=.FALSE.
+    l_photol_only=.FALSE.
     IF (l_gas_band) THEN
       DO j=1, n_gas
 
@@ -1290,14 +1289,27 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           w_abs_esft(k, j) = spectrum%gas%w(k, i_band, i_gas_band)
         END DO
 
+        l_photol_only(j) &
+          = control%l_photol_only(spectrum%gas%type_absorb(i_gas_band))
+
 !       Perform the rescaling of the amount of gas for this band.
-        IF (spectrum%gas%i_scale_k(i_band, i_gas_band)                         &
+        IF (.NOT.l_photol_only(j) .AND. &
+            i_gas_overlap == ip_overlap_single .AND. &
+            spectrum%gas%type_absorb(i_gas_band) /= control%i_gas) THEN
+          ! If only considering one gas zero the absorption for other species
+          DO k=1, n_abs_esft(j)
+            DO i=1, atm%n_layer
+              DO l=1, atm%n_profile
+                k_abs_layer(l, i, k, j) = 0.0_RealK
+              END DO
+            END DO
+          END DO
+
+        ELSE IF (spectrum%gas%i_scale_k(i_band, i_gas_band)                    &
             == ip_scale_band) THEN
           CALL scale_absorb(ierr, atm%n_profile, atm%n_layer                   &
-            , atm%gas_mix_ratio(1, 1, i_gas_band), atm%p, atm%t                &
-            , i_top                                                            &
+            , atm%p, atm%t                                                     &
             , gas_frac_rescaled(1, 1, i_gas_band)                              &
-            , k_esft_layer(1, 1, 1, i_gas_band)                                &
             , spectrum%gas%i_scale_fnc(i_band, i_gas_band)                     &
             , spectrum%gas%p_ref(i_gas_band, i_band)                           &
             , spectrum%gas%t_ref(i_gas_band, i_band)                           &
@@ -1306,6 +1318,22 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
             , spectrum%gas%doppler_cor(i_gas_band)                             &
             , dimen%nd_profile, dimen%nd_layer                                 &
             , spectrum%dim%nd_scale_variable)
+          IF (l_photol_only(j)) THEN
+            DO i=1, atm%n_layer
+              DO l=1, atm%n_profile
+                gas_frac_rescaled(l, i, i_gas_band) = MAX(0.0_RealK, &
+                  gas_frac_rescaled(l, i, i_gas_band))
+              END DO
+            END DO
+          ELSE
+            DO i=1, atm%n_layer
+              DO l=1, atm%n_profile
+                gas_frac_rescaled(l, i, i_gas_band) = MAX(0.0_RealK, &
+                  gas_frac_rescaled(l, i, i_gas_band) &
+                  * atm%gas_mix_ratio(l, i, i_gas_band))
+              END DO
+            END DO
+          END IF
           DO k=1, n_abs_esft(j)
             DO i=1, atm%n_layer
               DO l=1, atm%n_profile
@@ -1319,50 +1347,83 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
         ELSE IF (spectrum%gas%i_scale_k(i_band, i_gas_band)                    &
             == ip_scale_null) THEN
 !         Copy across the unscaled array.
-          DO k=1, n_abs_esft(j)
-            DO i=1, atm%n_layer
-              DO l=1, atm%n_profile
-                k_abs_layer(l, i, k, j)                                        &
-                  = spectrum%gas%k(k, i_band, i_gas_band)                      &
-                  * atm%gas_mix_ratio(l, i, i_gas_band)
+          IF (l_photol_only(j)) THEN
+            DO k=1, n_abs_esft(j)
+              DO i=1, atm%n_layer
+                DO l=1, atm%n_profile
+                  k_abs_layer(l, i, k, j)                                      &
+                    = spectrum%gas%k(k, i_band, i_gas_band)
+                END DO
               END DO
             END DO
-          END DO
+          ELSE
+            DO k=1, n_abs_esft(j)
+              DO i=1, atm%n_layer
+                DO l=1, atm%n_profile
+                  k_abs_layer(l, i, k, j)                                      &
+                    = spectrum%gas%k(k, i_band, i_gas_band)                    &
+                    * atm%gas_mix_ratio(l, i, i_gas_band)
+                END DO
+              END DO
+            END DO
+          END IF
 
         ELSE IF (spectrum%gas%i_scale_k(i_band, i_gas_band)                    &
             == ip_scale_term) THEN
-            DO k=1, n_abs_esft(j)
-              CALL scale_absorb(ierr, atm%n_profile, atm%n_layer               &
-                , atm%gas_mix_ratio(1, 1, i_gas_band), atm%p, atm%t            &
-                , i_top                                                        &
-                , gas_frac_rescaled(1, 1, i_gas_band)                          &
-                , k_esft_layer(1, 1, k, i_gas_band)                            &
-                , spectrum%gas%i_scale_fnc(i_band, i_gas_band)                 &
-                , spectrum%gas%p_ref(i_gas_band, i_band)                       &
-                , spectrum%gas%t_ref(i_gas_band, i_band)                       &
-                , spectrum%gas%scale(1, k, i_band, i_gas_band)                 &
-                , k, i_band, spectrum%gas%l_doppler(i_gas_band)                &
-                , spectrum%gas%doppler_cor(i_gas_band)                         &
-                , dimen%nd_profile, dimen%nd_layer                             &
-                , spectrum%dim%nd_scale_variable)
-              IF (spectrum%gas%i_scale_fnc(i_band, i_gas_band)                 &
-                  == ip_scale_lookup) THEN
+          IF (spectrum%gas%i_scale_fnc(i_band, i_gas_band)                     &
+               == ip_scale_lookup) THEN
+            IF (l_photol_only(j)) THEN
+              DO k=1, n_abs_esft(j)
                 DO i=1, atm%n_layer
                   DO l=1, atm%n_profile
-                    k_abs_layer(l, i, k, j)                                    &
-                      = gas_frac_rescaled(l, i, i_gas_band)
+                    k_abs_layer(l, i, k, j) = k_esft_layer(l, i, k, i_gas_band)
+                  END DO
+                END DO
+              END DO
+            ELSE
+              DO k=1, n_abs_esft(j)
+                DO i=1, atm%n_layer
+                  DO l=1, atm%n_profile
+                    k_abs_layer(l, i, k, j) = MAX(0.0_RealK, &
+                      k_esft_layer(l, i, k, i_gas_band) &
+                      * atm%gas_mix_ratio(l, i, i_gas_band))
+                  END DO
+                END DO
+              END DO
+            END IF
+          ELSE
+            DO k=1, n_abs_esft(j)
+              CALL scale_absorb(ierr, atm%n_profile, atm%n_layer              &
+                , atm%p, atm%t                                                &
+                , gas_frac_rescaled(1, 1, i_gas_band)                         &
+                , spectrum%gas%i_scale_fnc(i_band, i_gas_band)                &
+                , spectrum%gas%p_ref(i_gas_band, i_band)                      &
+                , spectrum%gas%t_ref(i_gas_band, i_band)                      &
+                , spectrum%gas%scale(1, k, i_band, i_gas_band)                &
+                , k, i_band, spectrum%gas%l_doppler(i_gas_band)               &
+                , spectrum%gas%doppler_cor(i_gas_band)                        &
+                , dimen%nd_profile, dimen%nd_layer                            &
+                , spectrum%dim%nd_scale_variable)
+              IF (l_photol_only(j)) THEN
+                DO i=1, atm%n_layer
+                  DO l=1, atm%n_profile
+                    k_abs_layer(l, i, k, j) &
+                      = spectrum%gas%k(k, i_band, i_gas_band) &
+                      * MAX(0.0_RealK, gas_frac_rescaled(l, i, i_gas_band))
                   END DO
                 END DO
               ELSE
                 DO i=1, atm%n_layer
                   DO l=1, atm%n_profile
-                    k_abs_layer(l, i, k, j)                                    &
-                      = spectrum%gas%k(k, i_band, i_gas_band)                  &
-                      * gas_frac_rescaled(l, i, i_gas_band)
+                    k_abs_layer(l, i, k, j) &
+                      = spectrum%gas%k(k, i_band, i_gas_band) &
+                      * MAX(0.0_RealK, gas_frac_rescaled(l, i, i_gas_band) &
+                      * atm%gas_mix_ratio(l, i, i_gas_band))
                   END DO
                 END DO
               END IF
             END DO
+          END IF
         END IF
 
 !       Add k-distribution of continua that are perfectly correlated with the
@@ -1439,15 +1500,17 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
     END IF
 
     IF (i_gas_overlap == ip_overlap_single) THEN
-      ! Only the selected gas is active in the band.
+      ! Only the selected gas is active in the band. If different, the major
+      ! gas is also included but with zero absorption (set above).
       n_gas=0
       DO i_abs=1, n_abs
         i = index_abs(i_abs)
+        i_gas_band = spectrum%gas%index_absorb(i, i_band)
         IF (i <= spectrum%gas%n_band_absorb(i_band)) THEN
-          IF (spectrum%gas%index_absorb(i, i_band) == control%i_gas) THEN
-            n_gas=1
-            index_abs(1)=i
-            EXIT
+          IF (i == 1 .OR. &
+              spectrum%gas%type_absorb(i_gas_band) == control%i_gas) THEN
+            n_gas=n_gas+1
+            index_abs(n_gas)=i
           END IF
         END IF
       END DO
@@ -1578,7 +1641,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , control%l_tile, bound%n_point_tile, bound%n_tile, bound%list_tile  &
           , bound%rho_alb_tile(1, 1, 1, i_band)                                &
 !                 Optical Properties
-          , ss_prop, photol                                                    &
+          , ss_prop, photol, l_photol_only                                     &
 !                 Cloudy properties
           , control%l_cloud, control%i_cloud                                   &
 !                 Cloud geometry
@@ -1721,7 +1784,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , control%l_tile, bound%n_point_tile, bound%n_tile, bound%list_tile  &
           , bound%rho_alb_tile(1, 1, 1, i_band)                                &
 !                 Optical Properties
-          , ss_prop, photol                                                    &
+          , ss_prop, photol, l_photol_only                                     &
 !                 Cloudy properties
           , control%l_cloud, control%i_cloud                                   &
 !                 Cloud geometry
@@ -2019,6 +2082,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
     CALL deallocate_ss_prop(ss_prop)
 
 !   Deallocate absorber arrays
+    DEALLOCATE(l_photol_only)
     DEALLOCATE(l_cont_added)
     DEALLOCATE(i_scatter_method_term)
     DEALLOCATE(n_abs_esft)

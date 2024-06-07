@@ -47,7 +47,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
 !                   Tiling of the surface
     , l_tile, n_point_tile, n_tile, list_tile, rho_alb_tile &
 !                   Optical properties
-    , ss_prop, photol &
+    , ss_prop, photol, l_photol_only &
 !                   Cloudy properties
     , l_cloud, i_cloud &
 !                   Cloud geometry
@@ -327,6 +327,9 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
   TYPE(StrQy), INTENT(IN) :: photol(spectrum%photol%n_pathway)
 !   Photolysis quantum yields interpolated to model grid temperatures
 
+  LOGICAL, INTENT(IN) :: l_photol_only(nd_abs)
+!   Only use gas for photolysis, ignoring affect on flux
+
 !                   Cloudy properties
   LOGICAL, INTENT(IN) :: &
       l_cloud
@@ -601,6 +604,9 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
     DO j=2, n_abs
 
       i_abs_band=index_abs(j)
+      ! Ignore absorption for gases that only require photolysis rates
+      IF (l_photol_only(i_abs_band)) CYCLE
+
       IF (n_abs_esft(i_abs_band) == 1 .AND. control%l_spherical_solar) THEN
         ! If there is only 1 k-term for this absorber there is no need to
         ! calculate an equivalent extinction: the single absorption coefficient
@@ -929,6 +935,9 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
     DO j=2, n_abs
 
       i_abs_band=index_abs(j)
+      ! Ignore absorption for gases that only require photolysis rates
+      IF (l_photol_only(i_abs_band)) CYCLE
+
       IF (n_abs_esft(i_abs_band) == 1 .AND. control%l_grey_single) THEN
         ! If there is only 1 k-term for this absorber there is no need to
         ! calculate an equivalent extinction: the single absorption coefficient
@@ -1105,11 +1114,19 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
     END IF
 
 !   Set the absorption for this absorber and k-term.
-    DO i=1, n_layer
-      DO l=1, n_profile
-        k_gas_abs(l, i) = k_abs_layer(l, i, iex, i_abs)
+    IF (l_photol_only(i_abs)) THEN
+      DO i=1, n_layer
+        DO l=1, n_profile
+          k_gas_abs(l, i) = 0.0_RealK
+        END DO
       END DO
-    END DO
+    ELSE
+      DO i=1, n_layer
+        DO l=1, n_profile
+          k_gas_abs(l, i) = k_abs_layer(l, i, iex, i_abs)
+        END DO
+      END DO
+    END IF
 
     IF (i_cloud == ip_cloud_mcica) THEN
 

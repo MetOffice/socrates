@@ -7,7 +7,7 @@
 ! Subroutine to scale amounts of absorbers.
 !
 ! Method:
-!   The mixing ratio is multiplied by a factor determined
+!   A scaling factor for the gas mixing ratio is determined
 !   by the type of scaling selected.
 !
 !- ---------------------------------------------------------------------
@@ -16,8 +16,8 @@ IMPLICIT NONE
 CHARACTER(LEN=*), PARAMETER, PRIVATE :: ModuleName = 'SCALE_ABSORB_MOD'
 CONTAINS
 SUBROUTINE scale_absorb(ierr, n_profile, n_layer                        &
-    , gas_mix_ratio, p, t, i_top                                        &
-    , gas_frac_rescaled, k_esft_layer                                   &
+    , p, t                                                              &
+    , gas_frac_rescaled                                                 &
     , i_fnc, p_reference, t_reference, scale_parameter                  &
     , iex, i_band                                                       &
     , l_doppler, doppler_correction                                     &
@@ -30,8 +30,7 @@ SUBROUTINE scale_absorb(ierr, n_profile, n_layer                        &
   USE rad_pcf, ONLY: i_err_fatal, ip_scale_power_law,                   &
                      ip_scale_power_quad, ip_scale_doppler_quad,        &
                      ip_scale_dbl_pow_law, ip_scale_fnc_null,           &
-                     ip_scale_dbl_pow_quad, ip_scale_wenyi,             &
-                     ip_scale_lookup
+                     ip_scale_dbl_pow_quad, ip_scale_wenyi
   USE vectlib_mod, ONLY : rtor_v
   USE scale_wenyi, ONLY: plg, ttb, tto, gk250b, gk4, gk6
   USE yomhook, ONLY: lhook, dr_hook
@@ -64,19 +63,13 @@ SUBROUTINE scale_absorb(ierr, n_profile, n_layer                        &
 !       Type of scaling function
     , iex                                                               &
 !       Index of ESFT term
-    , i_band                                                            &
+    , i_band
 !       Band being considered
-    , i_top
-!       Uppermost `index' for scaling (this will be 1 for fields
-!       Given in layers, as in the unified model, or 0 for
-!       Fields given at the boundaries of layers)
   LOGICAL, INTENT(IN) ::                                                &
       l_doppler
 !       Flag for Doppler term
   REAL (RealK), INTENT(IN) ::                                           &
-      gas_mix_ratio(nd_profile, nd_layer)                               &
-!       Mass mixing ratio of gas
-    , p(nd_profile, nd_layer)                                           &
+      p(nd_profile, nd_layer)                                           &
 !       Pressure
     , t(nd_profile, nd_layer)                                           &
 !       Temperature
@@ -86,12 +79,11 @@ SUBROUTINE scale_absorb(ierr, n_profile, n_layer                        &
 !       Reference temperature
     , scale_parameter(nd_scale_variable)                                &
 !       Scaling paramters
-    , doppler_correction                                                &
+    , doppler_correction
 !       Doppler-broadening correction
-    , k_esft_layer(nd_profile, nd_layer)
   REAL (RealK), INTENT(OUT) ::                                          &
       gas_frac_rescaled(nd_profile, nd_layer)
-!       Mass fraction of gas
+!       Rescaling factor for mass fraction of gas
 
 ! Local variables.
   INTEGER ::                                                            &
@@ -102,12 +94,12 @@ SUBROUTINE scale_absorb(ierr, n_profile, n_layer                        &
 !       Offset to pressure
 
   REAL (RealK) :: cgp, gkpb, gkpc
-  REAL (RealK) :: pwk_in(n_profile,n_layer-i_top+1)  ! Workspace
-  REAL (RealK) :: pwk(n_profile,n_layer-i_top+1)  ! Workspace
-  REAL (RealK) :: twk_in(n_profile,n_layer-i_top+1)  ! Workspace
-  REAL (RealK) :: twk(n_profile,n_layer-i_top+1)  ! Workspace
-  REAL (RealK) :: sp1(n_profile,n_layer-i_top+1)  ! Workspace
-  REAL (RealK) :: sp2(n_profile,n_layer-i_top+1)  ! Workspace
+  REAL (RealK) :: pwk_in(n_profile,n_layer) ! Workspace
+  REAL (RealK) :: pwk(n_profile,n_layer)    ! Workspace
+  REAL (RealK) :: twk_in(n_profile,n_layer) ! Workspace
+  REAL (RealK) :: twk(n_profile,n_layer)    ! Workspace
+  REAL (RealK) :: sp1(n_profile,n_layer)    ! Workspace
+  REAL (RealK) :: sp2(n_profile,n_layer)    ! Workspace
   INTEGER :: n_input      ! No. of inputs for rtor_v function
   REAL (RealK) :: tmp, t_inv, p_ref_off_inv
 
@@ -130,13 +122,13 @@ SUBROUTINE scale_absorb(ierr, n_profile, n_layer                        &
   IF ((i_fnc == ip_scale_power_law)  .OR.                               &
       (i_fnc == ip_scale_power_quad) .OR.                               &
       (i_fnc == ip_scale_doppler_quad)) THEN
-    DO i=1, n_layer-i_top+1
+    DO i=1, n_layer
       DO l=1, n_profile
         sp1(l,i)=scale_parameter(1)
         sp2(l,i)=scale_parameter(2)
       END DO
     END DO
-    n_input=(n_layer-i_top+1)*n_profile
+    n_input=(n_layer)*n_profile
   END IF
 
 ! The array gas_frac_rescaled is used initially to hold only the
@@ -146,23 +138,23 @@ SUBROUTINE scale_absorb(ierr, n_profile, n_layer                        &
 
     t_inv = 1.0_RealK/t_reference
     p_ref_off_inv = 1.0_RealK/(p_reference+pressure_offset)
-    DO i=1, n_layer-i_top+1
+    DO i=1, n_layer
       DO l=1, n_profile
-        pwk_in(l,i)=(p(l,i_top+i-1)+pressure_offset)*p_ref_off_inv
-        twk_in(l,i)=t(l,i_top+i-1)*t_inv
+        pwk_in(l,i)=(p(l,i)+pressure_offset)*p_ref_off_inv
+        twk_in(l,i)=t(l,i)*t_inv
       END DO
     END DO
     CALL rtor_v(n_input,pwk_in,sp1,pwk)
     CALL rtor_v(n_input,twk_in,sp2,twk)
-    DO i=i_top, n_layer
+    DO i=1, n_layer
       DO l=1, n_profile
-        gas_frac_rescaled(l, i)=pwk(l,i-i_top+1)*twk(l,i-i_top+1)
+        gas_frac_rescaled(l, i)=pwk(l,i)*twk(l,i)
       END DO
     END DO
 
   ELSE IF (i_fnc == ip_scale_dbl_pow_law) THEN
 
-    DO i=i_top, n_layer
+    DO i=1, n_layer
       DO l=1, n_profile
         IF (p(l, i) > scale_parameter(5)) THEN
           gas_frac_rescaled(l, i)=                                      &
@@ -184,25 +176,25 @@ SUBROUTINE scale_absorb(ierr, n_profile, n_layer                        &
   ELSE IF (i_fnc == ip_scale_power_quad) THEN
 
     p_ref_off_inv = 1.0_RealK/(p_reference+pressure_offset)
-    DO i=  1, n_layer-i_top+1
+    DO i=  1, n_layer
       DO l=1, n_profile
-        pwk_in(l,i)=(p(l,i_top+i-1)+pressure_offset)*p_ref_off_inv
+        pwk_in(l,i)=(p(l,i)+pressure_offset)*p_ref_off_inv
       END DO
     END DO
     CALL rtor_v(n_input,pwk_in,sp1,pwk)
     t_inv = 1.0_RealK/t_reference
-    DO i=i_top, n_layer
+    DO i=1, n_layer
       DO l=1, n_profile
         tmp = t(l,i)*t_inv - 1.0_RealK
-        gas_frac_rescaled(l, i)=pwk(l,i-i_top+1)                        &
-          *(1.0e+00_RealK+tmp*scale_parameter(2)                        &
+        gas_frac_rescaled(l, i)=pwk(l,i) &
+          *(1.0e+00_RealK+tmp*scale_parameter(2) &
           +scale_parameter(3)*tmp*tmp)
       END DO
     END DO
 
   ELSE IF (i_fnc == ip_scale_dbl_pow_quad) THEN
 
-    DO i=i_top, n_layer
+    DO i=1, n_layer
       DO l=1, n_profile
         IF (p(l, i) > scale_parameter(7)) THEN
           gas_frac_rescaled(l, i)=                                      &
@@ -226,19 +218,19 @@ SUBROUTINE scale_absorb(ierr, n_profile, n_layer                        &
 
 !   There is no Doppler term here since it is implicitly included
 !   in the scaling.
-    DO i=  1, n_layer-i_top+1
+    DO i=  1, n_layer
       DO l=1, n_profile
-        pwk_in(l,i)=(p(l,i_top+i-1)+scale_parameter(2))                 &
+        pwk_in(l,i)=(p(l,i)+scale_parameter(2)) &
                    /(p_reference+scale_parameter(2))
       END DO
     END DO
     CALL rtor_v(n_input,pwk_in,sp1,pwk)
     t_inv = 1.0_RealK/t_reference
-    DO i=i_top, n_layer
+    DO i=1, n_layer
       DO l=1, n_profile
         tmp = t(l,i)*t_inv - 1.0_RealK
-        gas_frac_rescaled(l, i)=pwk(l,i-i_top+1)                        &
-          *(1.0e+00_RealK+tmp*scale_parameter(3)                        &
+        gas_frac_rescaled(l, i)=pwk(l,i) &
+          *(1.0e+00_RealK+tmp*scale_parameter(3) &
           +scale_parameter(4)*tmp*tmp)
       END DO
     END DO
@@ -246,7 +238,7 @@ SUBROUTINE scale_absorb(ierr, n_profile, n_layer                        &
   ELSE IF (i_fnc == ip_scale_wenyi) THEN
 
     IF (i_band  ==  4) THEN
-      DO i=i_top, n_layer
+      DO i=1, n_layer
         DO l=1, n_profile
           cgp  = MAX(-5.5_RealK, LOG(p(l, i)/100.0_RealK))
           jp   = INT((5.5+cgp)*2.)+1
@@ -264,7 +256,7 @@ SUBROUTINE scale_absorb(ierr, n_profile, n_layer                        &
         END DO
       END DO
     ELSE IF(i_band == 6)THEN
-      DO i=i_top, n_layer
+      DO i=1, n_layer
         DO l=1, n_profile
           cgp  = MAX(-5.5_RealK, LOG(p(l, i)/100.0_RealK))
           jp   = INT((5.5+cgp)*2.)+1
@@ -283,29 +275,10 @@ SUBROUTINE scale_absorb(ierr, n_profile, n_layer                        &
       END DO
     END IF
 
-  ELSE IF (i_fnc == ip_scale_lookup) THEN
-
-    DO i=n_layer, 1, -1
-      DO l=1, n_profile
-        gas_frac_rescaled(l, i)=MAX(0.0e+00_RealK,                      &
-          k_esft_layer(l,i)*gas_mix_ratio(l, i))
-      END DO
-    END DO
-
   ELSE
     cmessage = '*** Error: an illegal type of scaling has been given.'
     ierr=i_err_fatal
     CALL ereport(RoutineName, ierr, cmessage)
-  END IF
-
-! Multiply by the mixing ratio and limit negative scalings.
-  IF (i_fnc /= ip_scale_lookup) THEN
-    DO i=n_layer, 1, -1
-      DO l=1, n_profile
-        gas_frac_rescaled(l, i)=MAX(0.0e+00_RealK                       &
-          , gas_frac_rescaled(l, i)*gas_mix_ratio(l, i))
-      END DO
-    END DO
   END IF
 
   IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)

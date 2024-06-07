@@ -47,7 +47,7 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !                 Tiling of the surface
     , l_tile, n_point_tile, n_tile, list_tile, rho_alb_tile             &
 !                 Optical Properties
-    , ss_prop, photol                                                   &
+    , ss_prop, photol, l_photol_only                                    &
 !                 Cloudy Properties
     , l_cloud, i_cloud                                                  &
 !                 Cloud Geometry
@@ -325,6 +325,9 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
   TYPE(StrQy), INTENT(IN) :: photol(spectrum%photol%n_pathway)
 !   Photolysis quantum yields interpolated to model grid temperatures
 
+  LOGICAL, INTENT(IN) :: l_photol_only(nd_abs)
+!   Only use gas for photolysis, ignoring affect on flux
+
 !                 Cloudy properties
   LOGICAL, INTENT(IN) ::                                                &
       l_cloud
@@ -447,7 +450,7 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !       Pointer to ESFT for gas
   INTEGER, ALLOCATABLE :: i_term_reduced(:)
 !       Pointer to term in outer loop
-  REAL (RealK), ALLOCATABLE :: product_weight_all(:)
+  REAL (RealK), ALLOCATABLE :: product_weight(:)
 !       Product of ESFT weights
   REAL (RealK) ::                                                       &
       k_esft(nd_profile, nd_layer, nd_abs, nd_k_term_inner)             &
@@ -461,8 +464,6 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !       Incident direct flux
     , flux_inc_down(nd_profile)                                         &
 !       Incident downward flux
-    , product_weight(nd_k_term_inner)                                   &
-!       Product of ESFT weights
     , dummy_ke(nd_profile, nd_layer)
 
 ! Monochromatic incrementing radiances:
@@ -535,7 +536,7 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
   ALLOCATE(i_esft_pointer(n_abs, n_term))
   ALLOCATE(iex_major_all(n_term))
   ALLOCATE(iex_minor_all(n_abs, n_term))
-  ALLOCATE(product_weight_all(n_term))
+  ALLOCATE(product_weight(n_term))
   DO k=1, n_term
     ! Set the combination of terms for this iteration of the loop
     DO j=1, n_abs
@@ -548,7 +549,7 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
       IF (j ==1) THEN
         iex_major_all(k) = iex
         iex_minor_all(j, k) = 0
-        product_weight_all(k) = w_abs_esft(iex, i_abs)
+        product_weight(k) = w_abs_esft(iex, i_abs)
       ELSE IF (i_gas_overlap == ip_overlap_exact_major &
         .AND. j <= spectrum%gas%n_band_absorb(i_band)) THEN
         ! For the exact_major overlap method the fractional contribution of
@@ -556,18 +557,18 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
         ! mapping. The minor gas k-terms are still randomly overlapped with
         ! each other.
         iex_minor_all(j, k) = iex
-        product_weight_all(k) = product_weight_all(k) &
+        product_weight(k) = product_weight(k) &
           * spectrum%map%weight_k_major(iex, i_abs, iex_major_all(k), i_band)
       ELSE
         ! k-terms are assumed to be randomly overlapped
         iex_minor_all(j, k) = 0
-        product_weight_all(k) = product_weight_all(k) &
+        product_weight(k) = product_weight(k) &
           * w_abs_esft(iex, i_abs)
       END IF
     END DO
     ! For the exact_major overlap method some combinations of terms will have
     ! zero weight allowing the radiative transfer calculations to be skipped.
-    IF (product_weight_all(k) > 0.0_RealK) THEN
+    IF (product_weight(k) > 0.0_RealK) THEN
       n_term_reduced = n_term_reduced + 1
       i_term_reduced(n_term_reduced) = k
     END IF
@@ -632,23 +633,26 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 
 
   DO k_outer=1, INT(CEILING(REAL(n_term_reduced, RealK)/nd_k_term_inner))
-    n_k_term_inner = MIN( nd_k_term_inner , &
+    n_k_term_inner = MIN( nd_k_term_inner, &
       n_term_reduced - (k_outer-1)*nd_k_term_inner )
 
     DO k_inner=1, n_k_term_inner
       k = (k_outer-1)*nd_k_term_inner + k_inner
       ! Set the combination of terms for this iteration of the loop
       iex_major(k_inner) = iex_major_all(i_term_reduced(k))
+      iex_minor(:, k_inner) = 0
       DO j=1, n_abs
         iex_minor(j, k_inner) = iex_minor_all(j, i_term_reduced(k))
         i_abs = index_abs(j)
-        ! Set the ESFT term for this absorber
-        iex = i_esft_pointer(j, i_term_reduced(k))
-        k_esft(1:n_profile, 1:n_layer, i_abs, k_inner) = &
-          k_abs_layer(1:n_profile, 1:n_layer, iex, i_abs)
+        IF (l_photol_only(i_abs)) THEN
+          k_esft(1:n_profile, 1:n_layer, i_abs, k_inner) = 0.0_RealK
+        ELSE
+          ! Set the ESFT term for this absorber
+          iex = i_esft_pointer(j, i_term_reduced(k))
+          k_esft(1:n_profile, 1:n_layer, i_abs, k_inner) = &
+            k_abs_layer(1:n_profile, 1:n_layer, iex, i_abs)
+        END IF
       END DO
-      ! The product of the ESFT weights
-      product_weight(k_inner) = product_weight_all(i_term_reduced(k))
     END DO ! k_inner
 
     CALL gas_optical_properties(n_profile, n_layer                      &
@@ -813,7 +817,8 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
       k = (k_outer-1)*nd_k_term_inner + k_inner
 
 !     Increment the fluxes within the band.
-      weight_incr = control%weight_band(i_band)*product_weight(k_inner)
+      weight_incr = control%weight_band(i_band) &
+        * product_weight(i_term_reduced(k))
       weight_sub_band_incr = control%weight_band(i_band)
       DO j=2, n_abs
         i_abs=index_abs(j)
@@ -829,7 +834,7 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
       END DO
       IF (control%l_blue_flux_surf) &
         weight_blue_incr = spectrum%solar%weight_blue(i_band) &
-          * product_weight(k_inner)
+          * product_weight(i_term_reduced(k))
 
       CALL augment_radiance(control, spectrum, atm, bound, radout         &
         , i_band, iex_major(k_inner), iex_minor(:, k_inner)               &
@@ -891,7 +896,7 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 
     END DO ! k_inner
   END DO ! k_outer
-  DEALLOCATE(product_weight_all)
+  DEALLOCATE(product_weight)
   DEALLOCATE(iex_minor_all)
   DEALLOCATE(iex_major_all)
   DEALLOCATE(i_esft_pointer)

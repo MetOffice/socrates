@@ -261,7 +261,8 @@ SUBROUTINE augment_radiance(control, sp, atm, bound, radout             &
             nd_esft_term, nd_abs, weight_channel_incr, i_band, l_path,         &
             iex_minor, i_sub, n_layer, n_profile, k_abs_layer, photol )
           CALL finalise_photol_incr(                                           &
-            sp, atm, l_path, nd_flux_profile, nd_layer, n_profile, n_layer,    &
+            control, sp, atm, l_path,                                          &
+            nd_flux_profile, nd_layer, n_profile, n_layer,                     &
             photolysis_div_incr, photolysis_rate_incr, actinic_flux_incr)
           CALL augment_channel(                                                &
             control, sp, bound, radout, l_initial_channel, l_clear,            &
@@ -313,7 +314,8 @@ SUBROUTINE augment_radiance(control, sp, atm, bound, radout             &
         END IF
       END DO
       CALL finalise_photol_incr(                                               &
-        sp, atm, l_path, nd_flux_profile, nd_layer, n_profile, n_layer,        &
+        control, sp, atm, l_path,                                              &
+        nd_flux_profile, nd_layer, n_profile, n_layer,                         &
         photolysis_div_incr, photolysis_rate_incr, actinic_flux_incr)
 
       IF (sp%map%n_sub_band_k(iex, i_band) > 1) THEN

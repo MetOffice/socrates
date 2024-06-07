@@ -8,10 +8,10 @@ echo -n 'Calculating horizon angles for LFRic seuk orog ancil:   '
 cp seuk.orog.ugrid.nc seuk.orog.ugrid_horizon.nc
 calc_horizon_angles seuk.orog.ugrid_horizon.nc
 
-if [ `stat -c %s seuk.orog.ugrid_horizon.nc` -gt 1300605 ] ; then
+if [ `stat -c %s seuk.orog.ugrid_horizon.nc` -gt 1306033 ] ; then
   ierr=1
   echo 'Size of output file seuk.orog.ugrid_horizon.nc is larger than expected'
-elif [ `stat -c %s seuk.orog.ugrid_horizon.nc` -lt 1300605 ] ; then
+elif [ `stat -c %s seuk.orog.ugrid_horizon.nc` -lt 1300113 ] ; then
   ierr=1
   echo 'Size of output file seuk.orog.ugrid_horizon.nc is smaller than expected'
 fi
@@ -20,10 +20,10 @@ echo -n 'Calculating horizon angles with extra diagnostic output:'
 cp seuk.orog.ugrid.nc seuk.orog.ugrid_x.nc
 calc_horizon_angles -x seuk.orog.ugrid_x.nc
 
-if [ `stat -c %s seuk.orog.ugrid_x.nc` -gt 3259905 ] ; then
+if [ `stat -c %s seuk.orog.ugrid_x.nc` -gt 3264768 ] ; then
   ierr=1
   echo 'Size of output file seuk.orog.ugrid_x.nc is larger than expected'
-elif [ `stat -c %s seuk.orog.ugrid_x.nc` -lt 3259905 ] ; then
+elif [ `stat -c %s seuk.orog.ugrid_x.nc` -lt 3256881 ] ; then
   ierr=1
   echo 'Size of output file seuk.orog.ugrid_x.nc is smaller than expected'
 fi

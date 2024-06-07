@@ -16,20 +16,24 @@ CHARACTER(LEN=*), PARAMETER, PRIVATE :: ModuleName = 'FINALISE_PHOTOL_INCR_MOD'
 
 CONTAINS
 
-SUBROUTINE finalise_photol_incr(                                       &
-  sp, atm, l_path, nd_flux_profile, nd_layer, n_profile, n_layer,      &
+SUBROUTINE finalise_photol_incr( &
+  control, sp, atm, l_path, nd_flux_profile, nd_layer, n_profile, n_layer, &
   photolysis_div_incr, photolysis_rate_incr, actinic_flux_incr)
 
   USE realtype_rd, ONLY: RealK
   USE gas_list_pcf, ONLY: molar_weight
   USE rad_ccf, ONLY: h_planck, c_light, n_avogadro
-  USE def_atm, ONLY: StrAtm
+  USE def_control, ONLY: StrCtrl
   USE def_spectrum, ONLY: StrSpecData
+  USE def_atm, ONLY: StrAtm
 
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
 
   IMPLICIT NONE
+
+! Control options:
+  TYPE(StrCtrl), INTENT(IN)     :: control
 
 ! Spectral data:
   TYPE(StrSpecData), INTENT(IN) :: sp
@@ -53,7 +57,7 @@ SUBROUTINE finalise_photol_incr(                                       &
     , n_layer   
 !       Number of layers
 
-  REAL (RealK), INTENT(OUT) ::                                          &
+  REAL (RealK), INTENT(INOUT) ::                                        &
                   photolysis_div_incr(nd_flux_profile, nd_layer,        &
                                       sp%dim%nd_pathway)
 !       Flux divergence for photolysis increment for the sub-band
@@ -86,16 +90,29 @@ SUBROUTINE finalise_photol_incr(                                       &
       i_gas = sp%photol%pathway_absorber(i_path)
       IF (i_gas /= i_gas_last) THEN
         photol_work = molar_weight(sp%gas%type_absorb(i_gas)) &
-          * 1.0E-03_RealK / ( n_avogadro * h_planck * c_light )
-        WHERE (atm%gas_mix_ratio(1:n_profile, 1:n_layer, i_gas) > tol)
-          photol_rate_work &
-            = photol_work / atm%gas_mix_ratio(1:n_profile, 1:n_layer, i_gas)
-        ELSEWHERE
-          photol_rate_work = 0.0_RealK
-        END WHERE
+             * 1.0E-03_RealK / ( n_avogadro * h_planck * c_light )
+        IF (.NOT.control%l_photol_only(sp%gas%type_absorb(i_gas))) THEN
+          WHERE (atm%gas_mix_ratio(1:n_profile, 1:n_layer, i_gas) > tol)
+            photol_rate_work &
+              = photol_work / atm%gas_mix_ratio(1:n_profile, 1:n_layer, i_gas)
+          ELSEWHERE
+            photol_rate_work = 0.0_RealK
+          END WHERE
+        END IF
         i_gas_last=i_gas
       END IF
-      IF (sp%photol%l_thermalise(i_path)) THEN
+      IF (control%l_photol_only(sp%gas%type_absorb(i_gas))) THEN
+        ! Absorption of flux is neglected for this gas. Only the photolysis
+        ! rates are calculated so the gas mixing ratio is not required.
+        DO i=1, n_layer
+          DO l=1, n_profile
+            ! Photolysis reactions per molecule per second
+            photolysis_rate_incr(l, i, i_path) &
+              = photolysis_rate_incr(l, i, i_path) * actinic_flux_incr(l, i) &
+              * photol_work
+          END DO
+        END DO
+      ELSE IF (sp%photol%l_thermalise(i_path)) THEN
         ! Energy used for photolysis is considered to be thermalised
         ! immediately and will be included in the radiative heating.
         ! In this case the photolysis_div_incr remains at zero.

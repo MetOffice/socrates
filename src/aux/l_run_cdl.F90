@@ -40,9 +40,12 @@ PROGRAM l_run_cdl
                      mol_weight_air, pi
   USE socrates_set_spectrum, only: set_spectrum
   USE socrates_set_cld_mcica, only: set_cld_mcica
+  USE ereport_mod, ONLY: ereport
+  USE errormessagelength_mod, ONLY: errormessagelength
 
   IMPLICIT NONE
 
+  CHARACTER (LEN=*), PARAMETER :: RoutineName = 'L_RUN_CDL'
 
 ! Declaration of variables.
 
@@ -51,6 +54,8 @@ PROGRAM l_run_cdl
 !       Error flag
   INTEGER :: ios
 !       I/O error flag
+  CHARACTER (LEN=errormessagelength) :: cmessage
+!       Error message
   LOGICAL :: l_interactive
 !       Switch for interactive use
 
@@ -585,20 +590,14 @@ PROGRAM l_run_cdl
     ENDDO
     IF (control%i_gas_overlap == IP_overlap_single) THEN
       WRITE(iu_stdout, '(a)') 'Enter type number of gas.'
-4     read(iu_stdin, *) control%i_gas
-!     Convert from the type to the species.
-      i=0
-5     i=i+1
-      IF (Spectrum%Gas%type_absorb(i) == control%i_gas) THEN
-        control%i_gas=i
-      ELSE IF (i < Spectrum%Gas%n_absorb) THEN
-        goto 5
-      ELSE
-        WRITE(iu_err, '(/a)')                                           &
-          '+++ This gas is not in the spectrum.'
-        WRITE(iu_err, '(a)') 'Please reenter.'
-        goto 4
-      ENDIF
+      READ(iu_stdin, *) control%i_gas
+      IF (.NOT.ANY(Spectrum%Gas%type_absorb(1:Spectrum%Gas%n_absorb) &
+                   == control%i_gas)) THEN
+        cmessage = 'The selected gas is not in the spectral file: '// &
+          TRIM(gas_suffix(Spectrum%Gas%type_absorb(control%i_gas)))
+        ierr=i_err_fatal
+        CALL ereport(RoutineName, ierr, cmessage)
+      END IF
     ELSE IF (control%i_gas_overlap ==                                   &
       IP_overlap_random_resort_rebin) THEN
       control%n_esft_red = -1

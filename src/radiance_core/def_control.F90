@@ -14,6 +14,7 @@
 MODULE def_control
 
 USE filenamelength_mod, ONLY: filenamelength
+USE gas_list_pcf, ONLY: npd_gases  
 USE missing_data_mod, ONLY: rmdi, imdi
 USE realtype_rd, ONLY: RealK
 
@@ -210,6 +211,8 @@ TYPE StrCtrl
   LOGICAL :: l_ch3ono2                                            = .FALSE.
 !   Flag for absorption by methylnitrate
 
+  LOGICAL :: l_photol_only(npd_gases)                             = .FALSE.
+!   Flags to treat gases for photolysis only, ignoring affect on flux
 
 ! Properties of clouds:
   INTEGER :: i_cloud                                              = imdi
