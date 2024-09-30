@@ -27,6 +27,21 @@ database_path="$RAD_DATA/cloud"
 
 # Parametrise thin averaging as type 12
 # -------------------------------------
+
+# Uncomment for narrow-band SW parametrisation
+# rm -f fit_ice_casim_${ver}_sw_ga9_ref mon_ice_casim_${ver}_sw_ga9_ref
+# Cscatter_average \
+#   -s $RAD_DATA/spectra/ga9_ref/sp_sw_260_jm3 \
+#   -P 1 -w -S $RAD_DATA/solar/lean_12 \
+#   -f 20 fit_ice_casim_${ver}_sw_ga9_ref mon_ice_casim_${ver}_sw_ga9_ref 917 \
+#   ${database_path}/scatter_ice_casim_${ver}
+
+# Uncomment for narrow-band LW parametrisation
+# rm -f fit_ice_casim_${ver}_lw_ga9_ref mon_ice_casim_${ver}_lw_ga9_ref
+# Cscatter_average -s $RAD_DATA/spectra/ga9_ref/sp_lw_300_jm3 -P 1 -w -p 250 \
+#   -f 20 fit_ice_casim_${ver}_lw_ga9_ref mon_ice_casim_${ver}_lw_ga9_ref 917 \
+#   ${database_path}/scatter_ice_casim_${ver}
+
 rm -f fit_ice_casim_${ver}_sw_ga9 mon_ice_casim_${ver}_sw_ga9
 Cscatter_average \
   -s $RAD_DATA/spectra/ga9/sp_sw_ga9 -P 1 -w -S $RAD_DATA/solar/lean_12 \
@@ -51,6 +66,25 @@ Cscatter_average -s $RAD_DATA/spectra/ga7/sp_lw_cloud7 -P 1 -w -p 250 \
 
 # Parametrise thick averaging as type 13
 # --------------------------------------
+
+# Uncomment for narrow-band SW parametrisation
+# rm -f fit_thick_ice_casim_${ver}_sw_ga9_ref \
+#       mon_thick_ice_casim_${ver}_sw_ga9_ref
+# Cscatter_average \
+#   -s $RAD_DATA/spectra/ga9_ref/sp_sw_260_jm3 \
+#   -P 1 -t -S $RAD_DATA/solar/lean_12 \
+#   -f 20 fit_thick_ice_casim_${ver}_sw_ga9_ref \
+#         mon_thick_ice_casim_${ver}_sw_ga9_ref 917 \
+#   ${database_path}/scatter_ice_casim_${ver}
+
+# Uncomment for narrow-band LW parametrisation
+# rm -f fit_thick_ice_casim_${ver}_lw_ga9_ref \
+#       mon_thick_ice_casim_${ver}_lw_ga9_ref
+# Cscatter_average -s $RAD_DATA/spectra/ga9_ref/sp_lw_300_jm3 -P 1 -t -p 250 \
+#   -f 20 fit_thick_ice_casim_${ver}_lw_ga9_ref \
+#         mon_thick_ice_casim_${ver}_lw_ga9_ref 917 \
+#   ${database_path}/scatter_ice_casim_${ver}
+
 rm -f fit_thick_ice_casim_${ver}_sw_ga9 mon_thick_ice_casim_${ver}_sw_ga9
 Cscatter_average \
   -s $RAD_DATA/spectra/ga9/sp_sw_ga9 -P 1 -t -S $RAD_DATA/solar/lean_12 \
@@ -77,12 +111,52 @@ Cscatter_average -s $RAD_DATA/spectra/ga7/sp_lw_cloud7 -P 1 -t -p 250 \
         mon_thick_ice_casim_${ver}_lw_cloud9 917 \
   ${database_path}/scatter_ice_casim_${ver}
 
-# Plot the fits:
+# Plot the fits (will plot 3 bands at a time):
+# python ../../python/cloud_fits.py mon_ice_casim_${ver}_sw_ga9_ref 1026
+# python ../../python/cloud_fits.py mon_ice_casim_${ver}_lw_ga9_ref 1026
+
+# python ../../python/cloud_optics.py fit_ice_casim_${ver}_sw_ga9_ref
+# python ../../python/cloud_optics.py fit_ice_casim_${ver}_lw_ga9_ref
+
 # python ../../python/cloud_fits.py mon_ice_casim_${ver}_sw_ga9 1026
 # python ../../python/cloud_fits.py mon_ice_casim_${ver}_lw_ga9 1026
 
 # python ../../python/cloud_optics.py fit_ice_casim_${ver}_sw_ga9
 # python ../../python/cloud_optics.py fit_ice_casim_${ver}_lw_ga9
+
+# Add the fits to the ga9_ref spectral files:
+# -------------------------------------------
+# rm -f sp_sw_260_jm3_casim_${ver}*
+# prep_spec <<EOF > prep_spec_sw_ga9_ref_casim_log
+# $RAD_DATA/spectra/ga9_ref/sp_sw_260_jm3
+# n
+# sp_sw_260_jm3_casim_${ver}
+# 12
+# 12
+# y
+# fit_ice_casim_${ver}_sw_ga9_ref
+# 12
+# 13
+# y
+# fit_thick_ice_casim_${ver}_sw_ga9_ref
+# -1
+# EOF
+
+# rm -f sp_lw_300_jm3_casim_${ver}*
+# prep_spec <<EOF > prep_spec_lw_ga9_ref_casim_log
+# $RAD_DATA/spectra/ga9_ref/sp_lw_300_jm3
+# n
+# sp_lw_300_jm3_casim_${ver}
+# 12
+# 12
+# y
+# fit_ice_casim_${ver}_lw_ga9_ref
+# 12
+# 13
+# y
+# fit_thick_ice_casim_${ver}_lw_ga9_ref
+# -1
+# EOF
 
 # Add the fits to the ga9 spectral files:
 # ---------------------------------------
@@ -93,9 +167,11 @@ n
 sp_sw_ga9_casim_${ver}
 12
 12
+y
 fit_ice_casim_${ver}_sw_ga9
 12
 13
+y
 fit_thick_ice_casim_${ver}_sw_ga9
 -1
 EOF
@@ -107,9 +183,11 @@ n
 sp_lw_ga9_casim_${ver}
 12
 12
+y
 fit_ice_casim_${ver}_lw_ga9
 12
 13
+y
 fit_thick_ice_casim_${ver}_lw_ga9
 -1
 EOF
