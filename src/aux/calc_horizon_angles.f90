@@ -205,6 +205,9 @@ program calc_horizon_angles
     l_local = .true.
     n_edge = n_node - n_profile - 1
     n_panel = 1
+    ! Initialise n_x, n_y to max values to be reset later
+    n_x = n_edge
+    n_y = n_edge
   else
     ! Assume cubed sphere grid
     l_local = .false.
