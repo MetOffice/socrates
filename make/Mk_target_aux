@@ -147,9 +147,11 @@ vert_int: vert_int.o radlib.$(LIBSUFFIX)
 wadd: wadd.o radlib.$(LIBSUFFIX)
 	$(LINK) -o wadd wadd.o radlib.$(LIBSUFFIX)
 
-calc_horizon_angles: calc_horizon_angles.o radlib.$(LIBSUFFIX)
-	$(LINK) -L$(LIBCDF_PATH) -o calc_horizon_angles  \
-	   calc_horizon_angles.o $(CDF_OBJ) radlib.$(LIBSUFFIX) -l$(LIBCDF_NAME)
+calc_horizon_angles: calc_horizon_angles.o \
+           socrates_horizon_1d.o socrates_horizon_2d.o rad_ccf.o realtype_rd.o
+	$(LINK) -L$(LIBCDF_PATH) -o calc_horizon_angles calc_horizon_angles.o \
+           socrates_horizon_1d.o socrates_horizon_2d.o rad_ccf.o realtype_rd.o \
+           -l$(LIBCDF_NAME)
 
 phoenix2sol: phoenix2sol.o radlib.$(LIBSUFFIX)
 	$(LINK) -o phoenix2sol phoenix2sol.o radlib.$(LIBSUFFIX)
