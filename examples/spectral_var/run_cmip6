@@ -4,9 +4,15 @@
 ierr=0
 
 # Download CMIP6 solar variability data
-wget -nc https://solarisheppa.geomar.de/solarisheppa/sites/default/files/data/cmip6/solarforcing-picontrol-fx_input4MIPs_solar_CMIP_SOLARIS-HEPPA-3-2_gn_18500101-18730128.nc.gz
-wget -nc https://solarisheppa.geomar.de/solarisheppa/sites/default/files/data/cmip6/solarforcing-ref-mon_input4MIPs_solar_CMIP_SOLARIS-HEPPA-3-2_gn_18500101-22991231.nc.gz
-gunzip -f *.gz
+if [[ -r /project/spice/radiation/solarisheppa/cmip6 ]]; then
+  gunzip -c /project/spice/radiation/solarisheppa/cmip6/solarforcing-picontrol-fx_input4MIPs_solar_CMIP_SOLARIS-HEPPA-3-2_gn_18500101-18730128.nc.gz \
+                                                      > solarforcing-picontrol-fx_input4MIPs_solar_CMIP_SOLARIS-HEPPA-3-2_gn_18500101-18730128.nc
+  gunzip -c /project/spice/radiation/solarisheppa/cmip6/solarforcing-ref-mon_input4MIPs_solar_CMIP_SOLARIS-HEPPA-3-2_gn_18500101-22991231.nc.gz \
+                                                      > solarforcing-ref-mon_input4MIPs_solar_CMIP_SOLARIS-HEPPA-3-2_gn_18500101-22991231.nc
+else
+  echo 'CMIP6 data not accessible'
+  exit 0
+fi
 
 # Remove files created by previous runs
 rm -f sp_sw_ga9*

@@ -4,10 +4,14 @@
 ierr=0
 
 # Download CMIP5 solar variability data
-wget -nc --no-check-certificate http://solarisheppa.geomar.de/solarisheppa/sites/default/files/data/CMIP5/spectra_1610_2000a_21Jan09.txt.gz
-wget -nc --no-check-certificate http://solarisheppa.geomar.de/solarisheppa/sites/default/files/data/CMIP5/spectra_1882_2000m_17Dec08.txt.gz
-wget -nc --no-check-certificate http://solarisheppa.geomar.de/solarisheppa/sites/default/files/data/CMIP5/spectra_2000_2008m_6May09.txt.gz
-gunzip -f *.gz
+if [[ -r /project/spice/radiation/solarisheppa/cmip5 ]]; then
+  gunzip -c /project/spice/radiation/solarisheppa/cmip5/spectra_1610_2000a_21Jan09.txt.gz > spectra_1610_2000a_21Jan09.txt
+  gunzip -c /project/spice/radiation/solarisheppa/cmip5/spectra_1882_2000m_17Dec08.txt.gz > spectra_1882_2000m_17Dec08.txt
+  gunzip -c /project/spice/radiation/solarisheppa/cmip5/spectra_2000_2008m_6May09.txt.gz > spectra_2000_2008m_6May09.txt
+else
+  echo 'CMIP5 data not accessible'
+  exit 0
+fi
 
 # Remove files created by previous runs
 rm -f sp_sw_ga7*
