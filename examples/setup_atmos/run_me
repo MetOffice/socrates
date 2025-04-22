@@ -157,10 +157,14 @@ ierr=0
 case $ATM in
   mls) \
     diff -q lw_sph_cld_mls_ifort.hrts    lw_sph_cloudy_mls.hrts   || \
+   (diff -q lw_sph_cld_mls_ifx.hrts      lw_sph_cloudy_mls.hrts   &&
+    echo 'Matched ifx output')                                    || \
    (diff -q lw_sph_cld_mls_gfortran.hrts lw_sph_cloudy_mls.hrts   &&
     echo 'Matched gfortran output') || ierr=1 ; \
     diff -q lw_sph_cld_mls_ref.radn      lw_sph_cloudy_mls.radn   || ierr=1 ; \
     diff -q lw_sph_cs_mls_ifort.hrts     lw_sph_clearsky_mls.hrts || \
+   (diff -q lw_sph_cs_mls_ifx.hrts       lw_sph_clearsky_mls.hrts &&
+    echo 'Matched ifx output')                                    || \
    (diff -q lw_sph_cs_mls_gfortran.hrts  lw_sph_clearsky_mls.hrts &&
     echo 'Matched gfortran output') || ierr=1 ; \
     diff -q lw_sph_cs_mls_ref.radn       lw_sph_clearsky_mls.radn || ierr=1 ; \

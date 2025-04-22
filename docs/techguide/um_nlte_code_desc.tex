@@ -35,7 +35,7 @@ The UM calls the LW NLTE heating rate correction from \\
 
 \section{LW Schemes}
 
-Here,~$x$ is a dimensionless vertical scale height.
+Here,~\textit{x} is a dimensionless vertical scale height.
 
 \paragraph{Fomichev's 1998 scheme for CO$_2$}
 \begin{enumerate}
@@ -51,7 +51,7 @@ Here,~$x$ is a dimensionless vertical scale height.
    There is no significant influence from atomic O$_2$, the matrix 
    parametisation is used with the coefficients corrected.
 \item  $12.5 \leq x < 14$ \\ 
-   CO$_2$ volume mixing ratio proportional to scale height $x$. \\
+   CO$_2$ volume mixing ratio proportional to scale height \textit{x}. \\
    The recurrence formula is used, corrected such that the escape 
    function is corrected to account for radiative heat exchange with
    the atmosphere and contribution of other bands other than the 
@@ -78,17 +78,16 @@ Here,~$x$ is a dimensionless vertical scale height.
 
 \section{Full LW code outline}
 
-\subsection{Set up vertical scale height ($x$) and corresponding 
-  pressure levels}
+\subsection{Set up vertical scale height (\textit{x}) and corresponding pressure levels}
 
-   $x = \ln \frac{100000}{p_x}$ \\
+   $x = \ln \frac{100000}{p_x}$
 
    \paragraph{Outputs}
    \begin{enumerate}
-   \item $x$: Dimensionless scale height, set in code from 
+   \item \textit{x}: Dimensionless scale height, set in code from 
      $0 \leq x \leq 17.5$ with steps of $\Delta x = 0.25$ (bottom of atmosphere 
      to top)
-   \item $p_x$: Pressure corresponding to the x-levels $x$ (Pa)
+   \item $p_x$: Pressure corresponding to the x-levels \textit{x} (Pa)
    \end{enumerate}
 
    \paragraph{References}
@@ -100,7 +99,7 @@ Here,~$x$ is a dimensionless vertical scale height.
    \item $\Delta x$ intervals - Fomichev 98 section 2
    \end{itemize}
 
-\subsection{Interpolate the UM temperatures and gas mix ratios to $x$}
+\subsection{Interpolate the UM temperatures and gas mix ratios to \textit{x}}
 
    \paragraph{Inputs}
    \begin{enumerate}
@@ -115,10 +114,10 @@ Here,~$x$ is a dimensionless vertical scale height.
 
    \paragraph{Outputs}
    \begin{enumerate}
-   \item $T_x$: Temperatures corresponding to the dimensionless scale $x$, 
+   \item $T_x$: Temperatures corresponding to the dimensionless scale \textit{x}, 
      (bottom of atmosphere to top) (K)
    \item $g_{x,q}$: Mass mixing ratios for different gases q corresponding 
-     to the dimensionless scale $x$ (bottom of atmosphere to top) (ppm)
+     to the dimensionless scale \textit{x} (bottom of atmosphere to top) (ppm)
    \end{enumerate}
 
    \paragraph{Requirements}
@@ -127,10 +126,9 @@ Here,~$x$ is a dimensionless vertical scale height.
      SOCRATES.
    \end{itemize}
 
-\subsection{Convert mass mixing ratios to volume mixing ratios over 
-  scale required}
+\subsection{Convert mass mixing ratios to volume mixing ratios over scale required}
 
-   $c_{x,q} = \frac{\mu_x}{M_q}g_{x,q}$ \\
+   $c_{x,q} = \frac{\mu_x}{M_q}g_{x,q}$
 
    \paragraph{Inputs}
    \begin{enumerate}
@@ -142,7 +140,7 @@ Here,~$x$ is a dimensionless vertical scale height.
    \paragraph{Outputs}
    \begin{enumerate}
    \item $c_{x,q}$: Volume mixing ratios for different gases q corresponding 
-     to the dimensionless scale $x$ (parts per million volume, ppmv)
+     to the dimensionless scale \textit{x} (parts per million volume, ppmv)
    \end{enumerate}
 
    \paragraph{Data}
@@ -190,10 +188,9 @@ Here,~$x$ is a dimensionless vertical scale height.
    \end{itemize}
 
 
-\subsection{Calculate the exponential part of the Planck function for 
-    CO$_2$ and O$_3$}
+\subsection{Calculate the exponential part of the Planck function for CO2 and O3}
 
-   $\phi_{x,q} = \exp(-hc_sV_q/kT_x)$ \\
+   $\phi_{x,q} = \exp(-hc_sV_q/kT_x)$
 
    \paragraph{Inputs}
    \begin{enumerate}
@@ -202,7 +199,7 @@ Here,~$x$ is a dimensionless vertical scale height.
    \item $V_{CO_2}$, $V_{O_3}$: Frequencies of the main vibrational 
      transitions of the main isotopes of CO$_2$ and O$_3$ (m$^{-1}$)
    \item $k$: Boltzmann's constant (J K$^{-1}$)
-   \item $T_x$: Temperature per scale height $x$ (K)
+   \item $T_x$: Temperature per scale height \textit{x} (K)
    \end{enumerate}
 
    \paragraph{Outputs}
@@ -228,12 +225,10 @@ Here,~$x$ is a dimensionless vertical scale height.
    \end{itemize}
 
 
-\subsection{Calculate the CO$_2$ coefficients for the matrix 
-  parameterisation $2 < x < 12.5$ for the particular concentration 
-  of CO$_2$}
+\subsection{Calculate the CO2 coefficients for the matrix parameterisation 2 \textless \textit{x} \textless 12.5 for the particular concentration of CO2}
 
    \begin{itemize}
-   \item For each given scale height $x$, height level $j$ and concentration 
+   \item For each given scale height \textit{x}, height level $j$ and concentration 
      $c$, the parameters $a_{j,x}$ and $b_{j,x}$ are found by 
      interpolating over $c$ between sets of values $a_{c,j,x}$ and 
      $b_{c,j,x}$.
@@ -276,7 +271,7 @@ Here,~$x$ is a dimensionless vertical scale height.
      significant amount.
    \item Fomichev 98, section 3.1 paragraph 3 suggests 360ppm is used 
      for the concentration of CO$_2$, but this is outdated.  \\
-     \url{http://ds.data.jma.go.jp/gmd/wdcgg/pub/products/summary/sum41/10_03co2.pdf}
+     \small{\url{http://ds.data.jma.go.jp/gmd/wdcgg/pub/products/summary/sum41/10_03co2.pdf}}\\
      for the CO$_2$ concentration below $x=12.5$. 2015 had 400.0ppmv of 
      CO$_2$, with +2.1ppmv each year, i.e. 406.3ppmv in 2018. (Note that
      this paper refers to mole fraction, which is equivalent to volume
@@ -367,37 +362,37 @@ Here,~$x$ is a dimensionless vertical scale height.
    \end{itemize}
 
 
-\subsection{Calculate the CO$_2$ column amount for $12.5 < x < 16.5$}
+\subsection{Calculate the CO2 column amount for 12.5 \textless \textit{x} \textless 16.5}
 
-   The integral over the depth of the atmosphere defines the \emph{atmospheric column} of CO$_2$ (or another gas species~$X$) as
+   The integral over the depth of the atmosphere defines the \emph{atmospheric column} of CO$_2$ (or another gas species~\textit{x}) as
    %
-   \begin{equation}
-   u_{x, \text{CO}_2}\ =\ \int n_{x, \text{CO}_2} dx, \nonumber
-   \end{equation}
+   \[
+   u_{x, \text{CO}_2}\ =\ \int n_{x, \text{CO}_2} dx,
+   \]
 
-   \noindent where~$x$ is the dimensionless scale height and~$n_{x, \text{CO}_2}$ is the number density of CO$_2$ (molecules cm$^{-3}$). The number density~$n_{x, \text{CO}_2}$ and the volume mixing ratio~$c_{x, \text{CO}_2}$ are related by the number density of air~$n_{x, a}$ as follows:
+   \noindent where~\textit{x} is the dimensionless scale height and~$n_{x, \text{CO}_2}$ is the number density of CO$_2$ (molecules cm$^{-3}$). The number density~$n_{x, \text{CO}_2}$ and the volume mixing ratio~$c_{x, \text{CO}_2}$ are related by the number density of air~$n_{x, a}$ as follows:
    %
-   \begin{equation}
-   n_{x, \text{CO}_2}\ =\ c_{x, \text{CO}_2} n_{x,a}. \nonumber
-   \end{equation}
+   \[
+   n_{x, \text{CO}_2}\ =\ c_{x, \text{CO}_2} n_{x,a}.
+   \]
 
    \noindent The number density of air~$n_{x,a}$ is related to the number of moles of air~$N$ and the volume~$V$ by Avogadro's constant~${A_v = 6.023 \times 10^{23}\, \text{molecules}\, \text{mol}^{-1}}$:
    %
-   \begin{equation}
-   n_{x,a}\ =\ \dfrac{A_v N}{V}.\nonumber
-   \end{equation}
+   \[
+   n_{x,a}\ =\ \dfrac{A_v N}{V}.
+   \]
 
    \noindent The ideal gas law may be expressed as~${pV = NRT}$, which can be used to obtain the following expression for the number density of air:
    %
-   \begin{equation}
-   n_{x,a}\ =\ \dfrac{A_v p}{RT}\nonumber
-   \end{equation}
+   \[
+   n_{x,a}\ =\ \dfrac{A_v p}{RT}
+   \]
 
    \noindent From the ideal gas law, it can also be obtained that~${\rho_{x,a} = p\mu_x / RT}$, where~$\mu_x$ is the molar mass of dry air per scale height (kg$\,$mol$^{-1}$). By assuming hydrostatic balance,~${\frac{dp}{dx} = - \rho_{x,a}\, g}$, together these give:
    %
-   \begin{equation}
-   dx\ =\ \dfrac{RT}{p \mu_x\, g} dp. \nonumber
-   \end{equation}
+   \[
+   dx\ =\ \dfrac{RT}{p \mu_x\, g} dp.
+   \]
 
    With these expressions, the following equation for the CO$_2$ column amount can be obtained:
    %
@@ -408,7 +403,7 @@ Here,~$x$ is a dimensionless vertical scale height.
                        & =\ && \dfrac{A_v}{g} \int \dfrac{c_{x, \text{CO}_2}}{\mu_x}\, dp. \nonumber
    \end{alignat}
 
-   Next, differentiate this expression with respect to the dimensionless scale height~$x$. Note that~${p_x = 10^5 e^{-x}}$, and so~${dp = -10^5 e^{-x}}$. Then:
+   Next, differentiate this expression with respect to the dimensionless scale height~\textit{x}. Note that~${p_x = 10^5 e^{-x}}$, and so~${dp = -10^5 e^{-x}}$. Then:
 %
    \begin{alignat}{4}
    \dfrac{d u_{x, \text{CO}_2}}{dx}\ & =\ && \dfrac{A_v}{g} \dfrac{d}{dx} \bigg( \int \dfrac{c_{x, \text{CO}_2}}{\mu_x} dp \bigg) \nonumber \\
@@ -432,9 +427,9 @@ Here,~$x$ is a dimensionless vertical scale height.
 
    \noindent Now let~$Y = 0.25 \times 10^5 A_v / 2g $ and rearrange this to obtain:
 %
-   \begin{equation}
-   u_{x_{i - 1}}\ =\ u_{x_{i}} + Y \bigg( \dfrac{c_{x_i, \text{CO}_2} e^{-x_i}}{\mu_{x_i}} + \dfrac{c_{x_{i - 1}, \text{CO}_2} e^{-x_{i - 1}}}{\mu_{x_{i-1}}} \bigg) \nonumber
-   \end{equation}
+   \[
+   u_{x_{i - 1}}\ =\ u_{x_{i}} + Y \bigg( \dfrac{c_{x_i, \text{CO}_2} e^{-x_i}}{\mu_{x_i}} + \dfrac{c_{x_{i - 1}, \text{CO}_2} e^{-x_{i - 1}}}{\mu_{x_{i-1}}} \bigg)
+   \]
 
    This formulation is then identical to what is used in Fomichev's stand-alone code.
 
@@ -448,7 +443,7 @@ Here,~$x$ is a dimensionless vertical scale height.
    \item $\mu_x$: Molar mass of dry air per scale height (kg mol$^{-1}$)
    \item $g$: Acceleration due to gravity (ms$^{-1}$)
    \item $c_{x,CO_2}$: Volume mixing ratio for CO$_2$ (ppmv)
-   \item $x$: Dimensionless scale height (dimensionless)
+   \item \textit{x}: Dimensionless scale height (dimensionless)
    \item $u_{x>16.5,CO_2}$: CO$_2$ column amount above $x = 16.5$ (cm$^{-2}$)
    \end{enumerate}
 
@@ -476,8 +471,7 @@ This is used to derive the equation for the CO$_2$ column amount.
    \end{itemize}
 
 
-\subsection{Calculate the coefficients $d_j$ for the recurrence formula 
-    for $12.5 < x < 16.5$}
+\subsection{Calculate the coefficients dj for the recurrence formula for 12.5 \textless \textit{x} \textless 16.5}
 
    $d_x = \alpha_{u,x}L_u$ for $12.5 \leq x \leq 13.75$
 
@@ -488,11 +482,11 @@ This is used to derive the equation for the CO$_2$ column amount.
    \noindent $\alpha_{u,x}$ is the correction to the escape function 
 
    \begin{itemize}   
-   \item $L_u$ for $x$ is found by linear interpolation of 
+   \item $L_u$ for \textit{x} is found by linear interpolation of 
      log $L_u$ over $u_x$.
-   \item $\alpha_x$ for $x$ is found by linear interpolation of 
+   \item $\alpha_x$ for \textit{x} is found by linear interpolation of 
      log $\alpha_{u,x}$ over $u_x$, where a different log $\alpha_{u,x}-u_x$
-     association is available for each $x$.
+     association is available for each \textit{x}.
    \item Note that Tables 10 and 11 in Fomichev 98 have $\log(u)$ rather 
      than $u$, so these have been converted.
    \item For the range $12.5 \leq x \leq 13.75$, $\log L_u + \log \alpha_{u,x}$
@@ -504,7 +498,7 @@ This is used to derive the equation for the CO$_2$ column amount.
    \item $u_x$: CO$_2$ column amount (cm$^{-2}$)
    \item $L_u$: Escape function for CO$_2$ column amount $u_x$ 
    \item $\alpha_{u,x}$: Correction to escape function for CO$_2$ column 
-     amount $u_x$ and scale height $x$ 
+     amount $u_x$ and scale height \textit{x} 
    \end{enumerate}
 
    \paragraph{Outputs}
@@ -522,7 +516,7 @@ This is used to derive the equation for the CO$_2$ column amount.
    \item Fomichev 98 table 10 - Escape function $L_u$ for CO$_2$ column 
      amount $u_x$
    \item Fomichev 98 table 11 - Correction to escape function $\alpha_{u,x}$ 
-     for CO$_2$ column amount $u_x$ and for $x$ 
+     for CO$_2$ column amount $u_x$ and for \textit{x} 
    \item Fomichev 98 section 6 paragraph 4 for interpolation methods.
    \end{itemize}
 
@@ -548,18 +542,17 @@ This is used to derive the equation for the CO$_2$ column amount.
    
    \paragraph{Inputs}
    \begin{enumerate}
-   \item $x$: Dimensionless scale height (dimensionless)
+   \item \textit{x}: Dimensionless scale height (dimensionless)
    \item $k$: Boltzmann Constant in (J K$^{-1}$)
-   \item $T_x$: Temperature at scale height $x$ (K)
+   \item $T_x$: Temperature at scale height \textit{x} (K)
    \end{enumerate}
 
    \paragraph{Outputs}
    \begin{enumerate}
-   \item $\rho_x$: Number density at scale height $x$ (m$^3$)
+   \item $\rho_x$: Number density at scale height \textit{x} (m$^3$)
    \end{enumerate}
 
-\subsection{Calculate parameter lambda for use in the recurrence 
-  formula}
+\subsection{Calculate parameter lambda for use in the recurrence formula}
   
    $\lambda_x = A_{CO_2} / \{ A_{CO_2} + \rho_x[c_{x,N_2}k_{N_2} + c_{x,O_2}k_{O_2} + c_{x,O}k_o ] \}$
 
@@ -579,9 +572,9 @@ This is used to derive the equation for the CO$_2$ column amount.
    \begin{enumerate}
    \item $A_{CO_2}$: Einstein A coefficient for the fundamental band for the 
      main isotope of $CO_2$ (s$^{-1}$)
-   \item $x$: Dimensionless scale height (dimensionless)
+   \item \textit{x}: Dimensionless scale height (dimensionless)
    \item $k$: Boltzmann Constant (J K$^{-1}$)
-   \item $T_x$: Temperature at scale height $x$ (K)
+   \item $T_x$: Temperature at scale height \textit{x} (K)
    \item $k_{N_2}$, $k_{O_2}$, $k_O$: Collisional deactivation rate constants 
      (m$^3$ s$^{-1}$)
    \item $c_{x,N_2}$, $c_{x,O_2}$, $c_{x,O}$: Volume mixing ratios (ppmv)
@@ -609,10 +602,9 @@ This is used to derive the equation for the CO$_2$ column amount.
    \end{itemize}
 
 
-\subsection{Calculation of the boundary condition at $x=12.5$ for the 
-    recurrence formula}
+\subsection{Calculation of the boundary condition at \textit{x}=12.5 for the recurrence formula}
 
-   $\gamma_{x=12.5} = \dfrac{\epsilon_{x=12.5}\mu_{x=12.5}}{K c_{x=12.5,CO_2}[1 - \lambda_{x=12.5}]}$ \\
+   $\gamma_{x=12.5} = \dfrac{\epsilon_{x=12.5}\mu_{x=12.5}}{K c_{x=12.5,CO_2}[1 - \lambda_{x=12.5}]}$
 
    \noindent where
 
@@ -662,8 +654,7 @@ This is used to derive the equation for the CO$_2$ column amount.
    \end{itemize}
 
     
-\subsection{Solve the recurrence formula for the heating rate 
-  correction, and calculate the heating rate for $12.5 < x < 16.5$}
+\subsection{Solve the recurrence formula for the heating rate correction, and calculate the heating rate for 12.5 \textless \textit{x} \textless 16.5}
 
    Use
 
@@ -710,7 +701,7 @@ This is used to derive the equation for the CO$_2$ column amount.
    \end{itemize}
 
  
-\subsection{Calculation of the heating rate above $x=16.5$}
+\subsection{Calculation of the heating rate above \textit{x}=16.5}
 
    $\epsilon_{x>16.5} = \frac{K c_{x,CO_2}(1 - \lambda_x)}{\mu_x} [F_{x=16.5} - \phi_{x,CO_2}]$
 
@@ -744,8 +735,7 @@ This is used to derive the equation for the CO$_2$ column amount.
    \end{itemize}
 
 
-\subsection{Convert heating rates into K/day using the specific heat 
-    capacity } 
+\subsection{Convert heating rates into K/day using the specific heat capacity} 
 
    $\epsilon_x = \frac{nC_P\Delta T_x}{m_{total}}$
 
@@ -814,8 +804,8 @@ This is used to derive the equation for the CO$_2$ column amount.
    \paragraph{Inputs}
    \begin{enumerate}
    \item $\epsilon_x$: Heating rates corresponding to the dimensionless 
-     scale height $x$ (J kg$^{-1}$ s$^{-1}$)
-   \item $p_x$: Pressure corresponding to the x-levels $x$ (converted
+     scale height \textit{x} (J kg$^{-1}$ s$^{-1}$)
+   \item $p_x$: Pressure corresponding to the x-levels \textit{x} (converted
      to top of atmosphere to bottom) (Pa)
    \item $p$: Pressure levels, from the UM (top of atmosphere to bottom)
      (Pa)
@@ -875,7 +865,7 @@ O2 and N2 profiles are taken from the United States Standard Atmosphere
 USSA-76 model (Chamberlain and Hunten 1987).
 
 Might possibly be a useful reference on statistical weights - \\
-\url{https://www.cfa.harvard.edu/atmosphere/publications/2006-EinsteinA-JQSRT-98.pdf}
+\small{\url{https://www.cfa.harvard.edu/atmosphere/publications/2006-EinsteinA-JQSRT-98.pdf}}
 
 James has confirmed that I need to loop over n\_profile (number of
 atmospheric profiles for radiation calculations) in the code, but can
@@ -910,7 +900,7 @@ the atmosphere, the ones in the code for 9 points.
   Existing radiation scheme used.
 \item  $2 < x \leq 14$ \\
    Parameterisation scheme used which sets heating adjustment according 
-   to CO$_2$ volume mixing ratio ($c$) and solar zenith angle. \\ 
+   to CO$_2$ volume mixing ratio ($c$) and solar zenith angle.
 \end{enumerate}
 
 \section{Full code outline SW}
@@ -926,7 +916,7 @@ the atmosphere, the ones in the code for 9 points.
 \end{enumerate}
 
 
-\subsection{Scale CO$_2$ column amount by the tropospheric CO$_2$ volume mixing ratio}
+\subsection{Scale CO2 column amount by the tropospheric CO2 volume mixing ratio}
 
 Scale the CO$_2$ column amount per dimensionless scale height from the
 parameterisation data by the ratio of the tropospheric CO$_2$ volume
@@ -947,7 +937,7 @@ $u_{CO_2, x} = u_{CO_2, x, ref} \times \dfrac{c_{CO_2, x=trop}}{c_{CO_2, x=trop,
    \end{enumerate}
 
 
-\subsection{Calculate the amount of CO$_2$ along the zenith path}
+\subsection{Calculate the amount of CO2 along the zenith path}
 
    Mean effective pathlength factor
 
@@ -981,7 +971,7 @@ $u_{CO_2, x} = u_{CO_2, x, ref} \times \dfrac{c_{CO_2, x=trop}}{c_{CO_2, x=trop,
 
    For values outside the range for which interpolation data is available: \\
    If $\log u_{CO_2, x, z} < \log u_{param, CO_2, x}(1)$, set $q_{CO_2} = q_{param, CO_2, x}(1)$ \\
-   If $\log u_{CO_2, x, z} > \log u_{param, CO_2, x}(10)$, set $q_{CO_2} = 0$ \\
+   If $\log u_{CO_2, x, z} > \log u_{param, CO_2, x}(10)$, set $q_{CO_2} = 0$
 
    \paragraph{Inputs}
    \begin{enumerate}
@@ -1034,7 +1024,7 @@ $u_{CO_2, x} = u_{CO_2, x, ref} \times \dfrac{c_{CO_2, x=trop}}{c_{CO_2, x=trop,
    
    \noindent For a polyatomic gas
    
-   \noindent $C_V = \frac{5}{2} nR$ so $C_P = \frac{7}{2} nR$ and $C_V/C_P = \frac{5}{7}$ \\
+   \noindent $C_V = \frac{5}{2} nR$ so $C_P = \frac{7}{2} nR$ and $C_V/C_P = \frac{5}{7}$
 
    These two cases are blended above $x \geq 10.5$ where atomic oxygen
    makes a difference, as with the heat capacity for the LW NLTE

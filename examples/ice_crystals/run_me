@@ -184,10 +184,14 @@ EOF
  echo 'Matched ifort SW output') || \
 (diff -q ga7_casim_${ver}/sp_sw_ga7_ifort19 sp_sw_ga7_casim_${ver} && \
  echo 'Matched ifort19 SW output') || \
+(diff -q ga7_casim_${ver}/sp_sw_ga7_ifx2025 sp_sw_ga7_casim_${ver} && \
+ echo 'Matched ifx2025 SW output') || \
 (diff -q ga7_casim_${ver}/sp_sw_ga7_gfortran sp_sw_ga7_casim_${ver} && \
  echo 'Matched gfortran SW output') || \
 (diff -q ga7_casim_${ver}/sp_sw_ga7_gfortran13 sp_sw_ga7_casim_${ver} && \
  echo 'Matched gfortran13 SW output') || \
+(diff -q ga7_casim_${ver}/sp_sw_ga7_gfortran14 sp_sw_ga7_casim_${ver} && \
+ echo 'Matched gfortran14 SW output') || \
 ierr=1
 (diff -q ga7_casim_${ver}/sp_lw_ga7_casim_${ver} sp_lw_ga7_casim_${ver} && \
  diff -q ga7_casim_${ver}/sp_lw_cloud7_casim_${ver} \
@@ -195,6 +199,8 @@ ierr=1
  echo 'Matched ifort LW output') || \
 (diff -q ga7_casim_${ver}/sp_lw_ga7_ifort19 sp_lw_ga7_casim_${ver} && \
  echo 'Matched ifort19 LW output') || \
+(diff -q ga7_casim_${ver}/sp_lw_ga7_ifx2025 sp_lw_ga7_casim_${ver} && \
+ echo 'Matched ifx2025 LW output') || \
 (diff -q ga7_casim_${ver}/sp_lw_ga7_gfortran sp_lw_ga7_casim_${ver} && \
  echo 'Matched gfortran LW output') || \
 ierr=1

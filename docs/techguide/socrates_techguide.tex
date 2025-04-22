@@ -2,13 +2,13 @@
 
 \usepackage{html}
 \usepackage{hyperref}
-\usepackage{doipubmed}
 \usepackage{a4,graphicx,texdraw,amsmath,amssymb,natbib}
 \usepackage{fancyhdr}
 \usepackage{a4wide}
 \usepackage{babel}
 \usepackage{url}
 \usepackage{float}
+\usepackage{parskip}
 \parskip 11pt
 \DeclareMathOperator{\atantwo}{atan2}
 
@@ -16,6 +16,7 @@
 \newcommand{\eeq}{\end{equation}}
 \newcommand{\beqn}{\begin{eqnarray}}
 \newcommand{\eeqn}{\end{eqnarray}}
+
 
 \begin{document}
 \pagenumbering{arabic}
@@ -50,6 +51,9 @@ Met Office, FitzRoy Rd, Exeter EX1 3PB
 \fancyhead[LO]{\nouppercase{\rightmark}}
 \fancyhead[RE]{\nouppercase{\leftmark}}
 }
+
+\setlength{\headheight}{13.6pt}
+\addtolength{\topmargin}{-1.6pt}
 
 \chapter{The Two-Stream Radiation Code}
 \label{sec:twostream}

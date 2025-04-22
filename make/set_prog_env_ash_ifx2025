@@ -1,0 +1,2 @@
+LIBCDF_PATH=/usr/local/netcdf4-intel-fortran/4.6.1/lib
+export LD_LIBRARY_PATH=$LIBCDF_PATH:$LD_LIBRARY_PATH

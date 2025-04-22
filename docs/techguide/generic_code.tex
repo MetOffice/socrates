@@ -17,7 +17,7 @@ atmospheric column composed of homogeneous layers, working backwards to
 the original physical 
 inputs, before passing on to a discussion of the treatment of 
 overlapping gaseous absorption and the 
-treatment of fractional cloudiness. \\
+treatment of fractional cloudiness.
 
 \noindent
 Spectral data for the parametrizations used and the decomposition of 
@@ -78,7 +78,7 @@ the first $\rho$-level is omitted on the physics grid. Increments to the
 heating rates are applied on $\theta$-levels.
 \begin{figure}
 \begin{center}
-\includegraphics[width=8.0cm,angle=270]{layer.ps}
+\includegraphics[width=8.0cm,angle=270]{layer.eps}
 \caption{Vertical Resolution of Atmosphere}
 \label{CMF1}
 \end{center}
@@ -126,7 +126,7 @@ U_{N}=\alpha_{d} V_{N} + \epsilon_{*} \pi B_{*}
 \label{p2_eq5}
 \eeq 
 where $\epsilon_{*}$ is the emissivity of the surface and $B_{*}$ is 
-the corresponding Planckian function.\\
+the corresponding Planckian function.
 
 \noindent
 The source terms, $S^{\pm}$, are related to the direct solar flux (scattering 
@@ -164,7 +164,7 @@ B=\sum^{n}_{k=0} \beta_{k} ( \theta/\theta_{R})^{k}
 \eeq
 where the order of the polynomial, n, the coefficients $\beta_{k}$ and 
 the reference temperature, $\theta_{R}$, are 
-determined externally.\\
+determined externally.
 
 {\it Note: In stand-alone radiation codes, it is usual to take the
 variation of the Planckian as linear across layer. In the Unified Model,
@@ -199,7 +199,7 @@ equations are expressed in terms of the diffuse fluxes, $F^{\pm}$ as
 \label{p2_eq11}
 \eeq
 where $Q^{\pm}$ are source terms: In terms of the variables used here, 
-$s=\alpha_{1}+\alpha_{2}$ and $d=\alpha_{1}-\alpha_{2}$.\\ 
+$s=\alpha_{1}+\alpha_{2}$ and $d=\alpha_{1}-\alpha_{2}$.
 
 \noindent
 In the Eddington approximation,
@@ -517,7 +517,7 @@ The radiation code contains provision for treating aerosols. This
 section is concerned only with
 the description of the radiative treatment of aerosols within the code. 
 The specification of mixing 
-ratios and aerosol models is described in the UM documentation.\\
+ratios and aerosol models is described in the UM documentation.
 
 \noindent
 For each species of aerosol in each spectral band the contributions to 
@@ -594,11 +594,11 @@ For fitting over a wide range of sizes, a parametrization with more
 free terms is required. A scheme based on the use of Pad\'e approximants
 has therefore been introduced
 \beqn
-k^{(e)} & = & L { {p_1 + p_2 r_e + p_3 r_e^2} \over 
+k^{(e)} & = & L { \frac{p_1 + p_2 r_e + p_3 r_e^2}
                   { 1 + p_4 r_e + p_5 r_e^2 + p_6 r_e^3} } \nonumber \\
-k^{(s)} & = & k^{(e)} \left(1 -{ {p_7 + p_8 r_e + p_9 r_e^2} \over 
+k^{(s)} & = & k^{(e)} \left(1 -{ \frac{p_7 + p_8 r_e + p_9 r_e^2}
                   { 1 + p_{10} r_e + p_{11} r_e^2 } }\right) \nonumber \\
-g       & = & {p_{12} + p_{13} r_e + p_{14} r_e^2} \over
+g       & = & \frac{p_{12} + p_{13} r_e + p_{14} r_e^2}
                   { 1 + p_{15} r_e + p_{16} r_e^2 }
 \label{p2_xx0}
 \eeqn
@@ -727,7 +727,7 @@ with each $k$-term for every
 other gas active in the band. This full treatment of random overlap is 
 available within the code, 
 but it is computationally expensive, and computationally faster 
-approximations to it are provided.\\
+approximations to it are provided.
 
 \noindent
 Equivalent extinction is an extension of the method of FESFT 
@@ -798,7 +798,7 @@ calculation of source terms across a cloudy layer the direct flux is
 taken to vary from its true value 
 at the top of the layer with the effect of minor gases being 
 represented by the direct transmission 
-calculated using the equivalent extinction.\\
+calculated using the equivalent extinction.
 
 \section{The Treatment of Clouds}
 
@@ -822,7 +822,7 @@ may be represented as homogeneous, in which case there are two types,
 stratiform and convective, 
 with homogeneous mixtures of water and ice in each;  as segregated, 
 in which case there are 
-four types of clouds, each consisting of a different component; or as segregated for a single cloud type in which case we have two types, ice and liquid.\\
+four types of clouds, each consisting of a different component; or as segregated for a single cloud type in which case we have two types, ice and liquid.
 
 \noindent
 A second scheme involves the sampling of a generated field of cloudy
@@ -860,7 +860,7 @@ regions in the layer and maintaining the vertical coherence of
 convective cloud. (From the 
 algorithmic point of view, this aggregation is performed implicitly in 
 the original scheme, but 
-explicitly in the new scheme).\\
+explicitly in the new scheme).
 
 \noindent
 The overlapping is represented by the coefficients used to couple fluxes 
@@ -1021,7 +1021,7 @@ directly, but rather to construct a set of algebraic recurrences which
 follow the pattern of 
 Gaussian elimination, but take full account of the position of zero 
 entries in the matrix, thus 
-reducing the operation count to a minimum.\\
+reducing the operation count to a minimum.
 
 \noindent
 The first stage of this reduction is to generate a set of relations 
@@ -1078,7 +1078,7 @@ By using the previous equation but one $U$ may be eliminated from the
 right to give us an 
 equation of the original form with $i$ replaced by $i-1$. In layers 
 above clouds this scheme can be 
-simplified for efficiency.\\
+simplified for efficiency.
 
 \noindent
 Back substitution proceeds easily. Suppose that at the  $i$th level we 
@@ -1359,7 +1359,7 @@ radiative heating for the energy used in the photolysis reactions.
 
 The components of the scheme are described below.
 
-\subsection{Correlated-$k$ mapping technique}
+\subsection{Correlated-\textit{k} mapping technique}
 In order to maintain accuracy whilst reducing computational cost a novel wavelength mapping technique
 is implemented as part of the correlated-$k$ method. Spectral absorption lines can vary dramatically over
 very small wavelength intervals. The correlated-$k$ method essentially just reorders the wavelengths within

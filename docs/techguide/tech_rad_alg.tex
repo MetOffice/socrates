@@ -3,8 +3,7 @@ The monochromatic equation of transfer is used in the form
 \begin{equation}
 \begin{split}
 (\bn . \nabla) I(\bx, \bn) & = -(k^{(s)} + k^{(a)}) I (\bx, \bn) \\
-& + { k^{(s)} \over
-{4 \pi} } \int_{\Omega} I(\bx,\bnp) P(\bnp, \bn) \, d\omega_{\bnp} 
+& + { \frac{k^{(s)}}{4 \pi} } \int_{\Omega} I(\bx,\bnp) P(\bnp, \bn) \, d\omega_{\bnp} 
 + j(\bx,\bn)
 \end{split}
 \end{equation}
@@ -12,12 +11,12 @@ The monochromatic equation of transfer is used in the form
 The phase function can be rescaled using the standard prescription
 \begin{align}
 k^{(s)} & \rightarrow (1-f) k^{(s)}, \\
-P(\bnp, \bn) & \rightarrow { {P(\bnp, \bn)-4\pi f \delta(\bnp - \bn)}
-\over {1-f}} \\
+P(\bnp, \bn) & \rightarrow { \frac{P(\bnp, \bn)-4\pi f \delta(\bnp - \bn)}
+{1-f}} \\
 \noalign{\text{\it i.~e.}}
 P(\bnp, \bn)-4\pi \delta(\bnp - \bn) & \rightarrow 
-{ {P(\bnp, \bn)-4\pi \delta(\bnp - \bn)}
-\over {1-f}}.
+{ \frac{P(\bnp, \bn)-4\pi \delta(\bnp - \bn)}
+{1-f}}.
 \end{align}
 Since this does not alter the functional form of the equation no further 
 reference to rescaling wil be made here.
@@ -29,7 +28,7 @@ P(\bnp, \bn)= \sum_{l=0}^\infty (2l+1) g_l P_l (\bnp.\bn)
 
 We make use of the standard results
 \begin{align}
-P_l (\bnp.\bn) &= { 4\pi \over {2l+1} } \sum_{m=-l}^l Y_l^m (\bn) Y_l^{m*}
+P_l (\bnp.\bn) &= { \frac{4\pi}{2l+1} } \sum_{m=-l}^l Y_l^m (\bn) Y_l^{m*}
 (\bnp) \\
 \delta(\bnp - \bn) &= \sum_{l=0}^\infty \sum_{m=-l}^l Y_l^m (\bn) Y_l^{m*}
 (\bnp)
@@ -80,7 +79,7 @@ $\bn = \sum_{j=-1}^1 n_j \boldsymbol{\epsilon}_j^*$ where $\boldsymbol{
 orthogonality of the $Y_l^m$,
 \begin{equation}
 \begin{split}
-\sum_{lm} n_0 Y_l^m (\bn) { {dI_{lm} (z)} \over {dz} } &= -(k^{(s)} + k^{(a)} )
+\sum_{lm} n_0 Y_l^m (\bn) { \frac{dI_{lm} (z)}{dz} } &= -(k^{(s)} + k^{(a)} )
 \sum_{lm} I_{lm}(z) Y_l^m (\bn) +\sum_{lm} j_{lm} Y_l^m (\bn) \\
 &+ k^{(s)} \biggl \{ \sum_{lm} I_{lm}(z) g_l Y_l^m (\bn) \\
 &+ I_\odot (z) \sum_{lm}
@@ -95,9 +94,9 @@ n_0 Y_l^m(\bn) =c_{lm}^+ Y_{l+1}^m (\bn) + c_{lm}^- Y_{l-1}^m (\bn)
 \end{equation}
 where
 \begin{align}
-c_{lm}^+ &= \sqrt{ { {(l+1-m)(l+1+m)} \over {(2l+1)(2l+3)} } } \\
+c_{lm}^+ &= \sqrt{ { \frac{(l+1-m)(l+1+m)}{(2l+1)(2l+3)} } } \\
 \noalign{and} \\
-c_{lm}^- &= \sqrt{ { {(l-m)(l+m)} \over {(2l-1)(2l+1)} } }
+c_{lm}^- &= \sqrt{ { \frac{(l-m)(l+m)}{(2l-1)(2l+1)} } }
 \end{align}
 are the Clebsch-Gordan coefficients, $\langle l+1,m | 1,0,l,m\rangle$ and
 $\langle l-1,m | 1,0,l,m\rangle$
@@ -110,14 +109,13 @@ d\tau &= -(k^{(s)} + k^{(a)}) \, dz \\
 \noalign{and} \\
 \omega &= k^{(s)}/(k^{(s)} + k^{(a)}).
 \end{align}
-For a Planckian source $j_{lm}(\bx,\bn)=k^{(a)} \sqrt{4\pi} B(\bx) \delta_{l0}
-\delta_{m0}$ 
+For a Planckian source $j_{lm}(\bx,\bn)=k^{(a)} \sqrt{4\pi} B(\bx) \delta_{l0} \delta_{m0}$ 
 where $B(\bx)$ is isotropic.
 The equation therefore becomes:
 \begin{equation}
 \begin{split}
-c_{l-1,m}^+ { {dI_{l-1,m}(\tau)} \over {d\tau} } &+
-c_{l+1,m}^- { {dI_{l+1,m}(\tau)} \over {d\tau} } = \\
+c_{l-1,m}^+ { \frac{dI_{l-1,m}(\tau)}{d\tau} } &+
+c_{l+1,m}^- { \frac{dI_{l+1,m}(\tau)}{d\tau} } = \\
 & s_l I_{lm}(\tau) -s_0 \sqrt{4\pi} B(\tau) \delta_{l0} \delta_{m0} \\
 &-\omega g_l Y_l^{m*} (\bn_\odot) I_\odot (\tau)
 \end{split}
@@ -272,18 +270,16 @@ so that the equation of transfer becomes
 \begin{equation}
 \begin{split}
 (\bn . \nabla) I'(\bx, \bn) & = -(k^{(s)} + k^{(a)}) I' (\bx, \bn) \\
-& + { k^{(s)} \over
-{4 \pi} } \int_{\Omega} I'(\bx,\bnp) P(\bnp, \bn) \, d\omega_{\bnp} 
+& + { \frac{k^{(s)}}{4 \pi} } \int_{\Omega} I'(\bx,\bnp) P(\bnp, \bn) \, d\omega_{\bnp} 
 - (\bn . \nabla) B(\bx).
 \end{split}
 \end{equation}
 Introducing the optical depth, $\tau$
 \begin{equation}
 \begin{split}
-n_0 {{d I'(\tau, \bn)} \over {d\tau} }& = I' (\tau, \bn) 
- - {\omega \over
-{4 \pi} }  \int_{\Omega} I'(\bx,\bnp) P(\bnp, \bn) \, d\omega_{\bnp} 
-- n_0 {{d B(\tau)}\over {d\tau}}
+n_0 {\frac{d I'(\tau, \bn)}{d\tau} }& = I' (\tau, \bn) 
+ - {\frac{\omega}{4 \pi} }  \int_{\Omega} I'(\bx,\bnp) P(\bnp, \bn) \, d\omega_{\bnp} 
+- n_0 {\frac{d B(\tau)}{d\tau}}
 \end{split}
 \end{equation}
 Now, $n_0=\sqrt{4\pi/3}. Y_1^0(\bn)$, so on expanding this in spherical
@@ -502,9 +498,9 @@ and applying orthogonality,
 if $l+l'$ is even.
 
 If $l+l'$ is odd, the evaluation of $\kappa_{ll'm}$ is not so trivial. 
-\cite{Dave74} give results for the case $m=0$. To derive the more general
+Dave (1974) give results for the case $m=0$. To derive the more general
 results required here, it seems easiest to follow the procedure given in
-\cite{Copson} for Legendre polynomials and proceed from the basic 
+Copson for Legendre polynomials and proceed from the basic 
 differential equation. Defining
 \begin{equation}
 Y_l^m \equiv \Upsilon_l^m e^{im\phi} \equiv \Xi_l^m P_l^m e^{im\phi},
@@ -542,7 +538,7 @@ $x$ is small
 \begin{equation}
 P_l^m (x) \sim {{(-1)^{m+l}}\over {2^l l!}} \left [ 1 -{m\over 2} x^2 +
 \ldots \right ] \, {d^{l+m}\over{dx^{l+m}}} \sum_{r=0}^l 
-\left ( {l \atop r} \right ) (-1)^r x^{2r}
+\left ( {\frac{l}{r}} \right ) (-1)^r x^{2r}
 \end{equation}
 When $x=0$ the only contribution arises from the term of the final series
 with $2r=l+m$, so $l+m$ must be even. 
@@ -1219,7 +1215,7 @@ the first integral with $\hat I_T$, the truncated diffuse radiance and
 $\hat P$ with $\hat P_T$, the truncated rescaled phase function.
 
 This sits very easily with the method of solution for radiances originally
-suggested by \cite{Kourganov55}, in which we regard the spherical harmonic
+suggested by Kourganoff (1955), in which we regard the spherical harmonic
 solution as defining the source function for the diffuse radiation in the 
 above equation, but it is actually more convenient to proceed very slightly
 differently from \cite{Nakajima88}. To be precise, we first solve the 

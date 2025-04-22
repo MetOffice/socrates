@@ -662,8 +662,10 @@ EOF
  echo 'Matched gfortran SW output') || \
 (diff -q sp_sw_ga8_gfortran13 sp_sw_ga8 && \
  echo 'Matched gfortran13 SW output') || \
-(diff -q sp_sw_ga8_nyuki sp_sw_ga8 && \
- echo 'Matched nyuki (gfortran) SW output') || ierr=1
+(diff -q sp_sw_ga8_gfortran14 sp_sw_ga8 && \
+ echo 'Matched gfortran14 SW output') || \
+(diff -q sp_sw_ga8_ifx2025 sp_sw_ga8 && \
+ echo 'Matched ifx2025 SW output') || ierr=1
 
 (diff -q sp_lw_ga8_ifort sp_lw_ga8 && \
  echo 'Matched ifort LW output') || \
@@ -673,8 +675,10 @@ EOF
  echo 'Matched gfortran LW output') || \
 (diff -q sp_lw_ga8_gfortran13 sp_lw_ga8 && \
  echo 'Matched gfortran13 LW output') || \
-(diff -q sp_lw_ga8_nyuki sp_lw_ga8 && \
- echo 'Matched nyuki (gfortran) LW output') || ierr=1
+(diff -q sp_lw_ga8_gfortran14 sp_lw_ga8 && \
+ echo 'Matched gfortran14 LW output') || \
+(diff -q sp_lw_ga8_ifx2025 sp_lw_ga8 && \
+ echo 'Matched ifx2025 LW output') || ierr=1
 
 if [ $ierr -gt 0 ] ; then
     exit 1

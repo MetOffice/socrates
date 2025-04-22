@@ -1,7 +1,7 @@
 # Environment variables for Mars spectral files
 
 # Met Office
-ARCHIVE_DATA="/spice/project/radiation/socrates"
+ARCHIVE_DATA=${SOCRATES_DATA_DIR}
 
 # UoE
 # ARCHIVE_DATA="/data/jm606/socrates"

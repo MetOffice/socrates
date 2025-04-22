@@ -3,11 +3,17 @@
 # Initialise error status (to test for output differences)
 ierr=0
 
+if [ ! $SOCRATES_DATA_DIR ] ; then
+  SOCRATES_DATA_DIR=.
+fi
+
+CMIP5_DATA_DIR=${SOCRATES_DATA_DIR}/solarisheppa/cmip5
+
 # Download CMIP5 solar variability data
-if [[ -r /project/spice/radiation/solarisheppa/cmip5 ]]; then
-  gunzip -c /project/spice/radiation/solarisheppa/cmip5/spectra_1610_2000a_21Jan09.txt.gz > spectra_1610_2000a_21Jan09.txt
-  gunzip -c /project/spice/radiation/solarisheppa/cmip5/spectra_1882_2000m_17Dec08.txt.gz > spectra_1882_2000m_17Dec08.txt
-  gunzip -c /project/spice/radiation/solarisheppa/cmip5/spectra_2000_2008m_6May09.txt.gz > spectra_2000_2008m_6May09.txt
+if [[ -r $CMIP5_DATA_DIR ]]; then
+  gunzip -c ${CMIP5_DATA_DIR}/spectra_1610_2000a_21Jan09.txt.gz > spectra_1610_2000a_21Jan09.txt
+  gunzip -c ${CMIP5_DATA_DIR}/spectra_1882_2000m_17Dec08.txt.gz > spectra_1882_2000m_17Dec08.txt
+  gunzip -c ${CMIP5_DATA_DIR}/spectra_2000_2008m_6May09.txt.gz > spectra_2000_2008m_6May09.txt
 else
   echo 'CMIP5 data not accessible'
   exit 0

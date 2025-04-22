@@ -1,4 +1,4 @@
-#! /bin/ksh
+#! /bin/bash
 # Script to make a tar file for external distribution.
 
 stamp=`date +_%y%m`

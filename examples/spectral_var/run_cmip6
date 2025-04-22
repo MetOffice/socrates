@@ -3,12 +3,18 @@
 # Initialise error status (to test for output differences)
 ierr=0
 
+if [ ! $SOCRATES_DATA_DIR ] ; then
+  SOCRATES_DATA_DIR=.
+fi
+
+CMIP6_DATA_DIR=${SOCRATES_DATA_DIR}/solarisheppa/cmip6
+
 # Download CMIP6 solar variability data
-if [[ -r /project/spice/radiation/solarisheppa/cmip6 ]]; then
-  gunzip -c /project/spice/radiation/solarisheppa/cmip6/solarforcing-picontrol-fx_input4MIPs_solar_CMIP_SOLARIS-HEPPA-3-2_gn_18500101-18730128.nc.gz \
-                                                      > solarforcing-picontrol-fx_input4MIPs_solar_CMIP_SOLARIS-HEPPA-3-2_gn_18500101-18730128.nc
-  gunzip -c /project/spice/radiation/solarisheppa/cmip6/solarforcing-ref-mon_input4MIPs_solar_CMIP_SOLARIS-HEPPA-3-2_gn_18500101-22991231.nc.gz \
-                                                      > solarforcing-ref-mon_input4MIPs_solar_CMIP_SOLARIS-HEPPA-3-2_gn_18500101-22991231.nc
+if [[ -r $CMIP6_DATA_DIR ]]; then
+  gunzip -c ${CMIP6_DATA_DIR}/solarforcing-picontrol-fx_input4MIPs_solar_CMIP_SOLARIS-HEPPA-3-2_gn_18500101-18730128.nc.gz \
+                            > solarforcing-picontrol-fx_input4MIPs_solar_CMIP_SOLARIS-HEPPA-3-2_gn_18500101-18730128.nc
+  gunzip -c ${CMIP6_DATA_DIR}/solarforcing-ref-mon_input4MIPs_solar_CMIP_SOLARIS-HEPPA-3-2_gn_18500101-22991231.nc.gz \
+                            > solarforcing-ref-mon_input4MIPs_solar_CMIP_SOLARIS-HEPPA-3-2_gn_18500101-22991231.nc
 else
   echo 'CMIP6 data not accessible'
   exit 0

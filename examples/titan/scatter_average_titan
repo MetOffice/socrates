@@ -1,4 +1,4 @@
-#! /bin/ksh
+#! /bin/bash
 #
 # Script to fit droplet and ice spectra for Titan spectral configurations.
 #

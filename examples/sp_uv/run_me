@@ -76,31 +76,39 @@ Ccdf2cdl -o cdl_trop_lw_ga7.hrts                   trop_lw_ga7.hrts > /dev/null
 Ccdf2cdl -o cdl_trop_lw_ga7_nlte.hrts              trop_lw_ga7_nlte.hrts > /dev/null
 
 diff -q cdl_trop_xsw_photol_g1_2.hrts     ref_trop_xsw_photol_g1_2.hrts          || ierr=1
+diff -q cdl_trop_xsw_photol_g1_13.hrts    gfortran_trop_xsw_photol_g1_13.hrts    || \
 diff -q cdl_trop_xsw_photol_g1_13.hrts    ref_trop_xsw_photol_g1_13.hrts         || \
 diff -q cdl_trop_xsw_photol_g1_13.hrts    ifort17_trop_xsw_photol_g1_13.hrts     || \
-diff -q cdl_trop_xsw_photol_g1_13.hrts    gfortran_trop_xsw_photol_g1_13.hrts    || ierr=1
+diff -q cdl_trop_xsw_photol_g1_13.hrts    ifx2025_trop_xsw_photol_g1_13.hrts     || \
+    ierr=1
 diff -q cdl_trop_xsw_photol_g2.hrts       ref_trop_xsw_photol_g2.hrts            || ierr=1
 diff -q cdl_trop_xsw_photol_g3.hrts       ref_trop_xsw_photol_g3.hrts            || ierr=1
 diff -q cdl_trop_xsw_photol_g4.hrts       ref_trop_xsw_photol_g4.hrts            || ierr=1
 diff -q cdl_trop_xsw_photol_sg_g1_2.hrts  ref_trop_xsw_photol_sg_g1_2.hrts       || ierr=1
+diff -q cdl_trop_xsw_photol_sg_g1_13.hrts gfortran_trop_xsw_photol_sg_g1_13.hrts || \
 diff -q cdl_trop_xsw_photol_sg_g1_13.hrts ref_trop_xsw_photol_sg_g1_13.hrts      || \
 diff -q cdl_trop_xsw_photol_sg_g1_13.hrts ifort17_trop_xsw_photol_sg_g1_13.hrts  || \
-diff -q cdl_trop_xsw_photol_sg_g1_13.hrts gfortran_trop_xsw_photol_sg_g1_13.hrts || ierr=1
+diff -q cdl_trop_xsw_photol_sg_g1_13.hrts ifx2025_trop_xsw_photol_sg_g1_13.hrts  || \
+    ierr=1
 diff -q cdl_trop_xsw_photol_sg_g2.hrts    ref_trop_xsw_photol_sg_g2.hrts         || ierr=1
 diff -q cdl_trop_xsw_photol_sg_g3.hrts    ref_trop_xsw_photol_sg_g3.hrts         || ierr=1
 diff -q cdl_trop_xsw_photol_sg_g4.hrts    ref_trop_xsw_photol_sg_g4.hrts         || ierr=1
-diff -q cdl_trop_xsw_photol_sg_g3_no.ph_rate_8 ref_trop_xsw_photol_sg_g3_no.ph_rate_8 || \
-diff -q cdl_trop_xsw_photol_sg_g3_no.ph_rate_8 gfortran_trop_xsw_photol_sg_g3_no.ph_rate_8 || ierr=1
-diff -q cdl_trop_xsw_photol_sg_g4_no.ph_rate_8 ref_trop_xsw_photol_sg_g4_no.ph_rate_8 || \
-diff -q cdl_trop_xsw_photol_sg_g4_no.ph_rate_8 gfortran_trop_xsw_photol_sg_g4_no.ph_rate_8 || ierr=1
+diff -q cdl_trop_xsw_photol_sg_g3_no.ph_rate_8 gfortran_trop_xsw_photol_sg_g3_no.ph_rate_8 || \
+diff -q cdl_trop_xsw_photol_sg_g3_no.ph_rate_8 ref_trop_xsw_photol_sg_g3_no.ph_rate_8      || \
+    ierr=1
+diff -q cdl_trop_xsw_photol_sg_g4_no.ph_rate_8 gfortran_trop_xsw_photol_sg_g4_no.ph_rate_8 || \
+diff -q cdl_trop_xsw_photol_sg_g4_no.ph_rate_8 ref_trop_xsw_photol_sg_g4_no.ph_rate_8      || \
+    ierr=1
+diff -q cdl_trop_xsw_photol_ch.ph_rate_2  gfortran_trop_xsw_photol_ch.ph_rate_2  || \
 diff -q cdl_trop_xsw_photol_ch.ph_rate_2  ref_trop_xsw_photol_ch.ph_rate_2       || \
-diff -q cdl_trop_xsw_photol_ch.ph_rate_2  gfortran_trop_xsw_photol_ch.ph_rate_2  || ierr=1
+    ierr=1
 diff -q cdl_trop_xsw_photol_nlte.hrts     ref_trop_xsw_photol_nlte.hrts          || ierr=1
 diff -q cdl_trop_sw_ga7.hrts              ref_trop_sw_ga7.hrts                   || ierr=1
-(diff -q cdl_trop_320_sg_ch.ph_rate_2     ref_trop_320_sg_ch.ph_rate_2           && \
- echo 'Matched ifort output')                                                    || \
 (diff -q cdl_trop_320_sg_ch.ph_rate_2     gfortran_trop_320_sg_ch.ph_rate_2      && \
- echo 'Matched gfortran output')                                                 || ierr=1
+  echo 'Matched gfortran output')                                                || \
+(diff -q cdl_trop_320_sg_ch.ph_rate_2     ref_trop_320_sg_ch.ph_rate_2           && \
+  echo 'Matched ifort output')                                                   || \
+    ierr=1
 diff -q cdl_trop_320.hrts                 ref_trop_320.hrts                      || ierr=1
 diff -q cdl_trop_lw_ga7.hrts              ref_trop_lw_ga7.hrts                   || ierr=1
 diff -q cdl_trop_lw_ga7_nlte.hrts         ref_trop_lw_ga7_nlte.hrts              || ierr=1

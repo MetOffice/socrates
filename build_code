@@ -8,6 +8,8 @@ if [ ${host:0:4} == "dali" ]; then
   host="dali"
 elif [ "${host:7:4}" == "arc4" ]; then
   host="arc4"
+elif [ "${host:0:5}" == "cazld" ]; then
+  host="cazld"
 fi
 
 SRC_LIST="general modules_gen aux scatter correlated_k"
@@ -79,11 +81,22 @@ done
 cd bin
 ./mkdep
 case "$1" in
-
   "gfortran" | "ifort" | \
   "lfric_gfortran6"  | "lfric_ifort17" | \
   "lfric_gfortran11" | "lfric_ifort19")
     cp set_prog_env_$1 set_prog_env
+    diff -q Mk_cmd_$1 Mk_cmd || (cp Mk_cmd_$1 Mk_cmd; make clean)
+    if [ -r /usr/share/Modules/init/bash ]
+      then
+        . /usr/share/Modules/init/bash
+    fi
+    shift
+    ;;
+
+  "azure_gfortran12" | "azure_gfortran12_debug" | \
+  "ash_ifx2025")
+    diff -q set_prog_env_$1 set_prog_env || \
+        (cp set_prog_env_$1 set_prog_env; make clean)
     diff -q Mk_cmd_$1 Mk_cmd || (cp Mk_cmd_$1 Mk_cmd; make clean)
     shift
     ;;
@@ -91,11 +104,13 @@ case "$1" in
   *)
     if [ -r set_prog_env_$host ]
       then
-        cp set_prog_env_$host set_prog_env
+        diff -q set_prog_env_$host set_prog_env || \
+            (cp set_prog_env_$host set_prog_env; make clean)
     fi
     if [ -r Mk_cmd_$host ]
       then
-        cp Mk_cmd_$host Mk_cmd
+          diff -q Mk_cmd_$host Mk_cmd || \
+              (cp Mk_cmd_$host Mk_cmd; make clean)
     fi
     if [ ! -r set_prog_env ]
       then
@@ -106,10 +121,6 @@ case "$1" in
     fi
     ;;
 esac
-if [ -r /usr/share/Modules/init/bash ]
-  then
-    . /usr/share/Modules/init/bash
-fi
 . ./set_prog_env
 make $1 && echo "All compiled OK"
 cd $here
