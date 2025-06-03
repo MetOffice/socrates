@@ -148,6 +148,23 @@ contains
          pnorm_perp_liq, & ! Perpendicular lidar backscattered signal power for liq
          beta_perp_ice,  & ! Perpendicular backscatter coefficient for ice
          beta_perp_liq     ! Perpendicular backscatter coefficient for liquid
+    REAL(WP),dimension(npoints,nlev) :: &
+         tautot_ice_tmp,     &
+         tautot_liq_tmp,     &
+         pnorm_perp_ice_tmp, &
+         pnorm_perp_liq_tmp, &
+         beta_perp_ice_tmp,  &
+         beta_perp_liq_tmp,  &
+         beta_mol_tmp,       &
+         tau_mol_tmp,        &
+         betatot_tmp,        &
+         tautot_tmp,         &
+         betatot_ice_tmp,    &
+         betatot_liq_tmp,    &
+         pnorm_tmp,          &
+         pmol_tmp,           &
+         pnorm_ice_tmp,      &
+         pnorm_liq_tmp
 
     ! Phase optics?
     lphaseoptics=.false.
@@ -168,30 +185,37 @@ contains
     ! ####################################################################################
     ! *) Molecular signal
     ! ####################################################################################
-    call cmp_backsignal(nlev,npoints,beta_mol(1:npoints,zi:zf:zinc),&
-                        tau_mol(1:npoints,zi:zf:zinc),pmol(1:npoints,zi:zf:zinc))
-                        
+    beta_mol_tmp(:,:) = beta_mol(1:npoints,zi:zf:zinc)
+    tau_mol_tmp(:,:) = tau_mol(1:npoints,zi:zf:zinc)
+    call cmp_backsignal(nlev,npoints,beta_mol_tmp,tau_mol_tmp,pmol_tmp)
+    pmol(1:npoints,zi:zf:zinc) = pmol_tmp(:,:)
     ! ####################################################################################
-    ! PLANE PARRALLEL FIELDS
+    ! PLANE PARALLEL FIELDS
     ! ####################################################################################
     do icol=1,ncolumns
        ! #################################################################################
        ! *) Total Backscatter signal
        ! #################################################################################
-       call cmp_backsignal(nlev,npoints,betatot(1:npoints,icol,zi:zf:zinc),&
-            tautot(1:npoints,icol,zi:zf:zinc),pnorm(1:npoints,icol,zi:zf:zinc))
-       
+       betatot_tmp(:,:) = betatot(1:npoints,icol,zi:zf:zinc)
+       tautot_tmp(:,:) = tautot(1:npoints,icol,zi:zf:zinc)
+       call cmp_backsignal(nlev,npoints,betatot_tmp,tautot_tmp,pnorm_tmp)
+       pnorm(1:npoints,icol,zi:zf:zinc) = pnorm_tmp(:,:)
        ! #################################################################################
        ! *) Ice/Liq Backscatter signal
        ! #################################################################################
        if (lphaseoptics) then
           ! Computation of the ice and liquid lidar backscattered signal (ATBice and ATBliq)
           ! Ice only
-          call cmp_backsignal(nlev,npoints,betatot_ice(1:npoints,icol,zi:zf:zinc),&
-               tautot_ice(1:npoints,icol,zi:zf:zinc), pnorm_ice(1:npoints,icol,zi:zf:zinc))
+          betatot_ice_tmp(:,:) = betatot_ice(1:npoints,icol,zi:zf:zinc)
+          tautot_ice_tmp(:,:) = tautot_ice(1:npoints,icol,zi:zf:zinc)
+          call cmp_backsignal(nlev,npoints,betatot_ice_tmp,tautot_ice_tmp, pnorm_ice_tmp)
+          pnorm_ice(1:npoints,icol,zi:zf:zinc) = pnorm_ice_tmp(:,:)
+
           ! Liquid only
-          call cmp_backsignal(nlev,npoints,betatot_liq(1:npoints,icol,zi:zf:zinc),&
-               tautot_liq(1:npoints,icol,zi:zf:zinc), pnorm_liq(1:npoints,icol,zi:zf:zinc))
+          betatot_liq_tmp(:,:) = betatot_liq(1:npoints,icol,zi:zf:zinc)
+          tautot_liq_tmp(:,:) = tautot_liq(1:npoints,icol,zi:zf:zinc)
+          call cmp_backsignal(nlev,npoints,betatot_liq_tmp,tautot_liq_tmp, pnorm_liq_tmp)
+          pnorm_liq(1:npoints,icol,zi:zf:zinc) = pnorm_liq_tmp(:,:)
        endif
     enddo
 
@@ -218,13 +242,16 @@ contains
           ! *) Computation of beta_perp_ice/liq using the lidar equation
           ! #################################################################################
           ! Ice only
-          call cmp_beta(nlev,npoints,pnorm_perp_ice(1:npoints,icol,zi:zf:zinc),&
-               tautot_ice(1:npoints,icol,zi:zf:zinc),beta_perp_ice(1:npoints,icol,zi:zf:zinc))        
-          
+          pnorm_perp_ice_tmp(:,:) = pnorm_perp_ice(1:npoints,icol,zi:zf:zinc)
+          tautot_ice_tmp(:,:) = tautot_ice(1:npoints,icol,zi:zf:zinc)
+          call cmp_beta(nlev,npoints,pnorm_perp_ice_tmp, tautot_ice_tmp,beta_perp_ice_tmp)
+          beta_perp_ice(1:npoints,icol,zi:zf:zinc) = beta_perp_ice_tmp(:,:)
+
           ! Liquid only
-          call cmp_beta(nlev,npoints,pnorm_perp_liq(1:npoints,icol,zi:zf:zinc),&
-               tautot_liq(1:npoints,icol,zi:zf:zinc),beta_perp_liq(1:npoints,icol,zi:zf:zinc))
-          
+          pnorm_perp_liq_tmp(:,:) = pnorm_perp_liq(1:npoints,icol,zi:zf:zinc)
+          tautot_liq_tmp(:,:) = tautot_liq(1:npoints,icol,zi:zf:zinc)
+          call cmp_beta(nlev,npoints,pnorm_perp_liq_tmp,tautot_liq_tmp,beta_perp_liq_tmp)
+          beta_perp_liq(1:npoints,icol,zi:zf:zinc) = beta_perp_liq_tmp(:,:)
           ! #################################################################################
           ! *) Perpendicular Backscatter signal
           ! #################################################################################
@@ -349,10 +376,17 @@ contains
     real(wp)  :: &
          xmax
     real(wp),dimension(npoints,1,Nlevels) :: t_in,ph_in,betamol_in
-    real(wp),dimension(npoints,ncol,llm)  :: pnormFlip,pnorm_perpFlip
+    real(wp),dimension(npoints,ncol,llm)  :: pnormFlip,pnorm_perpFlip,pnorm_perpFlip_tmp
     real(wp),dimension(npoints,1,llm)     :: tmpFlip,pplayFlip,betamolFlip
     real(wp),dimension(SR_BINS+1)         :: histBsct
-    
+    real(wp),dimension(npoints,Nlevels)   :: zlev_tmp,zlev_half_tmp
+    real(wp),dimension(llm)               :: vgrid_zl_tmp,vgrid_zu_tmp
+    real(wp),dimension(npoints,1,llm)     :: pplayFlip_tmp,betamolFlip_tmp,tmpFlip_tmp
+    real(wp),dimension(npoints,ncol,llm)  :: pnormFlip_tmp
+    real(wp),dimension(npoints,ncol,Nlevels) :: pnorm_in, pnorm_perp_in
+    real(wp),dimension(ncol) :: x3d_tmp
+
+
     ! Which lidar platform?
     lcalipso = .false.
     latlid = .false.
@@ -364,19 +398,32 @@ contains
     ! Vertically regrid input data
     if (use_vgrid) then 
        ph_in(:,1,:) = pplay(:,nlevels:1:-1)
-       call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
-            ph_in,llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),pplayFlip(:,1,llm:1:-1))
+       zlev_tmp(:,:) = zlev(:,nlevels:1:-1)
+       zlev_half_tmp(:,:) = zlev_half(:,nlevels:1:-1)
+       vgrid_zl_tmp(:) = vgrid_zl(llm:1:-1)
+       vgrid_zu_tmp(:) = vgrid_zu(llm:1:-1)
+       call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev_tmp,zlev_half_tmp,&
+            ph_in,llm,vgrid_zl_tmp,vgrid_zu_tmp,pplayFlip_tmp)
+       pplayFlip(:,:,llm:1:-1) = pplayFlip_tmp(:,:,:)
+
        betamol_in(:,1,:) = pmol(:,nlevels:1:-1)
-       call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
-            betamol_in,llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),betamolFlip(:,1,llm:1:-1))
-       call cosp_change_vertical_grid(Npoints,Ncol,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
-            pnorm(:,:,nlevels:1:-1),llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),pnormFlip(:,:,llm:1:-1))
+       pnorm_in(:,:,:) = pnorm(:,:,nlevels:1:-1)
+       call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev_tmp,zlev_half_tmp,&
+            betamol_in,llm,vgrid_zl_tmp,vgrid_zu_tmp,betamolFlip_tmp)
+       call cosp_change_vertical_grid(Npoints,Ncol,Nlevels,zlev_tmp,zlev_half_tmp,&
+            pnorm_in,llm,vgrid_zl_tmp,vgrid_zu_tmp,pnormFlip_tmp)
+       betamolFlip(:,:,llm:1:-1) = betamolFlip_tmp(:,:,:)
+       pnormFlip(:,:,llm:1:-1) = pnormFlip_tmp(:,:,:)
+
        if (lcalipso) then
-          t_in(:,1,:)=tmp(:,nlevels:1:-1)
-          call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
-               t_in,llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),tmpFlip(:,1,llm:1:-1))
-          call cosp_change_vertical_grid(Npoints,Ncol,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
-               pnorm_perp(:,:,nlevels:1:-1),llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),pnorm_perpFlip(:,:,llm:1:-1))
+          t_in(:,1,:) = tmp(:,nlevels:1:-1)
+          pnorm_perp_in = pnorm_perp(:,:,nlevels:1:-1)
+          call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev_tmp,zlev_half_tmp,&
+               t_in,llm,vgrid_zl_tmp,vgrid_zu_tmp,tmpFlip_tmp)
+          call cosp_change_vertical_grid(Npoints,Ncol,Nlevels,zlev_tmp,zlev_half_tmp,&
+               pnorm_perp_in,llm,vgrid_zl_tmp,vgrid_zu_tmp,pnorm_perpFlip_tmp)
+          tmpFlip(:,:,llm:1:-1) = tmpFlip_tmp(:,:,:)
+          pnorm_perpFlip(:,:,llm:1:-1) = pnorm_perpFlip_tmp(:,:,:)
        endif
     endif
 
@@ -459,7 +506,8 @@ contains
        ! CFADs of subgrid-scale lidar scattering ratios
        do i=1,Npoints
           do j=1,llm
-             cfad2(i,:,j) = hist1D(ncol,x3d(i,:,j),SR_BINS,histBsct)
+             x3d_tmp(:) = x3d(i,:,j)
+             cfad2(i,:,j) = hist1D(ncol,x3d_tmp,SR_BINS,histBsct)
           enddo
        enddo
        where(cfad2 .ne. R_UNDEF) cfad2=cfad2/ncol

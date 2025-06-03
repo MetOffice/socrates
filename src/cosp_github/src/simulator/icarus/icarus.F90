@@ -500,6 +500,8 @@ contains
 
     ! Local Variables
     INTEGER :: j,ilev,ilev2
+    REAL(WP),dimension(ncol) :: boxtau_tmp, boxptop_tmp
+    REAL(WP),dimension(numISCCPTauBins,numISCCPPresBins) :: fq_isccp_tmp
     REAL(WP),dimension(npoints,ncol) :: albedocld
     LOGICAL, dimension(npoints,ncol) :: box_cloudy
 
@@ -567,10 +569,11 @@ contains
        ! Compute joint histogram and column quantities for points that are sunlit and cloudy
        if (sunlit(j) .eq.1 .or. isccp_top_height .eq. 3) then 
           ! Joint-histogram
-          call hist2D(boxtau(j,1:ncol),boxptop(j,1:ncol),ncol,isccp_histTau,numISCCPTauBins, &
-               isccp_histPres,numISCCPPresBins,fq_isccp(j,1:numISCCPTauBins,1:numISCCPPresBins))
-          fq_isccp(j,1:numISCCPTauBins,1:numISCCPPresBins) = &
-               fq_isccp(j,1:numISCCPTauBins,1:numISCCPPresBins)/ncol
+          boxtau_tmp(:) = boxtau(j,1:ncol)
+          boxptop_tmp(:) = boxptop(j,1:ncol)
+          call hist2D(boxtau_tmp,boxptop_tmp,ncol,isccp_histTau,numISCCPTauBins, &
+               isccp_histPres,numISCCPPresBins,fq_isccp_tmp)
+          fq_isccp(j,1:numISCCPTauBins,1:numISCCPPresBins) = fq_isccp_tmp/ncol
           
           ! Column cloud area
           totalcldarea(j) = real(count(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin),wp)/ncol
