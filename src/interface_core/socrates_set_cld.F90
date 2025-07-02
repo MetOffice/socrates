@@ -813,8 +813,12 @@ end if
 do i = 1, cld%n_condensed
   do k = dimen%id_cloud_top, atm%n_layer
     do l = 1, atm%n_profile
-      cld%condensed_mix_ratio(l, k, i) = cld%condensed_mix_ratio(l, k, i) &
-        / max(cld%frac_cloud(l, k, cld%i_cloud_type(i)), eps)
+      if (cld%frac_cloud(l, k, cld%i_cloud_type(i)) > eps) then
+        cld%condensed_mix_ratio(l, k, i) = cld%condensed_mix_ratio(l, k, i) &
+          / cld%frac_cloud(l, k, cld%i_cloud_type(i))
+      else
+        cld%condensed_mix_ratio(l, k, i) = 0.0_RealK
+      end if
     end do
   end do
 end do

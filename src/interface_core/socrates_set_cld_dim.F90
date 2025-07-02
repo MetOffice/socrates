@@ -29,6 +29,7 @@ use def_spectrum, only: StrSpecData
 use def_atm,      only: StrAtm
 use realtype_rd,  only: RealK, RealExt
 use rad_pcf,      only: &
+  ip_cloud_combine_homogen, ip_cloud_combine_ice_water, &
   ip_cloud_split_homogen, ip_cloud_split_ice_water, &
   ip_clcmp_st_water, ip_clcmp_st_ice, ip_clcmp_cnv_water, ip_clcmp_cnv_ice, &
   ip_re_external, ip_re_constant, &
@@ -91,6 +92,8 @@ integer :: i_param_type, layer_offset, stride_layer
 !   Working variable
 logical :: l_last
 !   Local flag to loop over profiles last in 1d fields
+logical :: l_combine
+!   Combine stratiform and convective cloud
 logical :: l_split
 !   Split cloud into optically thick and thin regions
 
@@ -134,11 +137,17 @@ end if
 
 
 select case (control%i_cloud_representation)
+case (ip_cloud_combine_homogen, ip_cloud_combine_ice_water)
+  ! Combine stratiform and convective cloud into a single region
+  l_combine = .true.
+  l_split = .false.
 case (ip_cloud_split_homogen, ip_cloud_split_ice_water)
   ! Stratiform and convective cloud is combined and the
   ! total cloud is split into optically thick and thin regions
+  l_combine = .true.
   l_split = .true.
 case default
+  l_combine = .false.
   l_split = .false.
 end select
 
@@ -179,6 +188,8 @@ do i=1, cld%n_condensed
       ! Set the ice-crystal effective dimension
       call set_cld_field(cld%condensed_dim_char(:, :, i), &
                          ice_dim, ice_dim_1d)
+    else if (l_combine) then
+      call set_ice_dim(ice_nc, ice_nc_1d, ice_conv_nc, ice_conv_nc_1d)
     else
       call set_ice_dim(ice_nc, ice_nc_1d)
     end if
@@ -331,7 +342,7 @@ contains
   end subroutine set_liq_dim
 
 
-  subroutine set_ice_dim(full_nc, oned_nc)
+  subroutine set_ice_dim(full_nc, oned_nc, full_conv_nc, oned_conv_nc)
 
     use rad_pcf, only: &
       ip_ice_adt, ip_ice_agg_de, ip_ice_agg_de_sun, ip_ice_baran, &
@@ -339,12 +350,13 @@ contains
     use rad_ccf, only: pi
     implicit none
 
-    real(RealExt), intent(in), optional :: full_nc(:, :)
+    real(RealExt), intent(in), optional :: full_nc(:, :), full_conv_nc(:, :)
 !     Full field cloud ice number concentration
-    real(RealExt), intent(in), optional :: oned_nc(:)
+    real(RealExt), intent(in), optional :: oned_nc(:), oned_conv_nc(:)
 !     One-dimensional cloud ice number concentration
 
     real(RealK) :: cinc(dimen%nd_profile, dimen%id_cloud_top:dimen%nd_layer)
+    real(RealK) :: cinc_conv(dimen%nd_profile,dimen%id_cloud_top:dimen%nd_layer)
     real(RealK) :: cinc_incloud
 !     Working cloud ice number concentration
     real(RealK), parameter :: eps = epsilon(1.0_RealK)
@@ -433,6 +445,15 @@ contains
     case (ip_ice_pade_2_phf)
       ! Pade fits based on the equivalent spherical radius.
       call set_cld_field(cinc, full_nc, oned_nc)
+      if (present(full_conv_nc).or.present(oned_conv_nc)) then
+        call set_cld_field(cinc_conv, full_conv_nc, oned_conv_nc)
+        do k = dimen%id_cloud_top, atm%n_layer
+          do l = 1, atm%n_profile
+            ! Combined cloud requires total ice number  
+            cinc(l, k) = cinc(l, k) + cinc_conv(l, k)
+          end do
+        end do
+      end if
       do k = dimen%id_cloud_top, atm%n_layer
         do l = 1, atm%n_profile
           ! Convert grid-box mean values to in-cloud values
