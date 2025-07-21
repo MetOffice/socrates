@@ -2187,6 +2187,43 @@ Band =    6
 *END
 *BLOCK: TYPE =   12: SUBTYPE =    0: VERSION =    2
 Parametrized scattering data for ice crystals.
+ Type number of ice crystals =     5
+Index of parametrization scheme =    20:   number of parameters =    16
+Number of moments of the phase function =     1
+Range of validity of parametrization =  5.99988E-06 --  1.80005E-04
+Band =     1     Fitting parameters:
+     1.09038E+05     1.58407E+09     4.75244E+13     6.28443E+07
+     1.10773E+12     2.71178E+16     1.52008E-07     2.31096E-01
+     1.38550E+03     6.75195E+03    -1.62908E+06     7.86832E-01
+     6.14823E+05     7.28212E+09     6.97782E+05     8.24395E+09
+Band =     2     Fitting parameters:
+     1.25218E+05     1.10651E+09     4.09672E+13     7.13011E+07
+     8.69459E+11     2.25947E+16    -6.75819E-08     1.00108E-01
+     1.41283E+04     2.26384E+05    -9.44250E+06     8.22378E-01
+     2.42091E+05     2.81442E+09     2.72451E+05     3.16765E+09
+Band =     3     Fitting parameters:
+    -2.33943E+03     9.61874E+08     1.95619E+13    -1.71677E+06
+     5.82075E+11     1.17720E+16     1.63674E-07     1.40369E-01
+    -4.82856E+02    -2.99191E+03    -1.96480E+06     7.80416E-01
+     3.64250E+05     3.57134E+09     4.09464E+05     4.00267E+09
+Band =     4     Fitting parameters:
+    -3.55377E+03     5.34813E+08     9.58684E+12    -2.29198E+06
+     3.19566E+11     5.77915E+15     1.71268E-06     1.12651E+01
+     9.25241E+05     1.12026E+05     2.83157E+06     7.48179E-01
+     3.40319E+05     2.67297E+09     3.81922E+05     2.98732E+09
+Band =     5     Fitting parameters:
+    -1.59474E+03     2.85657E+09     6.02612E+13    -2.01354E+06
+     1.66148E+12     3.67212E+16    -1.21635E-04     1.88904E+03
+     9.55128E+07     7.15562E+04     2.68302E+08     6.73509E-01
+     3.30432E+05     5.45612E+08     3.65973E+05     5.57569E+08
+Band =     6     Fitting parameters:
+    -1.80685E+03     2.72139E+08     5.08470E+12    -1.20112E+06
+     1.54757E+11     3.06620E+15     3.37725E-02     6.45783E+04
+     4.08705E+08     1.73372E+05     8.14314E+08     8.90537E-01
+    -2.85832E+02     1.72880E+10     1.81882E+04     1.79109E+10
+*END
+*BLOCK: TYPE =   12: SUBTYPE =    0: VERSION =    2
+Parametrized scattering data for ice crystals.
  Type number of ice crystals =     8
 Index of parametrization scheme =    12:   number of parameters =    14
 Number of moments of the phase function =     1

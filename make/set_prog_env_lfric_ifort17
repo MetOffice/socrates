@@ -1,9 +1,0 @@
-module purge
-module load texstudio
-module load scitools
-module use /project/extrasoftware/modulefiles.rhel7
-module use /data/users/lfric/software/modulefiles.rhel7
-module load ifort/17.0_64
-module load mpi/mpich/3.3/ifort/17.0_64
-module load hdf5/1.10.4/ifort/17.0_64
-module load netcdf/4.6.2/ifort/17.0_64

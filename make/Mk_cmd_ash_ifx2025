@@ -2,10 +2,10 @@
 # Pathnames for compilers and global options for naming files
 #
 FORTCOMP        = ifx -O -c
-LINK            = ifx -O
+LINK            = ifx -O -Wl,-rpath=${NETCDFF_ROOT}/lib
 LIBLINK         = ar rvu
-INCCDF_PATH     = /usr/local/netcdf4-intel-fortran/4.6.1/include
-LIBCDF_PATH     = /usr/local/netcdf4-intel-fortran/4.6.1/lib
+INCCDF_PATH     = ${NETCDFF_ROOT}/include
+LIBCDF_PATH     = ${NETCDFF_ROOT}/lib
 LIBCDF_NAME     = netcdff
 OMPARG          = -qopenmp
 

@@ -8,16 +8,13 @@
 #
 # Default target:
 
-all: Cgen_null Cinc_field Cscale_field
+all: Cinc_field Cscale_field
 
 # Compiler
 
 CC = cc
 
 # Scripts written in C:
-
-Cgen_null: Cgen_null.c
-	$(CC) -o Cgen_null Cgen_null.c -lm
 
 Cinc_field: Cinc_field.c
 	$(CC) -o Cinc_field Cinc_field.c -lm
@@ -28,5 +25,5 @@ Cscale_field: Cscale_field.c
 # Special targets:
 
 new:
-	touch Cgen_null.c Cinc_field.c Cscale_field.c
+	touch Cinc_field.c Cscale_field.c
 	make

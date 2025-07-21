@@ -20,13 +20,9 @@ if [ $pyerr -eq 0 ]; then
         do
             diff_err=0
             (nccmp --data --metadata $f KGO/$f && \
-             echo "$f matched ifort KGO: Pass") || \
+             echo "$f matched gfortran12 KGO: Pass") || \
             (nccmp --data --metadata $f KGO/ifort19_$f && \
-             echo "$f matched ifort19 KGO: Pass") || \
-            (nccmp --data --metadata $f KGO/gfortran_$f && \
-             echo "$f matched gfortran KGO: Pass") || \
-            (nccmp --data --metadata $f KGO/gfortran13_$f && \
-             echo "$f matched gfortran13 KGO: Pass") || diff_err=1
+             echo "$f matched ifort19 KGO: Pass") || diff_err=1
             if [ $diff_err -gt 0 ]; then
                 echo "$f did not compare"
                 ierr=1

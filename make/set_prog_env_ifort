@@ -1,6 +1,0 @@
-module purge
-module load texstudio
-module load scitools
-module load ifort/17.0_64
-LIBCDF_PATH=/data/users/frhg/netcdf-fortran-4.4.4/build/ifort17/lib
-export LD_LIBRARY_PATH=$LIBCDF_PATH:$LD_LIBRARY_PATH

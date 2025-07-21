@@ -81,19 +81,7 @@ done
 cd bin
 ./mkdep
 case "$1" in
-  "gfortran" | "ifort" | \
-  "lfric_gfortran6"  | "lfric_ifort17" | \
-  "lfric_gfortran11" | "lfric_ifort19")
-    cp set_prog_env_$1 set_prog_env
-    diff -q Mk_cmd_$1 Mk_cmd || (cp Mk_cmd_$1 Mk_cmd; make clean)
-    if [ -r /usr/share/Modules/init/bash ]
-      then
-        . /usr/share/Modules/init/bash
-    fi
-    shift
-    ;;
-
-  "azure_gfortran12" | "azure_gfortran12_debug" | \
+  "azure_gfortran12" | "azure_gfortran12_debug" | "azure_ifort19" | \
   "ash_ifx2025")
     diff -q set_prog_env_$1 set_prog_env || \
         (cp set_prog_env_$1 set_prog_env; make clean)

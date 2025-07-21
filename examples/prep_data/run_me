@@ -48,10 +48,9 @@ sulp_scatav
 -1
 EOF
 
-(diff -q sp_with_aer sp_gfortran && echo "Matched gfortran output") || \
-(diff -q sp_with_aer sp_ifort && echo "Matched ifort output") || \
+(diff -q sp_with_aer sp_gfortran12 && echo "Matched gfortran12 output") || \
 (diff -q sp_with_aer sp_ifort19 && echo "Matched ifort19 output") || \
-(diff -q sp_with_aer sp_gfortran13 && echo "Matched gfortran13 output") || \
+(diff -q sp_with_aer sp_gfortran14 && echo "Matched gfortran14 output") || \
 (diff -q sp_with_aer sp_ifx2025 && echo "Matched ifx2025 output") || \
 exit 1
 rm sulp_scat sulp_scatav sp_with_aer

@@ -78,7 +78,6 @@ Ccdf2cdl -o cdl_trop_lw_ga7_nlte.hrts              trop_lw_ga7_nlte.hrts > /dev/
 diff -q cdl_trop_xsw_photol_g1_2.hrts     ref_trop_xsw_photol_g1_2.hrts          || ierr=1
 diff -q cdl_trop_xsw_photol_g1_13.hrts    gfortran_trop_xsw_photol_g1_13.hrts    || \
 diff -q cdl_trop_xsw_photol_g1_13.hrts    ref_trop_xsw_photol_g1_13.hrts         || \
-diff -q cdl_trop_xsw_photol_g1_13.hrts    ifort17_trop_xsw_photol_g1_13.hrts     || \
 diff -q cdl_trop_xsw_photol_g1_13.hrts    ifx2025_trop_xsw_photol_g1_13.hrts     || \
     ierr=1
 diff -q cdl_trop_xsw_photol_g2.hrts       ref_trop_xsw_photol_g2.hrts            || ierr=1
@@ -87,7 +86,6 @@ diff -q cdl_trop_xsw_photol_g4.hrts       ref_trop_xsw_photol_g4.hrts           
 diff -q cdl_trop_xsw_photol_sg_g1_2.hrts  ref_trop_xsw_photol_sg_g1_2.hrts       || ierr=1
 diff -q cdl_trop_xsw_photol_sg_g1_13.hrts gfortran_trop_xsw_photol_sg_g1_13.hrts || \
 diff -q cdl_trop_xsw_photol_sg_g1_13.hrts ref_trop_xsw_photol_sg_g1_13.hrts      || \
-diff -q cdl_trop_xsw_photol_sg_g1_13.hrts ifort17_trop_xsw_photol_sg_g1_13.hrts  || \
 diff -q cdl_trop_xsw_photol_sg_g1_13.hrts ifx2025_trop_xsw_photol_sg_g1_13.hrts  || \
     ierr=1
 diff -q cdl_trop_xsw_photol_sg_g2.hrts    ref_trop_xsw_photol_sg_g2.hrts         || ierr=1
