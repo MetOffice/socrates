@@ -19,7 +19,6 @@ MODULE input_head_pcf
 !   changed to ensure that the changes are mirrored in all arrays.
 
   USE realtype_rd, ONLY: RealK
-  USE gas_list_pcf, ONLY: npd_gases
   USE rad_pcf, ONLY: npd_aerosol_component
 
   IMPLICIT NONE
@@ -262,92 +261,6 @@ MODULE input_head_pcf
 !   Long titles for physical data
 !
 !
-! Gaseous Data:
-!
-  CHARACTER  (LEN=len_col_header), Parameter, &
-    Dimension(NPD_gases) :: header_gas = (/ &
-    'H2O       ', 'CO2       ', 'O3        ', 'N2O       ', &
-    'CO        ', 'CH4       ', 'O2        ', 'NO        ', &
-    'SO2       ', 'NO2       ', 'NH3       ', 'HNO3      ', &
-    'N2        ', 'CFC11     ', 'CFC12     ', 'CFC113    ', &
-    'HCFC22    ', 'HFC125    ', 'HFC134A   ', 'CFC114    ', &
-    'TiO       ', 'VO        ', 'H2        ', 'He        ', &
-    'OCS       ', 'Na        ', 'K         ', 'FeH       ', &
-    'CrH       ', 'Li        ', 'Rb        ', 'Cs        ', &
-    'PH3       ', 'C2H2      ', 'HCN       ', 'H2S       ', &
-    'Ar        ', 'AIR       ', 'O         ', 'N         ', &
-    'NO3       ', 'N2O5      ', 'HONO      ', 'HO2NO2    ', &
-    'H2O2      ', 'C2H6      ', 'CH3       ', 'H2CO      ', &
-    'HO2       ', 'HDO       ', 'HCl       ', 'HF        ', &
-    'cOSSO     ', 'tOSSO     ', 'yOSOS     ', 'CH3CHO    ', &
-    'CH3OOH    ', 'CH3COCH3  ', 'CH3COCHO  ', 'CHOCHO    ', &
-    'C2H5CHO   ', 'HOCH2CHO  ', 'C2H5COCH3 ', 'MVK       ', &
-    'MACR      ', 'PAN       ', 'CH3ONO2   ' /) 
-!   Headers for gaseous data
-!
-!
-  CHARACTER  (LEN=len_file_suffix), Parameter, &
-    Dimension(NPD_gases) :: gas_suffix = (/ &
-    'q           ', 'co2         ', 'o3          ', 'n2o         ', &
-    'co          ', 'ch4         ', 'o2          ', 'no          ', &
-    'so2         ', 'no2         ', 'nh3         ', 'hno3        ', &
-    'n2          ', 'cfc11       ', 'cfc12       ', 'cfc113      ', &
-    'hcfc22      ', 'hfc125      ', 'hfc134a     ', 'cfc114      ', &
-    'tio         ', 'vo          ', 'h2          ', 'he          ', &
-    'ocs         ', 'na          ', 'k           ', 'feh         ', &
-    'crh         ', 'li          ', 'rb          ', 'cs          ', &
-    'ph3         ', 'c2h2        ', 'hcn         ', 'h2s         ', &
-    'ar          ', 'air         ', 'o           ', 'n           ', &
-    'no3         ', 'n2o5        ', 'hono        ', 'ho2no2      ', &
-    'h2o2        ', 'c2h6        ', 'ch3         ', 'h2co        ', &
-    'ho2         ', 'hdo         ', 'hcl         ', 'hf          ', &
-    'cosso       ', 'tosso       ', 'yosos       ', 'ch3cho      ', &
-    'ch3ooh      ', 'ch3coch3    ', 'ch3cocho    ', 'chocho      ', &
-    'c2h5cho     ', 'hoch2cho    ', 'c2h5coch3   ', 'mvk         ', &
-    'macr        ', 'pan         ', 'ch3ono2     '/) 
-!   File suffixes for gaseous data
-!
-!
-  CHARACTER  (LEN=len_long_title), Parameter, &
-    Dimension(NPD_gases) :: gas_title = (/ &
-    ' Water Vapour                 ', ' Carbon Dioxide               ', &
-    ' Ozone                        ', ' Dinitrogen oxide             ', &
-    ' Carbon Monoxide              ', ' Methane                      ', &
-    ' Oxygen                       ', ' Nitrogen Monoxide            ', &
-    ' Sulphur Dioxide              ', ' Nitrogen Dioxide             ', &
-    ' Ammonia                      ', ' Nitric acid                  ', &
-    ' Nitrogen                     ', ' CFC-11                       ', &
-    ' CFC-12                       ', ' CFC-113                      ', &
-    ' HCFC-22                      ', ' HFC-125                      ', &
-    ' HFC-134a                     ', ' CFC-114                      ', &
-    ' Titanium oxide               ', ' Vanadium oxide               ', &
-    ' Hydrogen                     ', ' Helium                       ', &
-    ' Carbonyl sulphide            ', ' Sodium                       ', &
-    ' Potassium                    ', ' Iron hydride                 ', &
-    ' Chromium hydride             ', ' Lithium                      ', &
-    ' Rubidium                     ', ' Cesium                       ', &
-    ' Phosphine                    ', ' Acetylene                    ', &
-    ' Hydrogen cyanide             ', ' Hydrogen sulphide            ', &
-    ' Argon                        ', ' Dry air                      ', &
-    ' Atomic Oxygen                ', ' Atomic Nitrogen              ', &
-    ' Nitrate radical              ', ' Dinitrogen Pentoxide         ', &
-    ' Nitrous acid                 ', ' Peroxynitric acid            ', &
-    ' Hydrogen peroxide            ', ' Ethane                       ', &
-    ' Methyl radical               ', ' Formaldehyde                 ', &
-    ' Hydroperoxy radical          ', ' Semiheavy water              ', &
-    ' Hydrogen chloride            ', ' Hydrogen fluoride            ', &
-    ' cis-OSSO                     ', ' trans-OSSO                   ', &
-    ' OSO-S                        ', ' Acetaldehyde                 ', &
-    ' Methylhydroperoxide          ', ' Acetone                      ', &
-    ' Methylglyoxal                ', ' Glyoxal                      ', &
-    ' Propanal                     ', ' Glycolaldehyde               ', &
-    ' Methyl ethyl ketone          ', ' Methyl vinyl ketone          ', &
-    ' Methacrolein                 ', ' Peroxyacetyl nitrate         ', &
-    ' Methylnitrate                ' /)
-!   Long titles for gaseous data
-!
-!
-! 
 ! Aerosol Data:
 !
   CHARACTER  (LEN=len_col_header), Parameter, &

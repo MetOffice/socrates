@@ -16,18 +16,20 @@
 SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
   USE realtype_rd,  ONLY: RealK
-  USE rad_pcf, ONLY: i_err_fatal, ip_solar, ip_two_stream, ip_sph_reduced_iter,&
-                     ip_spherical_harmonic, ip_infra_red, i_normal,            &
-                     ip_aerosol_param_moist, ip_aerosol_param_phf_moist,       &
-                     ip_overlap_single, ip_overlap_random,                     &
-                     ip_overlap_exact_major, ip_overlap_random_resort_rebin,   &
-                     ip_overlap_k_eqv_scl, ip_overlap_k_eqv,                   &
-                     ip_overlap_mix_ses2, ip_cloud_column_max, ip_cloud_mcica, &
-                     ip_cloud_mix_max, ip_cloud_mix_random, ip_cloud_part_corr,&
-                     ip_cloud_part_corr_cnv, ip_cloud_triple, ip_scale_term,   &
-                     ip_overlap_hybrid, ip_scale_lookup, ip_scale_null,        &
-                     ip_overlap_k_eqv_mod, ip_region_clear, ip_region_strat,   &
-                     ip_region_conv, ip_scale_ses2, ip_scale_band
+  USE rad_pcf, ONLY: i_err_fatal, &
+    ip_solar, ip_two_stream, ip_sph_reduced_iter, &
+    ip_spherical_harmonic, ip_infra_red, i_normal, &
+    ip_aerosol_param_moist, ip_aerosol_param_phf_moist, &
+    ip_overlap_single, ip_overlap_random, &
+    ip_overlap_exact_major, ip_overlap_random_resort_rebin, &
+    ip_overlap_k_eqv_scl, ip_overlap_k_eqv, &
+    ip_overlap_mix_ses2, ip_cloud_column_max, ip_cloud_mcica, &
+    ip_cloud_mix_max, ip_cloud_mix_random, ip_cloud_part_corr, &
+    ip_cloud_part_corr_cnv, ip_cloud_triple, &
+    ip_overlap_hybrid, ip_overlap_k_eqv_mod, &
+    ip_region_clear, ip_region_strat, ip_region_conv, &
+    ip_scale_ses2, ip_scale_band, ip_scale_term, &
+    ip_scale_lookup, ip_scale_t_lookup, ip_scale_null
   USE def_spectrum, ONLY: StrSpecData
   USE def_dimen,    ONLY: StrDim
   USE def_control,  ONLY: StrCtrl
@@ -114,6 +116,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
   INTEGER                                                                      &
       i_band                                                                   &
 !       Spectral band
+    , i_gas                                                                    &
+!       Local index of gas
     , n_gas                                                                    &
 !       Number of active gases
     , i_gas_band, i_gas_band_1, i_gas_band_2                                   &
@@ -201,7 +205,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
 ! Controlling variables:
   INTEGER                                                                      &
-      i                                                                        &
+      i, ii                                                                    &
 !       Loop variable
     , j, j_cont                                                                &
 !       Loop variable
@@ -447,6 +451,14 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !       Weight of jt_ct-term in generalised continuum T interpolation
       fgf(dimen%nd_profile, dimen%nd_layer, spectrum%dim%nd_species_sb)
 !       Multiplication factors for gas fraction interpolation
+
+! Temperature dependent gas absorption interpolation
+  INTEGER :: n_gas_lk, i_gas_lk(spectrum%dim%nd_species)
+!   Indexing of gas species for lookup tables
+  INTEGER, ALLOCATABLE :: jt_gas(:, :, :)
+!   Index for temperature interpolation of gas absorption
+  REAL (RealK), ALLOCATABLE :: wt_gas(:, :, :)
+!   Weight of jt_gas term in gas absorption temperature interpolation
 
 ! Temperature dependent quantum yield interpolation
   INTEGER :: n_t_lookup
@@ -723,6 +735,30 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
       , spectrum%gas%p_lookup, spectrum%gas%t_lookup, spectrum%gas%gf_lookup   &
       , fac00, fac01, fac10, fac11, jp, jt, jtt, fgf, jgf, jgfp1)
   END IF
+
+! Calculate temperature interpolation factors for gas k-terms
+  n_gas_lk = 0
+  i_gas_lk(:) = 0
+  DO i_gas=1, Spectrum%Gas%n_absorb
+    DO i_band=control%first_band, control%last_band
+      IF (spectrum%gas%i_scale_fnc(i_band, i_gas) == ip_scale_t_lookup) THEN
+        n_gas_lk = n_gas_lk + 1
+        i_gas_lk(i_gas) = n_gas_lk
+        EXIT
+      END IF
+    END DO
+  END DO
+  ALLOCATE(jt_gas(atm%n_profile, atm%n_layer, n_gas_lk))
+  ALLOCATE(wt_gas(atm%n_profile, atm%n_layer, n_gas_lk))
+  DO i_gas=1, Spectrum%Gas%n_absorb
+    ii = i_gas_lk(i_gas)
+    IF (ii > 0) THEN
+      CALL inter_t_lookup( atm%n_profile, atm%n_layer, &
+        Spectrum%Gas%n_t_lookup_gas(i_gas), atm%n_profile, atm%n_layer, &
+        atm%t, Spectrum%Gas%t_lookup_gas(:, i_gas), &
+        wt_gas(:, :, ii), jt_gas(:, :, ii) )
+    END IF
+  END DO
 
 ! Calculate temperature interpolation factor for continuum k-terms
   IF (ANY(spectrum%contgen%i_band_k_cont(                                      &
@@ -1115,6 +1151,20 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
               END DO
             END DO
           END IF
+        ELSE IF (spectrum%gas%i_scale_fnc(i_band, i_gas_band) &
+          == ip_scale_t_lookup) THEN
+          ii = i_gas_lk(i_gas_band)
+          DO k=1, spectrum%gas%i_band_k(i_band, i_gas_band)
+            DO i=1, atm%n_layer
+              DO l=1, atm%n_profile
+                k_esft_layer(l,i,k,i_gas_band) = MAX(0.0_RealK, &
+                  wt_gas(l,i,ii)*Spectrum%Gas%k_t_lookup_gas( &
+                    jt_gas(l,i,ii), k, i_gas_band, i_band ) &
+                  + (1.0_RealK - wt_gas(l,i,ii))*Spectrum%Gas%k_t_lookup_gas( &
+                    jt_gas(l,i,ii)+1, k, i_gas_band, i_band) )
+              END DO
+            END DO
+          END DO
         END IF
       END DO
 
@@ -1370,8 +1420,10 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
         ELSE IF (spectrum%gas%i_scale_k(i_band, i_gas_band)                    &
             == ip_scale_term) THEN
-          IF (spectrum%gas%i_scale_fnc(i_band, i_gas_band)                     &
-               == ip_scale_lookup) THEN
+          IF (spectrum%gas%i_scale_fnc(i_band, i_gas_band) &
+                == ip_scale_lookup .OR. &
+              spectrum%gas%i_scale_fnc(i_band, i_gas_band) &
+                == ip_scale_t_lookup) THEN
             IF (l_photol_only(j)) THEN
               DO k=1, n_abs_esft(j)
                 DO i=1, atm%n_layer
@@ -2107,6 +2159,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 
   CALL deallocate_sph(sph)
   DEALLOCATE(photol)
+  DEALLOCATE(wt_gas)
+  DEALLOCATE(jt_gas)
 
   9999 CONTINUE
   IF (ierr /= i_normal) THEN

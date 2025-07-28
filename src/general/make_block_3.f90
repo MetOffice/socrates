@@ -256,7 +256,6 @@ SUBROUTINE make_block_3(Sp, Sol, ierr)
 
   ELSE
 !   Rayleigh scattering by air
-
     Sp%Rayleigh%i_rayleigh_scheme = ip_rayleigh_total
     IF (ALLOCATED(Sp%Rayleigh%rayleigh_coeff)) &
         DEALLOCATE(Sp%Rayleigh%rayleigh_coeff)
@@ -266,6 +265,26 @@ SUBROUTINE make_block_3(Sp, Sol, ierr)
 
   CALL make_block_3_1(Sp, Sol, Refract_H2, l_h2he_atm)
   IF (l_h2he_atm) CALL deallocate_refract(Refract_H2)
+
+  ! Treat single custom gas as total for compatibility with sub-bands
+  IF (Sp%Rayleigh%i_rayleigh_scheme == ip_rayleigh_custom .AND. &
+      Sp%Rayleigh%n_gas_rayleigh == 1) THEN
+    WRITE(*, '(A)') &
+      'Assume entire atmosphere is this gas for Rayleigh scattering? (Y/N)'
+    READ(*, *, IOSTAT=ios) char_yn
+    IF (char_yn == 'Y' .OR. char_yn == 'y') THEN
+      Sp%Rayleigh%i_rayleigh_scheme = ip_rayleigh_total
+      IF (ALLOCATED(Sp%Rayleigh%rayleigh_coeff)) &
+          DEALLOCATE(Sp%Rayleigh%rayleigh_coeff)
+      ALLOCATE(Sp%Rayleigh%rayleigh_coeff(Sp%Dim%nd_band))
+      DO i=1, Sp%Basic%n_band
+        Sp%Rayleigh%rayleigh_coeff(i) = Sp%Rayleigh%rayleigh_coeff_gas(1,i)
+      END DO
+      DEALLOCATE(Sp%Rayleigh%rayleigh_coeff_gas)
+      DEALLOCATE(Sp%Rayleigh%index_rayleigh)
+    END IF
+  END IF
+
   Sp%Basic%l_present(3)=.TRUE.
 
 END SUBROUTINE make_block_3

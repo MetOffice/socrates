@@ -19,7 +19,6 @@
 
       USE realtype_rd
       USE rad_pcf
-      USE dimensions_pp_ucf
       USE def_std_io_icf
 
       IMPLICIT NONE
@@ -40,7 +39,7 @@
 !           Shorter wavelength
      &  , wave_length_longer
 !           Longer wavelength
-     &  , spectrum(npd_solar_points)
+     &  , spectrum(n_points)
 !           Spectrum of wavelengths
 !
 !

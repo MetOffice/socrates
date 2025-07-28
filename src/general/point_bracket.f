@@ -18,7 +18,6 @@
 !
 !     Modules to set types of variables:
       USE realtype_rd
-      USE dimensions_pp_ucf
 !
 !
       IMPLICIT NONE
@@ -38,7 +37,7 @@
       REAL  (RealK), Intent(IN) ::
      &    lambda
 !           Point to search for
-     &  , spectrum(npd_solar_points)
+     &  , spectrum(n_points)
 !           Spectrum to search
 !
 !     Local variables.

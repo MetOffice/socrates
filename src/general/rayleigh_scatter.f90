@@ -4,20 +4,14 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!  Calculates Rayleigh scattering coefficient at STP.
-!
-! Description:
-!   Straight forward.
-!
-! Code Owner: Please refer to the UM file CodeOwners.txt
-! This file belongs in section: Radiation Control
+! Calculates Rayleigh scattering coefficient at STP.
 !
 !- ---------------------------------------------------------------------
 REAL(RealK) FUNCTION rayleigh_scatter(i_gas, wavelength)
 
   USE realtype_rd, ONLY: RealK
   USE rad_ccf, ONLY: pi, r_gas, n_avogadro
-  USE gas_list_pcf
+  USE gas_list_pcf, ONLY: molar_weight, depolarization_factor, rayleigh_cutoff
   USE refract_re_ccf, ONLY: refract_re_m1, p_stp, t_stp
 
   IMPLICIT NONE
@@ -48,5 +42,8 @@ REAL(RealK) FUNCTION rayleigh_scatter(i_gas, wavelength)
       *((6.0_RealK+3.0_RealK*depolarization_factor(i_gas)) &
       /(6.0_RealK-7.0_RealK*depolarization_factor(i_gas))) &
       *(molar_weight(i_gas)*1.0E-03_RealK/rho_stp**2)
+
+! Zero Rayleigh scattering below cutoff wavelength (where absorption dominates)
+  IF (wavelength < rayleigh_cutoff(i_gas)+0.1e-12) rayleigh_scatter=0.0_RealK
 
 END FUNCTION rayleigh_scatter

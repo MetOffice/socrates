@@ -24,7 +24,7 @@ cd ../
 echo ---
 echo "Testing spectral file creation for photolysis:"
 cd sp_uv
-./run_me_sp || err=1
+./run_me_sp_411rd || err=1
 cd ../
 
 echo ---

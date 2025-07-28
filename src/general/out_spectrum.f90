@@ -18,7 +18,8 @@ SUBROUTINE out_spectrum(file_spectral, Spectrum, ierr)
     StrSpecRayleigh, StrSpecGas, StrSpecPlanck, StrSpecCont, StrSpecContGen, &
     StrSpecDrop, StrSpecAerosol, StrSpecIce, StrSpecVar
   USE rad_pcf, ONLY: i_normal, i_err_fatal, &
-    ip_scale_lookup, ip_rayleigh_total, ip_rayleigh_custom, &
+    ip_rayleigh_total, ip_rayleigh_custom, &
+    ip_scale_lookup, ip_scale_t_lookup, &
     ip_scale_fnc_null, ip_scale_null, n_scale_variable, &
     ip_slingo_schrecker, ip_ackerman_stephens, ip_drop_pade_2, &
     ip_slingo_schr_phf, ip_drop_pade_2_phf, ip_ps_size_phf, &
@@ -496,7 +497,7 @@ CONTAINS
 !
     TYPE  (StrSpecBasic) :: SpBasic
     TYPE  (StrSpecGas) :: SpGas
-!
+
 !   Local variables.
     INTEGER :: i, j, k, igf, isb
 !     Loop variables
@@ -504,45 +505,25 @@ CONTAINS
 !     Index of gas
     INTEGER :: i_index_sb
 !     Index of gas in arrays with self-broadening
-!
-!
-!
+
+
     WRITE(iu_spc, '(a19, a16, a16)') &
       '*BLOCK: TYPE =    5', ': SUBTYPE =    0', ': version =    1'
     WRITE(iu_spc, '(a)') &
       'Exponential sum fiting coefficients: (exponents: m2/kg)'
-!
-    IF (ANY(Spectrum%Gas%l_self_broadening)) THEN
+
+    IF (ANY(SpGas%l_self_broadening)) THEN
       WRITE(iu_spc,'(a)') 'Self-broadened indexing numbers of all absorbers.'
       WRITE(iu_spc,'(a)') '(Zero means no self-broadening.)'
-      WRITE(iu_spc,'(6(2x, i3))') &
-        Spectrum%Gas%index_sb(1:Spectrum%Gas%n_absorb)
+      WRITE(iu_spc,'(6(2x, i3))') SpGas%index_sb(1:SpGas%n_absorb)
     END IF
-!
+
     WRITE(iu_spc, '(a4, 8x, a58, /, 12x, a48)') 'Band', &
       'Gas, Number of k-terms, Scaling type and scaling function,', &
       ' followed by reference pressure and temperature,'
     WRITE(iu_spc, '(12x, a47)') &
       ' k-terms, weights and scaling parameters.'
-!
-    IF (ANY(SpGas%i_scale_fnc == ip_scale_lookup)) THEN
-      WRITE(iu_spc1,'(a6,a2,a12)') '*BLOCK', ': ', 'k-table     '
-      WRITE(iu_spc1,'(/,2(a,i4),a)') 'Lookup table: ', &
-        Spectrum%Dim%nd_pre, ' pressures, ', &
-        Spectrum%Dim%nd_tmp, ' temperatures.'
-      DO ip=1, Spectrum%Dim%nd_pre
-        WRITE(iu_spc1,'(6(1PE13.6))') EXP(Spectrum%Gas%p_lookup(ip)), &
-          Spectrum%Gas%t_lookup(1:Spectrum%Dim%nd_tmp,ip)
-      END DO
 
-      IF (ANY(Spectrum%Gas%l_self_broadening)) THEN
-        WRITE(iu_spc1,'(/,a,i4,a)') 'Lookup table: ', &
-          Spectrum%Gas%n_gas_frac, ' gas fractions.'
-        WRITE(iu_spc1,'(6(1PE13.6))') &
-          Spectrum%Gas%gf_lookup(1:Spectrum%Gas%n_gas_frac)
-      END IF
-    END IF
-!
     DO i=1, SpBasic%n_band
       DO j=1, SpGas%n_band_absorb(i)
         i_index=SpGas%index_absorb(j, i)
@@ -555,6 +536,9 @@ CONTAINS
         IF (SpGas%i_scale_fnc(i, i_index) == ip_scale_lookup) THEN
           WRITE(iu_spc, '(2(7x, i5))') &
             SpGas%num_ref_p(i_index, i), SpGas%num_ref_t(i_index, i)
+        ELSE IF (SpGas%i_scale_fnc(i, i_index) == ip_scale_t_lookup) THEN
+          WRITE(iu_spc, '(a14, i5, a13)') 'Lookup table: ', &
+            SpGas%num_ref_t(i_index, i), ' temperatures'
         ELSE
           WRITE(iu_spc, '(2(6x, 1pe16.9))') &
             SpGas%p_ref(i_index, i), SpGas%t_ref(i_index, i)
@@ -571,63 +555,110 @@ CONTAINS
               SpGas%i_scat(k, i, i_index), SpGas%scale(1:n_scale_variable &
                 (SpGas%i_scale_fnc(i, i_index)), k, i, i_index)
           END IF
-        ENDDO
-        IF (SpGas%i_scale_fnc(i, i_index) == ip_scale_lookup ) THEN
-          WRITE(iu_spc1,'(/,3(a,i4))') 'Band: ',i,', gas: ',i_index, &
-            ', k-terms: ',SpGas%i_band_k(i, i_index)
-          IF (SpGas%l_self_broadening(i_index)) THEN
-            i_index_sb = SpGas%index_sb(i_index)
-            DO k=1, SpGas%i_band_k(i, i_index)
-              DO igf=1, SpGas%n_gas_frac
-                DO ip=1, Spectrum%Dim%nd_pre
-                  WRITE(iu_spc1,'(6(1PE13.6))') &
-                    SpGas%k_lookup_sb(:,ip,igf,k,i_index_sb,i)
-                END DO
-              END DO
-            END DO
-          ELSE
-            DO k=1, SpGas%i_band_k(i, i_index)
-              DO ip=1, Spectrum%Dim%nd_pre
-                WRITE(iu_spc1,'(6(1PE13.6))') &
-                  SpGas%k_lookup(:,ip,k,i_index,i)
-              END DO
-            END DO
-          END IF
-        END IF
-      ENDDO
-    ENDDO
-    IF (ANY(SpGas%i_scale_fnc == ip_scale_lookup)) THEN
-      WRITE(iu_spc1, '(a4)') '*END'
-    END IF
-
-    IF (ANY(Spectrum%Gas%n_sub_band_gas(1:SpBasic%n_band, &
-                                        1:SpGas%n_absorb) > 1)) THEN
-      WRITE(iu_spc1,'(//,a6,a2,a16)') '*BLOCK', ': ', 'sub-band mapping'
-    END IF
-    DO i=1, SpBasic%n_band
-      DO j=1, SpGas%n_band_absorb(i)
-        i_index=SpGas%index_absorb(j, i)
-        IF (Spectrum%Gas%n_sub_band_gas(i, i_index) > 1) THEN
-          WRITE(iu_spc1, '(/,2(a,i4),a,i6)') 'Band: ',i,', gas: ',i_index, &
-            ', sub-bands: ', Spectrum%Gas%n_sub_band_gas(i, i_index)
-          WRITE(iu_spc1, '(a)') &
-        'Sub-band  k-term       weight       wavelength_short   wavelength_long'
-          DO isb=1, Spectrum%Gas%n_sub_band_gas(i, i_index)
-            WRITE(iu_spc1, '(2i8, 3(2x,1PE16.9))') isb, &
-              Spectrum%Gas%sub_band_k(isb, i, i_index), &
-              Spectrum%Gas%sub_band_w(isb, i, i_index), &
-              Spectrum%Gas%wavelength_sub_band(:, isb, i, i_index)
-          END DO
-        END IF
+        END DO
       END DO
     END DO
-    IF (ANY(Spectrum%Gas%n_sub_band_gas(1:SpBasic%n_band, &
-                                        1:SpGas%n_absorb) > 1)) THEN
+
+    WRITE(iu_spc, '(a4)') '*END'
+
+
+    IF (ANY(SpGas%i_scale_fnc == ip_scale_lookup)) THEN
+      WRITE(iu_spc1,'(a6,a2,a12)') '*BLOCK', ': ', 'k-table     '
+      WRITE(iu_spc1,'(/,2(a,i4),a)') 'Lookup table: ', &
+        Spectrum%Dim%nd_pre, ' pressures, ', &
+        Spectrum%Dim%nd_tmp, ' temperatures.'
+      DO ip=1, Spectrum%Dim%nd_pre
+        WRITE(iu_spc1,'(6(1PE13.6))') EXP(SpGas%p_lookup(ip)), &
+          SpGas%t_lookup(1:Spectrum%Dim%nd_tmp,ip)
+      END DO
+      IF (ANY(SpGas%l_self_broadening)) THEN
+        WRITE(iu_spc1,'(/,a,i4,a)') 'Lookup table: ', &
+          SpGas%n_gas_frac, ' gas fractions.'
+        WRITE(iu_spc1,'(6(1PE13.6))') &
+          SpGas%gf_lookup(1:SpGas%n_gas_frac)
+      END IF
+      DO i=1, SpBasic%n_band
+        DO j=1, SpGas%n_band_absorb(i)
+          i_index=SpGas%index_absorb(j, i)
+          IF (SpGas%i_scale_fnc(i, i_index) == ip_scale_lookup ) THEN
+            WRITE(iu_spc1,'(/,3(a,i4))') 'Band: ',i,', gas: ',i_index, &
+              ', k-terms: ',SpGas%i_band_k(i, i_index)
+            IF (SpGas%l_self_broadening(i_index)) THEN
+              i_index_sb = SpGas%index_sb(i_index)
+              DO k=1, SpGas%i_band_k(i, i_index)
+                DO igf=1, SpGas%n_gas_frac
+                  DO ip=1, Spectrum%Dim%nd_pre
+                    WRITE(iu_spc1,'(6(1PE13.6))') &
+                      SpGas%k_lookup_sb(:,ip,igf,k,i_index_sb,i)
+                  END DO
+                END DO
+              END DO
+            ELSE
+              DO k=1, SpGas%i_band_k(i, i_index)
+                DO ip=1, Spectrum%Dim%nd_pre
+                  WRITE(iu_spc1,'(6(1PE13.6))') &
+                    SpGas%k_lookup(:,ip,k,i_index,i)
+                END DO
+              END DO
+            END IF
+          END IF
+        END DO
+      END DO
       WRITE(iu_spc1, '(a4)') '*END'
     END IF
 
 
-    WRITE(iu_spc, '(a4)') '*END'
+    IF (ANY(SpGas%i_scale_fnc == ip_scale_t_lookup)) THEN
+      WRITE(iu_spc1,'(//,a6,a2,a20)') '*BLOCK', ': ', 'temperature k-tables'
+      WRITE(iu_spc1,'(/,a9,i4,a)') 'Maximum: ', &
+        Spectrum%Dim%nd_t_lookup_gas, ' temperatures.'
+      DO i_index=1, SpGas%n_absorb
+        IF (ANY(SpGas%i_scale_fnc(:, i_index) == ip_scale_t_lookup)) THEN
+          WRITE(iu_spc1,'(/,2(a,i4),a)') 'Lookup table for gas ', i_index, &
+            ': ', SpGas%n_t_lookup_gas(i_index), ' temperatures.'
+          WRITE(iu_spc1,'(6(1PE13.6))') &
+            SpGas%t_lookup_gas(1:SpGas%n_t_lookup_gas(i_index), i_index)
+        END IF
+      END DO
+      DO i=1, SpBasic%n_band
+        DO j=1, SpGas%n_band_absorb(i)
+          i_index=SpGas%index_absorb(j, i)
+          IF (SpGas%i_scale_fnc(i, i_index) == ip_scale_t_lookup ) THEN
+            WRITE(iu_spc1,'(/,3(a,i4))') 'Band: ',i,', gas: ',i_index, &
+              ', k-terms: ',SpGas%i_band_k(i, i_index)
+            DO k=1, SpGas%i_band_k(i, i_index)
+              WRITE(iu_spc1,'(6(1PE13.6))') &
+                SpGas%k_t_lookup_gas(1:SpGas%n_t_lookup_gas(i_index), &
+                                     k, i_index, i)
+            END DO
+          END IF
+        END DO
+      END DO
+      WRITE(iu_spc1, '(a4)') '*END'
+    END IF
+
+
+    IF (ANY(SpGas%n_sub_band_gas(1:SpBasic%n_band, 1:SpGas%n_absorb) > 1)) THEN
+      WRITE(iu_spc1,'(//,a6,a2,a16)') '*BLOCK', ': ', 'sub-band mapping'
+      DO i=1, SpBasic%n_band
+        DO j=1, SpGas%n_band_absorb(i)
+          i_index=SpGas%index_absorb(j, i)
+          IF (SpGas%n_sub_band_gas(i, i_index) > 1) THEN
+            WRITE(iu_spc1, '(/,2(a,i4),a,i6)') 'Band: ',i,', gas: ',i_index, &
+              ', sub-bands: ', SpGas%n_sub_band_gas(i, i_index)
+            WRITE(iu_spc1, '(a8,2x,a6,7x,a6,7x,a16,3x,a15)') &
+              'Sub-band','k-term','weight','wavelength_short','wavelength_long'
+            DO isb=1, SpGas%n_sub_band_gas(i, i_index)
+              WRITE(iu_spc1, '(2i8, 3(2x,1PE16.9))') isb, &
+                SpGas%sub_band_k(isb, i, i_index), &
+                SpGas%sub_band_w(isb, i, i_index), &
+                SpGas%wavelength_sub_band(:, isb, i, i_index)
+            END DO
+          END IF
+        END DO
+      END DO
+      WRITE(iu_spc1, '(a4)') '*END'
+    END IF
 !
 !
 !

@@ -296,7 +296,7 @@ if (control%l_aerosol) then
 end if
 
 ! Set MODE aerosol optical properties
-if (present(n_aer_mode)) then
+if (present(n_aer_mode).and.control%l_aerosol_mode) then
   aer%n_mode = n_aer_mode
 else
   aer%n_mode = 0

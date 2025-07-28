@@ -21,7 +21,7 @@ USE realtype_rd, ONLY: RealK
 IMPLICIT NONE
 
 
-INTEGER, PARAMETER :: n_dim = 36
+INTEGER, PARAMETER :: n_dim = 38
 !   Number of dimensions in StrSpecDim
 INTEGER, PARAMETER :: n_int = 18
 !   Number of (non-allocatable) integers
@@ -81,6 +81,8 @@ TYPE StrSpecDim
 !   Size allocated for spectral sub-bands for each major gas k-term
   INTEGER :: nd_k_sub_band = 0
 !   Size allocated for minor gas k-terms for each spectral sub-band
+  INTEGER :: nd_k_term_map = 0
+!   Size allocated for k-terms in the weight_k_major array
   INTEGER :: nd_sub_band_gas = 0
 !   Size allocated for spectral sub-bands in each band
   INTEGER :: nd_sub_band = 0
@@ -103,6 +105,8 @@ TYPE StrSpecDim
 !   Number of temperatures in quantum yield look-up tables
   INTEGER :: nd_wl_lookup_photol = 0
 !   Number of wavelengths in quantum yield look-up tables
+  INTEGER :: nd_t_lookup_gas = 0
+!   Number of temperatures in gas k-term look-up tables
 END TYPE StrSPecDim
 
 
@@ -211,6 +215,11 @@ TYPE StrSpecGas
 !   Absorption coefficients for mixture species
   REAL (RealK), ALLOCATABLE :: f_mix(:)
 !   Mixing ratio of mixed absorber amount
+
+  INTEGER, ALLOCATABLE :: n_t_lookup_gas(:)
+  REAL (RealK), ALLOCATABLE :: t_lookup_gas(:, :)
+  REAL (RealK), ALLOCATABLE :: k_t_lookup_gas(:, :, :, :)
+!   Absorption coefficients for temperature lookup tables
 
   LOGICAL, ALLOCATABLE      :: l_doppler(:)
 !   Flag for Doppler broadening for each species
@@ -708,6 +717,24 @@ IF (.NOT. ALLOCATED(Sp%Gas%f_mix)) &
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%f_mix)
 
+IF (.NOT. ALLOCATED(Sp%Gas%n_t_lookup_gas)) THEN
+  ALLOCATE(Sp%Gas%n_t_lookup_gas( Sp%Dim%nd_species ))
+  Sp%Gas%n_t_lookup_gas = 0
+END IF
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%n_t_lookup_gas)
+
+IF (.NOT. ALLOCATED(Sp%Gas%t_lookup_gas)) &
+  ALLOCATE(Sp%Gas%t_lookup_gas( Sp%Dim%nd_t_lookup_gas, Sp%Dim%nd_species ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%t_lookup_gas)
+
+IF (.NOT. ALLOCATED(Sp%Gas%k_t_lookup_gas)) &
+  ALLOCATE(Sp%Gas%k_t_lookup_gas( Sp%Dim%nd_t_lookup_gas, Sp%Dim%nd_k_term, &
+                                  Sp%Dim%nd_species, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%k_t_lookup_gas)
+
 IF (.NOT. ALLOCATED(Sp%Gas%l_doppler)) THEN
   ALLOCATE(Sp%Gas%l_doppler( Sp%Dim%nd_species ))
   Sp%Gas%l_doppler = .FALSE.
@@ -1160,8 +1187,8 @@ Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Map%weight_k_sub_band)
 
 IF (.NOT. ALLOCATED(Sp%Map%weight_k_major)) &
-  ALLOCATE(Sp%Map%weight_k_major( Sp%Dim%nd_k_term, Sp%Dim%nd_species, &
-                                  Sp%Dim%nd_k_term, Sp%Dim%nd_band ))
+  ALLOCATE(Sp%Map%weight_k_major( Sp%Dim%nd_k_term_map, Sp%Dim%nd_species, &
+                                  Sp%Dim%nd_k_term_map, Sp%Dim%nd_band ))
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Map%weight_k_major)
 
@@ -1346,6 +1373,12 @@ IF (ALLOCATED(Sp%Gas%doppler_cor)) &
    DEALLOCATE(Sp%Gas%doppler_cor)
 IF (ALLOCATED(Sp%Gas%l_doppler)) &
    DEALLOCATE(Sp%Gas%l_doppler)
+IF (ALLOCATED(Sp%Gas%k_t_lookup_gas)) &
+   DEALLOCATE(Sp%Gas%k_t_lookup_gas)
+IF (ALLOCATED(Sp%Gas%t_lookup_gas)) &
+   DEALLOCATE(Sp%Gas%t_lookup_gas)
+IF (ALLOCATED(Sp%Gas%n_t_lookup_gas)) &
+   DEALLOCATE(Sp%Gas%n_t_lookup_gas)
 IF (ALLOCATED(Sp%Gas%f_mix)) &
    DEALLOCATE(Sp%Gas%f_mix)
 IF (ALLOCATED(Sp%Gas%k_mix_gas)) &

@@ -64,14 +64,19 @@ SUBROUTINE make_block_5(Spectrum, ierr)
 
   INTEGER :: nd_k_term_alloc
 !   Previously allocated size for k-terms
+  INTEGER :: nd_t_lookup_gas_alloc
+!   Previously allocated size for t_lookup
   INTEGER :: nd_sub_band_alloc
 !   Previously allocated size for sub-bands
   INTEGER, ALLOCATABLE :: arr_tmp_int_3d(:, :, :)
+  REAL (RealK), ALLOCATABLE :: arr_tmp_real_2d(:, :)
   REAL (RealK), ALLOCATABLE :: arr_tmp_real_3d(:, :, :)
   REAL (RealK), ALLOCATABLE :: arr_tmp_real_4d(:, :, :, :)
   REAL (RealK), ALLOCATABLE :: arr_tmp_real_5d(:, :, :, :, :)
   REAL (RealK), ALLOCATABLE :: arr_tmp_real_6d(:, :, :, :, :, :)
 !   Temporary arrays used when resizing existing arrays
+  REAL (RealK) :: t_lookup_pressure
+!   Single pressure used for temperature lookup tables 
 
 ! Alias pointers to dimensions to the actual structure.
   nd_band            => Spectrum%Dim%nd_band
@@ -117,6 +122,9 @@ SUBROUTINE make_block_5(Spectrum, ierr)
     IF (ALLOCATED(Spectrum%Gas%num_ref_t)) &
         DEALLOCATE(Spectrum%Gas%num_ref_t)
     ALLOCATE(Spectrum%Gas%num_ref_t(nd_species, nd_band))
+    IF (ALLOCATED(Spectrum%Gas%n_t_lookup_gas)) &
+        DEALLOCATE(Spectrum%Gas%n_t_lookup_gas)
+    ALLOCATE(Spectrum%Gas%n_t_lookup_gas(nd_species))
     IF (ALLOCATED(Spectrum%Gas%l_self_broadening)) &
         DEALLOCATE(Spectrum%Gas%l_self_broadening)
     ALLOCATE(Spectrum%Gas%l_self_broadening(nd_species))
@@ -139,6 +147,7 @@ SUBROUTINE make_block_5(Spectrum, ierr)
     Spectrum%Gas%i_scat=0
     Spectrum%Gas%num_ref_p=0
     Spectrum%Gas%num_ref_t=0
+    Spectrum%Gas%n_t_lookup_gas=0
     Spectrum%Gas%l_self_broadening=.FALSE.
     Spectrum%Gas%index_sb=0
     Spectrum%Gas%n_sub_band_gas=1
@@ -315,6 +324,17 @@ SUBROUTINE make_block_5(Spectrum, ierr)
         Spectrum%Gas%k_lookup_sb(:,:,:,1:nd_k_term_alloc,:,:) = arr_tmp_real_6d
         DEALLOCATE(arr_tmp_real_6d)
       END IF
+
+      IF (ALLOCATED(Spectrum%Gas%k_t_lookup_gas)) THEN
+        ALLOCATE(arr_tmp_real_4d(Spectrum%Dim%nd_t_lookup_gas, &
+          nd_k_term_alloc, nd_species, nd_band))
+        arr_tmp_real_4d = Spectrum%Gas%k_t_lookup_gas
+        DEALLOCATE(Spectrum%Gas%k_t_lookup_gas)
+        ALLOCATE(Spectrum%Gas%k_t_lookup_gas(Spectrum%Dim%nd_t_lookup_gas, &
+          nd_k_term, nd_species, nd_band))
+        Spectrum%Gas%k_t_lookup_gas(:,1:nd_k_term_alloc,:,:) = arr_tmp_real_4d
+        DEALLOCATE(arr_tmp_real_4d)
+      END IF
     END IF
 
     DO k=1, Spectrum%Gas%i_band_k(i_band, i_index)
@@ -326,16 +346,24 @@ SUBROUTINE make_block_5(Spectrum, ierr)
     END DO
     READ(iu_esft, '(/)')
 
-    IF (Spectrum%Gas%i_scale_fnc(i_band,i_index) == ip_scale_lookup) THEN
-!     Read in lookup table.
+    IF (Spectrum%Gas%i_scale_fnc(i_band,i_index) == ip_scale_lookup .OR. &
+        Spectrum%Gas%i_scale_fnc(i_band,i_index) == ip_scale_t_lookup) THEN
+!     Read in lookup table size.
       READ(iu_esft, '(14x, i4, 12x, i4)')                               &
         Spectrum%Gas%num_ref_p(i_index,i_band),                         &
         Spectrum%Gas%num_ref_t(i_index,i_band)
+      IF (Spectrum%Gas%num_ref_p(i_index,i_band) == 1 .AND. &
+          .NOT. Spectrum%Gas%l_self_broadening(i_index)) THEN
+        Spectrum%Gas%i_scale_fnc(i_band,i_index) = ip_scale_t_lookup
+      END IF
+    END IF
 
-      IF ( (MAXVAL(Spectrum%Gas%num_ref_p) > Spectrum%Dim%nd_pre) .OR.  &
-           (MAXVAL(Spectrum%Gas%num_ref_t) > Spectrum%Dim%nd_tmp) ) THEN
-        Spectrum%Dim%nd_pre = MAXVAL(Spectrum%Gas%num_ref_p)
-        Spectrum%Dim%nd_tmp = MAXVAL(Spectrum%Gas%num_ref_t)
+    IF (Spectrum%Gas%i_scale_fnc(i_band,i_index) == ip_scale_lookup) THEN
+
+      IF (Spectrum%Gas%num_ref_p(i_index,i_band) > Spectrum%Dim%nd_pre .OR. &
+          Spectrum%Gas%num_ref_t(i_index,i_band) > Spectrum%Dim%nd_tmp) THEN
+        Spectrum%Dim%nd_pre = Spectrum%Gas%num_ref_p(i_index,i_band)
+        Spectrum%Dim%nd_tmp = Spectrum%Gas%num_ref_t(i_index,i_band)
         IF (ALLOCATED(Spectrum%Gas%p_lookup)) &
             DEALLOCATE(Spectrum%Gas%p_lookup)
         ALLOCATE(Spectrum%Gas%p_lookup( Spectrum%Dim%nd_pre ))
@@ -357,6 +385,7 @@ SUBROUTINE make_block_5(Spectrum, ierr)
                                           nd_band ))
       END IF
 
+!     Read in lookup table.
       DO ip=1, Spectrum%Dim%nd_pre
         READ(iu_esft, '(6(1PE13.6))', IOSTAT=ios)                       &
           Spectrum%Gas%p_lookup(ip), (Spectrum%Gas%t_lookup(it, ip),    &
@@ -435,6 +464,80 @@ SUBROUTINE make_block_5(Spectrum, ierr)
           END DO
         END DO
       END IF
+
+    ELSE IF (Spectrum%Gas%i_scale_fnc(i_band,i_index) == ip_scale_t_lookup) THEN
+
+      IF (Spectrum%Gas%n_t_lookup_gas(i_index) == 0) THEN
+        ! First band to use T-lookup for this gas
+        Spectrum%Gas%n_t_lookup_gas(i_index) &
+          = Spectrum%Gas%num_ref_t(i_index, i_band)
+      ELSE IF (Spectrum%Gas%n_t_lookup_gas(i_index) &
+                  /= Spectrum%Gas%num_ref_t(i_index, i_band)) THEN
+        WRITE(*, '(/A/)') '*** Error in subroutine make_block_5'
+        WRITE(*,'(a)') 'Only one T-lookup table can be used for each gas.'
+        ierr=i_err_fatal
+        RETURN
+      END IF
+      IF (Spectrum%Gas%n_t_lookup_gas(i_index) &
+        > Spectrum%Dim%nd_t_lookup_gas) THEN
+        ! Resize arrays if the number of temperatures is greater than allocated
+        nd_t_lookup_gas_alloc = Spectrum%Dim%nd_t_lookup_gas
+        Spectrum%Dim%nd_t_lookup_gas = Spectrum%Gas%n_t_lookup_gas(i_index)
+        IF (ALLOCATED(Spectrum%Gas%t_lookup_gas)) THEN
+          ALLOCATE(arr_tmp_real_2d(nd_t_lookup_gas_alloc, nd_species))
+          arr_tmp_real_2d = Spectrum%Gas%t_lookup_gas
+          DEALLOCATE(Spectrum%Gas%t_lookup_gas)
+          ALLOCATE(Spectrum%Gas%t_lookup_gas(Spectrum%Dim%nd_t_lookup_gas, &
+            nd_species))
+          Spectrum%Gas%t_lookup_gas(1:nd_t_lookup_gas_alloc,:) &
+            = arr_tmp_real_2d
+          DEALLOCATE(arr_tmp_real_2d)
+        ELSE
+          ALLOCATE(Spectrum%Gas%t_lookup_gas(Spectrum%Dim%nd_t_lookup_gas, &
+            nd_species))
+        END IF
+        IF (ALLOCATED(Spectrum%Gas%k_t_lookup_gas)) THEN
+          ALLOCATE(arr_tmp_real_4d(nd_t_lookup_gas_alloc, &
+            nd_k_term, nd_species, nd_band))
+          arr_tmp_real_4d = Spectrum%Gas%k_t_lookup_gas
+          DEALLOCATE(Spectrum%Gas%k_t_lookup_gas)
+          ALLOCATE(Spectrum%Gas%k_t_lookup_gas(Spectrum%Dim%nd_t_lookup_gas, &
+            nd_k_term, nd_species, nd_band))
+          Spectrum%Gas%k_t_lookup_gas(1:nd_t_lookup_gas_alloc,:,:,:) &
+            = arr_tmp_real_4d
+          DEALLOCATE(arr_tmp_real_4d)
+        ELSE
+          ALLOCATE(Spectrum%Gas%k_t_lookup_gas(Spectrum%Dim%nd_t_lookup_gas, &
+            nd_k_term, nd_species, nd_band))          
+        END IF
+      END IF
+
+!     Read in temperature lookup table for this gas.
+      READ(iu_esft, '(6(1PE13.6))', IOSTAT=ios) t_lookup_pressure, &
+        ( Spectrum%Gas%t_lookup_gas(it, i_index), &
+          it=1, Spectrum%Gas%n_t_lookup_gas(i_index) )
+      IF (ios /= 0) THEN
+        WRITE(*, '(/A/)') '*** Error in subroutine make_block_5'
+        WRITE(*,'(a, i4)') 'T look-up table for species:', i_index
+        ierr=i_err_fatal
+        RETURN
+      END IF
+
+!     Skip over the headers.
+      READ(iu_esft, '(/)')
+      DO k=1, Spectrum%Gas%i_band_k(i_band, i_index)
+        READ(iu_esft, '(6(1PE13.6))', IOSTAT=ios) &
+          ( Spectrum%Gas%k_t_lookup_gas(it, k, i_index, i_band), &
+            it=1, Spectrum%Gas%n_t_lookup_gas(i_index) )
+        IF (ios /= 0) THEN
+          WRITE(*, '(/A/)') '*** Error in subroutine make_block_5'
+          WRITE(*,'(a, 3i4)') 'Temperature look-up table entry:', &
+            i_band, k, i_index
+          ierr=i_err_fatal
+          RETURN
+        END IF
+      END DO
+
     END IF
 
     ! Read in sub-band data

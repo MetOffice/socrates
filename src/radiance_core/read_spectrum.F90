@@ -18,24 +18,23 @@ SUBROUTINE read_spectrum(file_spectral, Sp)
 
 USE realtype_rd, ONLY: RealK
 USE def_spectrum, ONLY: StrSpecData, allocate_spectrum
-USE rad_pcf, ONLY: i_err_fatal, ip_rayleigh_total, ip_rayleigh_custom,         &
-                   i_normal, i_warning, ip_ice_adt, ip_ice_adt_10,             &
-                   ip_ice_baran, ip_ice_fu_ir, ip_ice_fu_phf, ip_ice_fu_solar, &
-                   ip_ice_iwc_only, ip_ice_t_iwc, ip_slingo_schr_ice_phf,      &
-                   ip_slingo_schrecker_ice, ip_sun_shine_vn2_ir,               &
-                   ip_sun_shine_vn2_vis, ip_ice_pade_2_phf,                    &
-                   ip_scale_power_law, ip_scale_ses2,                          &
-                   ip_scale_power_quad, ip_scale_doppler_quad, ip_scale_null,  &
-                   ip_scale_wenyi, ip_scale_dbl_pow_law, ip_scale_lookup,      &
-                   ip_scale_dbl_pow_quad, ip_scale_dbl_dop_quad,               &
-                   ip_scale_fnc_null, n_scale_variable,  ip_slingo_schrecker,  &
-                   ip_ackerman_stephens, ip_drop_pade_2, ip_aerosol_param_dry, &
-                   ip_aerosol_param_moist, ip_aerosol_param_phf_moist,         &
-                   ip_aerosol_param_phf_dry, ip_slingo_schr_phf,               &
-                   ip_ps_size_phf
-USE dimensions_spec_ucf, ONLY: npd_type, npd_k_term, npd_scale_variable,       &
-                               npd_drop_type, npd_ice_type,                    &
-                               npd_cloud_parameter, npd_humidities
+USE rad_pcf, ONLY: i_err_fatal, i_normal, i_warning, &
+  ip_rayleigh_total, ip_rayleigh_custom, &
+  ip_ice_adt, ip_ice_adt_10, ip_ice_baran, ip_ice_fu_ir, &
+  ip_ice_fu_phf, ip_ice_fu_solar, ip_ice_iwc_only, ip_ice_t_iwc, &
+  ip_slingo_schr_ice_phf, ip_slingo_schrecker_ice, &
+  ip_sun_shine_vn2_ir, ip_sun_shine_vn2_vis, ip_ice_pade_2_phf, &
+  ip_scale_power_law, ip_scale_ses2, ip_scale_power_quad, &
+  ip_scale_doppler_quad, ip_scale_null, ip_scale_wenyi, &
+  ip_scale_dbl_pow_law, ip_scale_lookup, ip_scale_t_lookup, &
+  ip_scale_dbl_pow_quad, ip_scale_dbl_dop_quad, &
+  ip_scale_fnc_null, n_scale_variable,  ip_slingo_schrecker, &
+  ip_ackerman_stephens, ip_drop_pade_2, ip_aerosol_param_dry, &
+  ip_aerosol_param_moist, ip_aerosol_param_phf_moist, &
+  ip_aerosol_param_phf_dry, ip_slingo_schr_phf, &
+  ip_ps_size_phf
+USE dimensions_spec_ucf, ONLY: npd_type, npd_k_term, npd_scale_variable, &
+  npd_drop_type, npd_ice_type, npd_cloud_parameter, npd_humidities
 USE gas_list_pcf, ONLY: ip_h2o
 USE file_manager, ONLY: assign_file_unit, release_file_unit
 USE ereport_mod, ONLY: ereport
@@ -194,7 +193,7 @@ spectral_k = file_spectral(1:i) // '_k'
 INQUIRE(FILE=spectral_k, EXIST=l_exist_k)
 IF (l_exist_k) THEN
   CALL assign_file_unit(spectral_k, iu_spc1, handler="fortran")
-  OPEN(UNIT=iu_spc1,FILE=spectral_k,IOSTAT=ios,STATUS='OLD',               &
+  OPEN(UNIT=iu_spc1,FILE=spectral_k,IOSTAT=ios,STATUS='OLD', &
        ACTION='READ',IOMSG=iomessage)
   IF (ios /= 0) THEN
     cmessage = 'Extended spectral file exists but could not be opened: '// &
@@ -713,7 +712,7 @@ DO
 
   END SELECT
   IF (ios /= 0) THEN
-    cmessage = 'Error in subroutine read_block_0_0_2_int: ' //           &
+    cmessage = 'Error in subroutine read_block_0_0_2_int: ' // &
                TRIM(iomessage)
     ierr=i_err_fatal
     RETURN
@@ -746,7 +745,7 @@ READ(iu_spc, '(//)')
 ALLOCATE(Sp%Basic%wavelength_short(nd_band))
 ALLOCATE(Sp%Basic%wavelength_long(nd_band))
 DO i=1, Sp%Basic%n_band
-  READ(iu_spc, FMT='(i5, 7x, 1pe16.9, 4x, 1pe16.9)', IOSTAT=ios,         &
+  READ(iu_spc, FMT='(i5, 7x, 1pe16.9, 4x, 1pe16.9)', IOSTAT=ios, &
        IOMSG=iomessage) &
     idum, Sp%Basic%wavelength_short(i), &
           Sp%Basic%wavelength_long(i)
@@ -807,12 +806,12 @@ READ(iu_spc, '(/)')
 ALLOCATE(Sp%Solar%solar_flux_band(nd_band))
 ALLOCATE(Sp%Solar%weight_blue(nd_band))
 DO i=1, Sp%Basic%n_band
-  READ(iu_spc, FMT='(i5, 7x, 1pe16.9, 4x, 1pe16.9)', IOSTAT=ios,         &
+  READ(iu_spc, FMT='(i5, 7x, 1pe16.9, 4x, 1pe16.9)', IOSTAT=ios, &
        IOMSG=iomessage) &
     idum, Sp%Solar%solar_flux_band(i), &
     Sp%Solar%weight_blue(i)
   IF (ios /= 0) THEN
-    cmessage = '*** Error: solar spectral data are not correct: '//  &
+    cmessage = '*** Error: solar spectral data are not correct: '// &
                TRIM(iomessage)
     ierr=i_err_fatal
     RETURN
@@ -1085,7 +1084,7 @@ DO i=1, Sp%Basic%n_band
     READ(iu_spc, FMT='(i5, 5(7x, i5))', IOSTAT=ios, IOMSG=iomessage) &
       idum_band, idum_species, number_term, idum_scale, idum_fnc
     IF (ios /= 0) THEN
-      cmessage = '*** Error in subroutine read_block_5_0_0.\n' //       &
+      cmessage = '*** Error in subroutine read_block_5_0_0.\n' // &
         'k-distribution data are not consistent with the summary: ' // &
         TRIM(iomessage)
       ierr=i_err_fatal
@@ -1235,7 +1234,7 @@ INTEGER :: n_sub_band_gas
 !   Number of sub-bands
 INTEGER :: j, i_term, l, it, ip, igf, isb
 !   Loop variables
-LOGICAL :: l_lookup
+LOGICAL :: l_lookup, l_t_lookup
 !   True if a k-table is used
 LOGICAL :: l_k_table_exists
 !   True if the k-table is present in the extended spectral file
@@ -1255,6 +1254,7 @@ ALLOCATE(Sp%Gas%scale(nd_scale_variable, nd_k_term, nd_band, nd_species))
 ALLOCATE(Sp%Gas%i_scat(nd_k_term, nd_band, nd_species))
 ALLOCATE(Sp%Gas%num_ref_p(nd_species, nd_band))
 ALLOCATE(Sp%Gas%num_ref_t(nd_species, nd_band))
+ALLOCATE(Sp%Gas%n_t_lookup_gas(nd_species))
 ALLOCATE(Sp%Gas%index_sb(nd_species))
 ALLOCATE(Sp%Gas%l_self_broadening(nd_species))
 ALLOCATE(Sp%Gas%n_sub_band_gas(nd_band, nd_species))
@@ -1263,10 +1263,12 @@ ALLOCATE(Sp%Gas%sub_band_w(nd_sub_band_gas, nd_band, nd_species))
 ALLOCATE(Sp%Gas%wavelength_sub_band(2, nd_sub_band_gas, nd_band, nd_species))
 Sp%Gas%num_ref_p=0
 Sp%Gas%num_ref_t=0
+Sp%Gas%n_t_lookup_gas=0
 Sp%Gas%index_sb=0
 Sp%Gas%n_sub_band_gas=1
 Sp%Gas%sub_band_k=0
 l_lookup=.FALSE.
+l_t_lookup=.FALSE.
 
 DO
   READ(iu_spc, '(a80)', IOSTAT=ios) line
@@ -1289,7 +1291,7 @@ DO
 
   END SELECT
   IF (ios /= 0) THEN
-    cmessage = 'Error in subroutine read_block_5_0_1: ' //              &
+    cmessage = 'Error in subroutine read_block_5_0_1: ' // &
                TRIM(iomessage)
     ierr=i_err_fatal
     RETURN
@@ -1324,6 +1326,7 @@ DO i=1, Sp%Basic%n_band
          (idum_fnc /= IP_scale_dbl_pow_quad) .AND. &
          (idum_fnc /= IP_scale_dbl_dop_quad) .AND. &
          (idum_fnc /= IP_scale_lookup)       .AND. &
+         (idum_fnc /= IP_scale_t_lookup)     .AND. &
          (idum_fnc /= IP_scale_fnc_null) ) THEN
       cmessage = '*** Error in subroutine read_block_5_0_1. ' // &
         'an illegal scaling function has been specified.'
@@ -1343,16 +1346,25 @@ DO i=1, Sp%Basic%n_band
 
     ! Read the reference temperature and pressure.
     IF (idum_fnc == ip_scale_lookup) THEN
-      IF (.NOT. l_exist_k) THEN
-        cmessage = 'Extended spectral file cannot be opened, ' // &
-          'k-term lookup table for BLOCK 5 cannot be read.'
-        ierr=i_err_fatal
-        RETURN
-      END IF
       READ(iu_spc, '(2(7x, i5))') &
         Sp%Gas%num_ref_p(idum_species, idum_band), &
         Sp%Gas%num_ref_t(idum_species, idum_band)
+      IF (nd_pre == 0 .AND. nd_tmp == 0) THEN
+        nd_pre = Sp%Gas%num_ref_p(idum_species, idum_band)
+        nd_tmp = Sp%Gas%num_ref_t(idum_species, idum_band)
+      ELSE IF (Sp%Gas%num_ref_p(idum_species, idum_band) /= nd_pre .OR. &
+          Sp%Gas%num_ref_t(idum_species, idum_band) /= nd_tmp) THEN
+        cmessage = '*** Error in subroutine read_block_5_0_1: '// &
+          'P/T lookup table size is not consistent.'
+        ierr=i_err_fatal
+        RETURN
+      END IF
       l_lookup=.TRUE.
+    ELSE IF (idum_fnc == ip_scale_t_lookup) THEN
+      Sp%Gas%num_ref_p(idum_species, idum_band) = 1
+      READ(iu_spc, '(14x, i5)') &
+        Sp%Gas%num_ref_t(idum_species, idum_band)
+      l_t_lookup=.TRUE.
     ELSE
       READ(iu_spc, '(2(6x, 1pe16.9))') &
         Sp%Gas%p_ref(idum_species, idum_band), &
@@ -1379,10 +1391,14 @@ DO i=1, Sp%Basic%n_band
   END DO
 END DO
 
-IF (l_lookup) THEN
-  nd_pre = MAXVAL(Sp%Gas%num_ref_p)
-  nd_tmp = MAXVAL(Sp%Gas%num_ref_t)
+IF ((l_lookup .OR. l_t_lookup) .AND. .NOT. l_exist_k) THEN
+  cmessage = 'Extended spectral file cannot be opened, ' // &
+    'k-term lookup table for BLOCK 5 cannot be read.'
+  ierr=i_err_fatal
+  RETURN
+END IF
 
+IF (l_lookup) THEN
   ALLOCATE(Sp%Gas%p_lookup( nd_pre ))
   ALLOCATE(Sp%Gas%t_lookup( nd_tmp, nd_pre ))
   ALLOCATE(Sp%Gas%k_lookup( nd_tmp, nd_pre, &
@@ -1448,13 +1464,6 @@ IF (l_lookup) THEN
       idum_species = jspecies(j,i)
       IF ( Sp%Gas%i_scale_fnc(i, idum_species) == &
            ip_scale_lookup ) THEN
-        IF (Sp%Gas%num_ref_p(idum_species, i) /= nd_pre .OR. &
-            Sp%Gas%num_ref_t(idum_species, i) /= nd_tmp) THEN
-          cmessage = '*** Error in subroutine read_block_5_0_1: '// &
-            'P/T lookup table size is not consistent.'
-          ierr=i_err_fatal
-          RETURN
-        END IF
         ! Skip over the headers.
         READ(iu_spc1, '(/)')
         IF (Sp%Gas%l_self_broadening(idum_species)) THEN
@@ -1497,6 +1506,83 @@ IF (l_lookup) THEN
     END DO
   END DO
 END IF
+
+
+IF (l_t_lookup) THEN
+  ! Locate correct block in extended spectral file
+  l_k_table_exists=.FALSE.
+  REWIND(iu_spc1)
+  DO
+    READ(iu_spc1, '(a80)') char_dum
+    IF ( char_dum(1:6) == '*BLOCK' ) THEN
+      IF ( char_dum(9:28) == 'temperature k-tables' ) THEN
+        l_k_table_exists=.TRUE.
+        EXIT
+      END IF
+    END IF
+  END DO
+
+  ! Return with error if the k-table does not exist
+  IF (.NOT. l_k_table_exists) THEN
+    cmessage = 'No temperature k-tables in extended spectral file.'
+    ierr = i_err_fatal
+    RETURN
+  END IF
+
+  ! Read the maximum size of the temperature dimension
+  READ(iu_spc1, '(/, 9x, i4)', IOSTAT=ios, IOMSG=iomessage) &
+    Sp%Dim%nd_t_lookup_gas
+  IF (ios /= 0) THEN
+    WRITE(cmessage,'(a)') &
+      '*** Error in subroutine read_block_5_0_1.\n' // &
+      'Cannot read nd_t_lookup_gas', '\nError: ' // TRIM(iomessage)
+    ierr=i_err_fatal
+    RETURN
+  END IF
+
+  ALLOCATE(Sp%Gas%t_lookup_gas(Sp%Dim%nd_t_lookup_gas, nd_species))
+  ALLOCATE(Sp%Gas%k_t_lookup_gas(Sp%Dim%nd_t_lookup_gas, &
+                                 nd_k_term, nd_species, nd_band))
+  DO idum_species=1, Sp%Gas%n_absorb
+    IF (ANY(Sp%Gas%i_scale_fnc(:, idum_species) == ip_scale_t_lookup)) THEN
+      READ(iu_spc1,'(/,27x,i4)', IOSTAT=ios, IOMSG=iomessage) &
+        Sp%Gas%n_t_lookup_gas(idum_species)
+      READ(iu_spc1,'(6(1PE13.6))', IOSTAT=ios, IOMSG=iomessage) &
+        Sp%Gas%t_lookup_gas(1:Sp%Gas%n_t_lookup_gas(idum_species), idum_species)
+      IF (ios /= 0) THEN
+        WRITE(cmessage,'(a, i4, a)') &
+          '*** Error in subroutine read_block_5_0_1:\n' // &
+          'Temperature look-up table corrupt for gas:', idum_species, &
+          '\nError: ' // TRIM(iomessage)
+        ierr=i_err_fatal
+        RETURN
+      END IF
+    END IF
+  END DO
+  DO i=1, Sp%Basic%n_band
+    DO j=1, Sp%Gas%n_band_absorb(i)
+      idum_species=Sp%Gas%index_absorb(j, i)
+      IF (Sp%Gas%i_scale_fnc(i, idum_species) == ip_scale_t_lookup ) THEN
+        ! Skip over the headers.
+        READ(iu_spc1, '(/)')
+        DO i_term=1, Sp%Gas%i_band_k(i, idum_species)
+          READ(iu_spc1,'(6(1PE13.6))', IOSTAT=ios, IOMSG=iomessage) &
+            Sp%Gas%k_t_lookup_gas(1:Sp%Gas%n_t_lookup_gas(idum_species), &
+                                 i_term, idum_species, i)
+          IF (ios /= 0) THEN
+            WRITE(cmessage,'(a, 3i4, a)') &
+              '*** Error in subroutine read_block_5_0_1:\n' // &
+              'Temperature look-up table entry:', i, i_term, idum_species, &
+              '\nError: ' // TRIM(iomessage)
+            ierr=i_err_fatal
+            RETURN
+          END IF
+        END DO
+      END IF
+    ENDDO
+  ENDDO
+END IF
+
 
 IF (nd_sub_band_gas > 1) THEN
   ! Locate correct block in extended spectral file
@@ -1675,7 +1761,7 @@ ALLOCATE(Sp%Planck%thermal_coeff(0:nd_thermal_coeff-1, nd_band))
 
 READ(iu_spc, '(/)')
 DO i=1, Sp%Basic%n_band
-  READ(iu_spc, '(i5, 7x, (t13, 3(1pe16.9, 4x)))', IOSTAT=ios,            &
+  READ(iu_spc, '(i5, 7x, (t13, 3(1pe16.9, 4x)))', IOSTAT=ios, &
        IOMSG=iomessage) &
     i_band, (Sp%Planck%thermal_coeff(k, i), &
     k=0, Sp%Planck%n_deg_fit)
@@ -1774,7 +1860,7 @@ IF (Sp%Planck%l_planck_tbl) THEN
 ELSE
   READ(iu_spc, '(/)')
   DO i=1, Sp%Basic%n_band
-    READ(iu_spc, '(i5, 7x, (t13, 3(1pe16.9, 4x)))', IOSTAT=ios,          &
+    READ(iu_spc, '(i5, 7x, (t13, 3(1pe16.9, 4x)))', IOSTAT=ios, &
          IOMSG=iomessage) &
       i_band, (Sp%Planck%thermal_coeff(k, i), &
       k=0, Sp%Planck%n_deg_fit)
@@ -2909,7 +2995,7 @@ READ(iu_spc, '(/)')
 
 ! Read in the Doppler information for each gas.
 DO i=1, Sp%Gas%n_absorb
-  READ(iu_spc, FMT='(i5, 7x, l6, 9x, 1pe12.5)', IOSTAT=ios,        &
+  READ(iu_spc, FMT='(i5, 7x, l6, 9x, 1pe12.5)', IOSTAT=ios, &
        IOMSG=iomessage) &
     idum, l_dum, r_dum
   IF (ios /= 0) THEN

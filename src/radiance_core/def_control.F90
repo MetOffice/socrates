@@ -211,6 +211,8 @@ TYPE StrCtrl
   LOGICAL :: l_ch3ono2                                            = .FALSE.
 !   Flag for absorption by methylnitrate
 
+  LOGICAL :: l_include_gas(npd_gases)                             = .FALSE.
+!   Flags to treat radiative effect of gases
   LOGICAL :: l_photol_only(npd_gases)                             = .FALSE.
 !   Flags to treat gases for photolysis only, ignoring affect on flux
 

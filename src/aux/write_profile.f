@@ -178,7 +178,7 @@
      &        =name_profile(1: length)//'.'//gas_suffix(i_type)
             var_name(1)(1:24)=gas_suffix(i_type)
      &        //empty(1:24-len(gas_suffix(i_type)))
-            var_long(1)(1: 30)=gas_title(i_type)(1: 30)
+            var_long(1)(1: 20)=name_absorb(i_type)(1: 20)
           ELSE IF (i_data_group(j) == IP_aerosol_data) THEN
             file_name(1: length+1+len_file_suffix)
      &        =name_profile(1: length)//'.'//aerosol_suffix(i_type)

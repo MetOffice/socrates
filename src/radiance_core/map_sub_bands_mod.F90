@@ -95,6 +95,7 @@ SUBROUTINE map_sub_bands(Sp)
   ! Reallocate the spectrum type arrays to hold the mapped values
   Sp%Dim%nd_sub_band_k = MAXVAL(Sp%Map%n_sub_band_k)
   Sp%Dim%nd_k_sub_band = MAXVAL(Sp%Map%n_k_sub_band)
+  Sp%Dim%nd_k_term_map = Sp%Dim%nd_k_term
 
   IF (ALLOCATED(Sp%Map%list_sub_band_k)) THEN
     DEALLOCATE(Sp%Map%list_sub_band_k)
@@ -123,6 +124,12 @@ SUBROUTINE map_sub_bands(Sp)
   ALLOCATE(Sp%Map%weight_k_sub_band(Sp%Dim%nd_k_sub_band, &
                                     Sp%Dim%nd_species, &
                                     Sp%Dim%nd_sub_band))
+
+  IF (ALLOCATED(Sp%Map%weight_k_major)) THEN
+    DEALLOCATE(Sp%Map%weight_k_major)
+  END IF
+  ALLOCATE(Sp%Map%weight_k_major(Sp%Dim%nd_k_term_map, Sp%Dim%nd_species, &
+                                 Sp%Dim%nd_k_term_map, Sp%Dim%nd_band))
 
   ! Now loop through sub-bands to list the sub-bands that are
   ! contributed to by each k-term and the associated weights

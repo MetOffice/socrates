@@ -19,7 +19,7 @@ variables:
 
     float so2(plev,lon,lat);                                                   
              so2:units = "none";                                              
-             so2:title = "Sulphur Dioxide";                                                  
+             so2:title = "Sulphur dioxide";                                                  
 
 data:
               lat =  0.000000E+00;

@@ -20,8 +20,6 @@ MODULE dimensions_pp_ucf
 !   Size allocated for continuum amounts
   INTEGER, Parameter ::  npd_wavenumber_trans = 10000
 !   Size allocated for wavenumbers in a band
-  INTEGER, Parameter ::  npd_solar_points = 100000
-!   Size allocated for the solar spectrum
   INTEGER, Parameter ::  npd_scatt_angle = 1001
 !   Size allocated for scattering angles
   INTEGER, Parameter ::  npd_size_scat   = 500

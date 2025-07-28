@@ -19,7 +19,7 @@ variables:
 
     float cfc12(plev,lon,lat);                                                 
              cfc12:units = "none";                                            
-             cfc12:title = "CFC-12";                                                         
+             cfc12:title = "CFC12";                                                          
 
 data:
               lat =  0.000000E+00;
