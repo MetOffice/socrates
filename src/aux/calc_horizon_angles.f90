@@ -13,8 +13,6 @@ program calc_horizon_angles
   use socrates_horizon_2d, only: horizon_2d
   implicit none
 
-  character(*), parameter :: dim_name='dim0'
-  character(*), parameter :: node_dim_name='num_node'
   character(*), parameter :: orog_name='unfiltered_surface_altitude'
   character(*), parameter :: alt_orog_name='m01s00i007'
   character(*), parameter :: filt_orog_name='surface_altitude'
@@ -48,6 +46,7 @@ program calc_horizon_angles
 
   integer :: status, ncid, varid
   integer :: dimid0, dimid1, dimid2, dimid3, dimid4, dimid5, dimid6, dimid7
+  integer :: dimids(7)
   integer :: n_profile, n_node, n_edge, n_x, n_y, n_panel
   integer :: corner_quadrant, node_quadrant(4), lower
   integer, allocatable :: x_map(:), y_map(:), x_panel_map(:), y_panel_map(:)
@@ -108,14 +107,6 @@ program calc_horizon_angles
     stop 'Horizon angles already present: will not be overwritten'
   end if
 
-  ! Get number of points
-  call nf(nf90_inq_dimid(ncid, dim_name, dimid1))
-  call nf(nf90_inquire_dimension(ncid, dimid1, len=n_profile))
-
-  ! Get number of nodes
-  call nf(nf90_inq_dimid(ncid, node_dim_name, dimid0))
-  call nf(nf90_inquire_dimension(ncid, dimid0, len=n_node))
-
   ! Get unfiltered surface altitude
   status = nf90_inq_varid(ncid, orog_name, varid)
   if (status /= NF90_NOERR) then
@@ -130,6 +121,10 @@ program calc_horizon_angles
       end if
     end if
   end if
+  ! Get number of points
+  call nf(nf90_inquire_variable(ncid, varid, dimids=dimids))
+  dimid1 = dimids(1)
+  call nf(nf90_inquire_dimension(ncid, dimid1, len=n_profile))
   allocate(surface_altitude(n_profile))
   status = nf90_get_var(ncid, varid, surface_altitude)
 
@@ -160,6 +155,10 @@ program calc_horizon_angles
   if (status /= NF90_NOERR) then
     stop "Can't find node longitude field"
   end if
+  ! Get number of nodes
+  call nf(nf90_inquire_variable(ncid, varid, dimids=dimids))
+  dimid0 = dimids(1)
+  call nf(nf90_inquire_dimension(ncid, dimid0, len=n_node))
   allocate(node_longitude(n_node))
   call nf(nf90_get_var(ncid, varid, node_longitude))
 
