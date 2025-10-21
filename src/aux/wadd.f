@@ -66,9 +66,9 @@
 !           Latitude
      &  , longitude(npd_longitude)
 !           Longitude
-     &  , p_1(npd_layer+1)
+     &  , p_1(npd_profile, npd_layer+1)
 !           Pressures in first file
-     &  , p_2(npd_layer+1)
+     &  , p_2(npd_profile, npd_layer+1)
 !           Pressures in second file
      &  , field_1(npd_profile, npd_layer+1)
 !           First field read in
@@ -159,7 +159,7 @@
         STOP
       ENDIF
       DO i=1, n_level_1
-        IF ( abs(p_1(i)-p_2(i)) < tol_p ) THEN
+        IF ( abs(p_1(1, i)-p_2(1, i)) < tol_p ) THEN
           DO l=1, n_profile_1
             field_out(l, i)=weight_1*field_1(l, i)
      &        +weight_2*field_2(l, i)

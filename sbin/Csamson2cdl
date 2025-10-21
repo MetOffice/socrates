@@ -1,4 +1,4 @@
-#! /bin/ksh
+#! /bin/bash
 #
 # Script to run the code to convert SAMSON files to CDL.
 #

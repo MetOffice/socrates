@@ -1,4 +1,4 @@
-#! /bin/ksh
+#! /bin/bash
 #
 # Script to form weighted averages of CDL-files of calculated fluxes
 # or radiances.

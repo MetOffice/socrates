@@ -1,6 +1,6 @@
-#! /bin/ksh
+#! /bin/bash
 #
-# Script to run teh conversion from net fluxes to heating rates.
+# Script to run the conversion from net fluxes to heating rates.
 #
 touch $LOCK_FILE
 while [ $# -gt 0 ]

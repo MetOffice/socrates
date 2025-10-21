@@ -1,4 +1,4 @@
-#! /bin/ksh
+#! /bin/bash
 #
 # Script to run the program to generate a viewing field.
 # This basic version works only with one point direction

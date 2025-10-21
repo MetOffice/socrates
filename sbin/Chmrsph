@@ -1,4 +1,4 @@
-#! /bin/ksh
+#! /bin/bash
 #
 # Script to run the conversion from humidity mxing ratio 
 # to specific humidity.

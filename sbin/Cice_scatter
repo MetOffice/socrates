@@ -1,4 +1,4 @@
-#! /bin/ksh
+#! /bin/bash
 #
 # SCRIPT TO RUN THE CODE FOR ICE SCATTERING.
 #

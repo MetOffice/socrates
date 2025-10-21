@@ -80,6 +80,12 @@ cd corr_k
 cd ../
 
 echo ---
+echo "Testing CDL scripts:"
+cd cdl
+./run_me || err=1
+cd ../
+
+echo ---
 if [ $err -gt 0 ] ; then
   echo "Some tests failed."
   exit 1

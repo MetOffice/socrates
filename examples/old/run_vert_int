@@ -1,7 +1,0 @@
-#! /bin/ksh
-#
-#
-#
- 
-$RAD_SCRIPT/Cvert_int $RAD_DIR/examples/aer_cmp/laer27.o3 \
-                      -o $RAD_DIR/examples/workdir/test_vert_int

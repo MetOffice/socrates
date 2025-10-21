@@ -5,7 +5,12 @@ rm -f q*.txt q*.zip parsum_2021.dat molparam.txt
 
 wget https://hitran.org/media/molparam.txt
 wget https://hitran.org/data/Q/q_all_TIPS2021.zip
-unzip -q q_all_TIPS2021.zip
+if [ -f q_all_TIPS2021.zip ] ; then
+  unzip -q q_all_TIPS2021.zip
+else
+  echo 'TIPS data not accessible'
+  exit 0
+fi
 
 qtxt2parsum
 diff -q parsum_2021.dat $RAD_DATA/gases/parsum.dat || \

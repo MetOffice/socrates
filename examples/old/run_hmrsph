@@ -1,7 +1,0 @@
-#! /bin/ksh
-#
-#
-#
- 
-$RAD_SCRIPT/Chmrsph  $RAD_DIR/examples/aer_cmp/laer27.q \
-                      -o $RAD_DIR/examples/workdir/test_hmrsph

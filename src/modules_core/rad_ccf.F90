@@ -27,12 +27,6 @@ MODULE rad_ccf
 !   Radius of the Sun (IAU recommendation: https://arxiv.org/abs/1510.07674)
   REAL (RealK), PROTECTED :: planet_radius     = 6.37E+06_RealK
 !   Radius of the planet
-  REAL (RealK), PARAMETER :: eccentricity      = 1.67E-02_RealK
-!   Eccentricity of earth's orbit
-  REAL (RealK), PARAMETER :: length_year       = 3.652422E+02_RealK
-!   Number of days in year
-  REAL (RealK), PARAMETER :: day_perihelion    = 3.71_RealK
-!   Time of annual perihelion
 
 ! ------------------------------------------------------------------
 ! math_cnst_ccf

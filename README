@@ -144,12 +144,15 @@ of the code.
 
 The full suite has been tested with the following compilers:
 
-Intel ifort 17.0.7
-GCC gfortran 8.1.0
+Intel ifort 19
+GCC gfortran 12.2
 
 To use these compilers within the Met Office run, respectively:
-./build_code ifort
-./build_code gfortran
+./build_code azure_ifort19
+./build_code azure_gfortran12
+
+On the Monsoon3 collaboration machine:
+./build_code monsoon3_gfortran12
 
 7) Reporting bugs and receiving updates
 ---------------------------------------
@@ -166,4 +169,4 @@ your name and the email address you wish to use for the account to either
 Scientific_Partnerships@metoffice.gov.uk or james.manners@metoffice.gov.uk.
 Tutorials and package updates are provided on the repository trac pages.
 
-James Manners 6.6.19
+James Manners 7.10.25

@@ -1,4 +1,4 @@
-#! /bin/ksh
+#! /bin/bash
 #
 # SCRIPT TO RUN SCATTERING CODE.
 #
@@ -28,7 +28,7 @@ MEASURE=1
 # Calculate only the asymmetry unless otherwise directed.
 MOMENT=1
 #
-set -A WEIGHT
+#set -A WEIGHT
 #
 while [ $# -gt 0 ]
 do case $1 in

@@ -1,4 +1,4 @@
-#! /bin/ksh
+#! /bin/bash
 #
 # Script to set values of parameters consistent with configured code.
 #
@@ -6,7 +6,8 @@
 
 FILE=$RAD_BIN/$1
 
-  sed -n -e '/::/p' $FILE | grep -i Parameter | grep -v "&" | cut -d : -f 3 \
+sed -n -e '/::/p' $FILE | grep -i Parameter \
+    | grep -v "&" | grep -v "npd_pathway" | cut -d : -f 3 \
     | tr "[:lower:]" "[:upper:]" | grep = | sed -e 's/ *//g' >> /tmp/param.$$
 
 chmod a+x /tmp/param.$$

@@ -1,4 +1,4 @@
-#! /bin/ksh
+#! /bin/sh
 #
 Csamson2cdl -o iso_200.o3 -u None -L "MMR OF OZONE" -n o3 \
    ../../mcc_profiles/one_km/iso_200.o3

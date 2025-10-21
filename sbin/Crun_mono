@@ -1,4 +1,4 @@
-#! /bin/ksh
+#! /bin/bash
 #set -xv
 #
 # Script to run the radiation code for one set of optical properties.
@@ -152,7 +152,7 @@ else if [ $angular_integration -eq $IP_SPHERICAL_HARMONIC ]
    fi
 fi
 fi
-if [ $sph_flux -ne "F" ] && [ $sph_flux -ne "J" ] && [ $sph_flux -ne "R" ]
+if [ "$sph_flux" != "F" ] && [ "$sph_flux" != "J" ] && [ "$sph_flux" != "R" ]
 then
 echo "Illegal Algorithm"
 exit

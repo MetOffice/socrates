@@ -1,7 +1,0 @@
-#! /bin/ksh
-#
-#
-#
- 
-$RAD_SCRIPT/Cnettohr  $RAD_DIR/examples/aer_cmp/aer27_lbl.nflx \
-                      -o $RAD_DIR/examples/workdir/test_nettohr

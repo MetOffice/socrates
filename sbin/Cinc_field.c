@@ -8,10 +8,7 @@
 
 FILE *fp;
 
-int main(argc, argv)
-int argc;
-char *argv[];
-{
+int main(int argc, char *argv[]) {
    int c, n_read;
    extern char *optarg;
    extern int optind;

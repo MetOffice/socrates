@@ -1,8 +1,0 @@
-#! /bin/ksh
-#
-#
-#
- 
-$RAD_SCRIPT/Cdentoq  $RAD_DIR/examples/aer_cmp/laer27.o3 \
-                      -t $RAD_DIR/examples/aer_cmp/laer27.t \
-                      -o $RAD_DIR/examples/workdir/test_dentoq

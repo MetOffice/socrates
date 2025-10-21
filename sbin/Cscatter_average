@@ -1,4 +1,4 @@
-#! /bin/ksh
+#! /bin/bash
 #set -xv
 #
 # Script to run program averaging scattering data

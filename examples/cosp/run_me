@@ -5,7 +5,12 @@
 ./check_cosp_github.sh
 
 # Run the COSP driver
-cosp_driver cosp_input_um_2d.nc > output.txt
+if [ -f cosp_input_um_2d.nc ] ; then
+  cosp_driver cosp_input_um_2d.nc > output.txt
+else
+  echo 'COSP input data not accessible'
+  exit 0
+fi
 
 # Test output against KGO
 ierr=0

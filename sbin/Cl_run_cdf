@@ -1,4 +1,4 @@
-#! /bin/ksh
+#! /bin/bash
 #
 # Script to run the radiation code on a set of netCDF files.
 #
@@ -147,7 +147,7 @@ if [ "$n_channel" ]
    then
    n_band=$(($range_2-$range_1+1))
    bnd_per_ch=$(($n_band/$n_channel))
-   if [ $n_band -eq $n_channel*$bnd_per_ch ]
+   if [ $n_band -eq $(($n_channel*$bnd_per_ch)) ]
    then
        case $n_channel in
           1) ;;

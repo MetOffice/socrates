@@ -7,8 +7,13 @@
 rm -rf COSPv2.0-master
 rm -f master.zip
 wget -nc https://github.com/CFMIP/COSPv2.0/archive/refs/heads/master.zip
-unzip master.zip
-cp COSPv2.0-master/driver/data/inputs/UKMO/cosp_input_um_2d.nc .
+if [ -f master.zip ] ; then
+  unzip master.zip
+  cp COSPv2.0-master/driver/data/inputs/UKMO/cosp_input_um_2d.nc .
+else
+  echo 'COSP github not accessible'
+  exit 0
+fi
 
 # Now check the diff to the current fcm version
 ierr=0

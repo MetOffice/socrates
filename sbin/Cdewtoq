@@ -1,4 +1,4 @@
-#! /bin/ksh
+#! /bin/bash
 #
 # Script to run the program to convert dewpoints to specific humidity.
 #

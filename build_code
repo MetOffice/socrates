@@ -82,6 +82,7 @@ cd bin
 ./mkdep
 case "$1" in
   "azure_gfortran12" | "azure_gfortran12_debug" | "azure_ifort19" | \
+  "monsoon3_gfortran12" | \
   "ash_ifx2025")
     diff -q set_prog_env_$1 set_prog_env || \
         (cp set_prog_env_$1 set_prog_env; make clean)
