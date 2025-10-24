@@ -3,7 +3,8 @@
 #
 
 AUX_CDF: l_run_cdf cdf2cdl cdl2cdf dentomix_cdf interp_cdf \
-		cdf2samson samson2cdf calc_horizon_angles
+		cdf2samson samson2cdf calc_horizon_angles \
+		runes_nc
 
 AUX_CDL: l_run_cdl run_mono assign_subcols dentomix dentoq format_size \
 		fval gen_horiz_cdl gen_null gen_surf_cdl \
@@ -29,6 +30,10 @@ l_run_cdl: l_run_cdl.o radlib.$(LIBSUFFIX)
 
 runes_driver: runes_driver.o radlib.$(LIBSUFFIX)
 	$(LINK) -o runes_driver runes_driver.o radlib.$(LIBSUFFIX)
+
+runes_nc: runes_nc.o $(CDF_OBJ) radlib.$(LIBSUFFIX)
+	$(LINK) -L$(LIBCDF_PATH) -o runes_nc \
+	runes_nc.o $(CDF_OBJ) radlib.$(LIBSUFFIX) -l$(LIBCDF_NAME)
 
 #
 # Monochromatic Version

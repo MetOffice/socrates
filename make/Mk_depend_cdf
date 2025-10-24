@@ -5,14 +5,23 @@
 read_cdf.o: read_cdf.f90
 	$(FORTCOMP) -I$(INCCDF_PATH) read_cdf.f90
 
+read_nc.o: read_nc.f90
+	$(FORTCOMP) -I$(INCCDF_PATH) read_nc.f90
+
 write_cdf.o: write_cdf.f90
 	$(FORTCOMP) -I$(INCCDF_PATH) write_cdf.f90
+
+write_nc.o: write_nc.f90
+	$(FORTCOMP) -I$(INCCDF_PATH) write_nc.f90
 
 dimensions_field_cdf_ucf.o: dimensions_field_cdf_ucf.f90
 	$(FORTCOMP) -I$(INCCDF_PATH) dimensions_field_cdf_ucf.f90
 
 l_run_cdf.o: l_run_cdf.f90
 	$(FORTCOMP) -I$(INCCDF_PATH) l_run_cdf.f90 
+
+runes_nc.o: runes_nc.f90
+	$(FORTCOMP) -I$(INCCDF_PATH) runes_nc.f90
 
 corr_k_single.o: corr_k_single.f90
 	$(FORTCOMP) $(OMPARG) -I$(INCCDF_PATH) corr_k_single.f90

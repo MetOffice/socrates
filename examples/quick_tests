@@ -10,8 +10,14 @@ fi
 err=0
 
 echo ---
-echo "Testing the runes interface used with LFRic:"
+echo "Testing simple calls to the runes interface:"
 cd runes
+./run_me || err=1
+cd ../
+
+echo ---
+echo "Testing the runes_nc driver using LFRic diagnostic input:"
+cd runes_nc
 ./run_me || err=1
 cd ../
 

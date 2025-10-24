@@ -4,6 +4,7 @@ SOURCE90_AUX =	aerosol_profile_pcf.f90 \
                 def_orbit.f90 \
 		filter_function.f90 \
 		method_merge_pcf.f90 \
+		runes_nc_nml_mod.f90 \
                 orbprm_mod.f90 \
 		qsat_wat.f90 \
 		qsat_alg_pcf.f90 \
@@ -33,7 +34,9 @@ SOURCE90_AUX =	aerosol_profile_pcf.f90 \
 		write_samson.f90
 
 SOURCE90_CDF =	read_cdf.f90 \
-		write_cdf.f90
+		write_cdf.f90 \
+		read_nc.f90 \
+		write_nc.f90
 
 SOURCE77_AUX =	angular_control.f \
 		assign_horiz_cdl.f \

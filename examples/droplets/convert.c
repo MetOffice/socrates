@@ -1,14 +1,11 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-int main(argc, argv)
-int argc;
-char *argv[];
-{
+int main(int argc, char *argv[]) {
    double re, ne, alpha, rm, beta;
- 
-   /* Program to read Effective Radius (in microns) and Variance 
-      in Hansen's form and to convert them to the form adopted 
+
+   /* Program to read Effective Radius (in microns) and Variance
+      in Hansen's form and to convert them to the form adopted
       for the modified gamma distribution. */
 
    sscanf(argv[1], "%lf", &re);
