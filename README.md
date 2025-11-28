@@ -1,9 +1,7 @@
 
-SOCRATES - Suite Of Community RAdiative Transfer codes based on Edwards and Slingo
-==================================================================================
+# SOCRATES - Suite Of Community RAdiative Transfer codes based on Edwards and Slingo
 
-What's included?
-----------------
+## What's included?
 
 You should have received this package as a tar file containing the
 directories: src/ make/ data/ examples/ idl/ python/ man/ sbin/ docs/
@@ -27,8 +25,7 @@ in netCDF format to be used as input for the radiation code (l_run_cdf).
 
 `docs/` contain the user guide and technical guide for the ES code.
 
-Compiling the source code within the Met Office
------------------------------------------------
+## Compiling the source code within the Met Office
 
 For users within the Met Office simply run the command:
 
@@ -50,8 +47,7 @@ To build just the two-stream/radiance code (netCDF version):
 
 `./build_code l_run_cdf`
 
-Compiling the source code externally
-------------------------------------
+## Compiling the source code externally
 
 For external users it should only be necessary to edit the file
 make/Mk_cmd to allow compilation of the code on your system. FORTCOMP
@@ -67,8 +63,7 @@ your path to the executables and man pages:
 
 See section 2 for building individual routines.
 
-Compilation of scripts in sbin
-------------------------------
+## Compilation of scripts in sbin
 
 There are a small number of utilities in sbin/ which are written
 in C and require compilation. A Makefile has been provided:
@@ -76,8 +71,7 @@ in C and require compilation. A Makefile has been provided:
 `cd $RAD_SCRIPT`
 `make`
 
-Running the code
-----------------
+## Running the code
 
 Once you have set your path to the man pages (see section 2/3) you can
 find up-to-date instructions for running the following routines:
@@ -113,8 +107,7 @@ l_run_cdf).
 It is very useful to study the examples/ directory for common usage
 of the code.
 
-Tested compilers
-----------------
+## Tested compilers
 
 The full suite has been tested with the following compilers:
 
