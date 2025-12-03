@@ -61,7 +61,7 @@ your path to the executables and man pages:
 `./build_code`
 `. ./set_rad_env`
 
-See section 2 for building individual routines.
+See previous section for building individual routines.
 
 ## Compilation of scripts in sbin
 
