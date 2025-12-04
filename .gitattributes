@@ -1,5 +1,2 @@
 # NetCDF CDL (Common Data Language)
-*.p linguist-language=CDL
-*.q linguist-language=CDL
-*.t linguist-language=CDL
-
+*.[pqt] linguist-language=CDL
