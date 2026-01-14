@@ -1,5 +1,5 @@
 
-# SOCRATES - Suite Of Community RAdiative Transfer codes based on Edwards and Slingo
+# Socrates - Suite Of Community RAdiative Transfer codes based on Edwards and Slingo
 
 ## Contributing Guidelines
 
@@ -38,11 +38,11 @@ Please be aware of and follow the Simulation Systems
 
 ## What's included?
 
-You should have received this package as a tar file containing the
-directories: src/ make/ data/ examples/ idl/ python/ man/ sbin/ docs/
+The Socrates package contains the following directories:
+src/ make/ data/ examples/ idl/ python/ man/ sbin/ docs/
 
-`src/` contains the source code in Fortran 95 (.f90) and a few remaining
-in Fortran 77 (.f).
+`src/` contains the source code in Fortran 2018 (.f90) and a few remaining
+in fixed Fortran format (.f).
 
 `make/` contains the Makefile which then accesses the various Mk_*
 files.
@@ -58,7 +58,7 @@ See the CONTENTS in each directory under examples/ for instructions.
 `idl/` and `python/` contain scripts to generate atmospheric profiles etc
 in netCDF format to be used as input for the radiation code (l_run_cdf).
 
-`docs/` contain the user guide and technical guide for the ES code.
+`docs/` contain the user guide and technical guide for the Socrates code.
 
 ## Compiling the source code within the Met Office
 
