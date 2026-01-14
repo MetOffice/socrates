@@ -93,7 +93,7 @@ your local netCDF installation.
 The following commands can then be run to build the suite and setup
 your path to the executables and man pages:
 
-`./build_code`
+`./build_code`\
 `. ./set_rad_env`
 
 See previous section for building individual routines.
@@ -103,7 +103,7 @@ See previous section for building individual routines.
 There are a small number of utilities in sbin/ which are written
 in C and require compilation. A Makefile has been provided:
 
-`cd $RAD_SCRIPT`
+`cd $RAD_SCRIPT`\
 `make`
 
 ## Running the code
@@ -114,7 +114,7 @@ find up-to-date instructions for running the following routines:
 Two-stream and spherical harmonics radiance codes using netCDF or
 text CDL input files:
 
-`man Cl_run_cdf`
+`man Cl_run_cdf`\
 `man Cl_run_cdl`
 
 A Mie scattering code for determining optical properties of aerosol
@@ -131,8 +131,8 @@ a netCDF input file:
 
 Auxillary routines for format conversion, interpolation etc:
 
-`man Ccdf2cdl`
-`man Ccdl2cdf`
+`man Ccdf2cdl`\
+`man Ccdl2cdf`\
 `man Cinterp`
 
 These scripts are a command line interface to interactive routines in
@@ -146,12 +146,12 @@ of the code.
 
 The full suite has been tested with the following compilers:
 
-Intel ifort 19
+Intel ifort 19\
 GCC gfortran 12.2
 
-To use these compilers within the Met Office run, respectively:
-`./build_code azure_ifort19`
+To use these compilers within the Met Office run, respectively:\
+`./build_code azure_ifort19`\
 `./build_code azure_gfortran12`
 
-On the Monsoon3 collaboration machine:
+On the Monsoon3 collaboration machine:\
 `./build_code monsoon3_gfortran12`
