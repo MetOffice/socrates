@@ -20,16 +20,14 @@ mkdir ${ESTMP}/socrates${stamp}
 
 # Copy package files
 cp -r sbin data docs examples idl python man src make ${ESTMP}/socrates${stamp}/
-cp README COPYRIGHT.txt build_code ${ESTMP}/socrates${stamp}/
+cp README.md CONTRIBUTORS.md COPYRIGHT.txt build_code ${ESTMP}/socrates${stamp}/
 
 # Update _version.txt file
-fcm info | grep '^URL' > ${ESTMP}/socrates${stamp}/_version.txt
-fcm info | grep "Last Changed Rev" >> ${ESTMP}/socrates${stamp}/_version.txt
-fcm info | grep "Last Changed Date" >> ${ESTMP}/socrates${stamp}/_version.txt
+git log -1 > ${ESTMP}/socrates${stamp}/_version.txt
 
 # Remove unwanted files
 cd ${ESTMP}/socrates${stamp}/ && find . -name *~ -exec rm -f {} \;
-cd ${ESTMP}/socrates${stamp}/ && find . -name \.svn -exec rm -rf {} \; 2> /dev/null
+cd ${ESTMP}/socrates${stamp}/ && find . -name \.git* -exec rm -rf {} \; 2> /dev/null
 
 echo 'Building documentation pdfs.'
 cd ${ESTMP}/socrates${stamp}/docs/techguide

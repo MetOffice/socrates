@@ -1,5 +1,5 @@
 #!/bin/bash
-# To check if the actual COSP code on github differs from this version run
+# To check if the upstream COSP code on github differs from this version run
 # check_cosp_github.sh and then see if there are any differences by having 
 # a look at cosp_diff_to_github.out
 
@@ -15,7 +15,7 @@ else
   exit 0
 fi
 
-# Now check the diff to the current fcm version
+# Now check the diff to the current Socrates version
 ierr=0
 rm -f cosp_diff_to_github.out
 diff -r -x cosp2_test.f90 COSPv2.0-master/driver/src ${RAD_DIR}/src/cosp_github/driver/src >> cosp_diff_to_github.out || ierr=1
@@ -24,12 +24,12 @@ diff -r -x cosp_rttov_interface.F90 -x cosp_rttov.F90 -x cosp_rttov11.F90 COSPv2
 diff -r COSPv2.0-master/subsample_and_optics_example ${RAD_DIR}/src/cosp_github/subsample_and_optics_example >> cosp_diff_to_github.out || ierr=1
 
 if [ $ierr -gt 0 ] ; then
-  echo 'COSP code differs from github version'
+  echo 'COSP code differs from version on github.com/CFMIP/COSPv2.0'
   exit 1
 else
   rm -f cosp_diff_to_github.out
   rm -rf COSPv2.0-master
   rm -f master.zip
-  echo 'COSP code matches github version'
+  echo 'COSP code matches github.com/CFMIP/COSPv2.0'
   exit 0
 fi

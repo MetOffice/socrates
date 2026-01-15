@@ -1,11 +1,11 @@
 
-A version of COSP code is included in the fcm repository at src/cosp_github
+A version of the COSP code is included here in src/cosp_github
 
-To check if the actual COSP code on github differs from this version run
-check_cosp_github.sh and then see if there are any differences by having 
-a look at cosp_diff_to_github.out
+To check if the upstream COSP code at github.com/CFMIP/COSPv2.0 differs
+from this version run check_cosp_github.sh and then see if there are any
+differences by having a look at cosp_diff_to_github.out
 
-IF YOU ARE REALLY SURE that you want to use the github version rather
-than the current fcm version, you can use copy_cosp_github.sh
-to overwrite relevant files with their github versions.
+IF YOU ARE REALLY SURE that you want to use the upstream version rather
+than the version here, you can use copy_cosp_github.sh
+to overwrite relevant files with their upstream versions.
 
