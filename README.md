@@ -1,5 +1,5 @@
 
-# SOCRATES - Suite Of Community RAdiative Transfer codes based on Edwards and Slingo
+# Socrates - Suite Of Community RAdiative Transfer codes based on Edwards and Slingo
 
 ## Contributing Guidelines
 
@@ -38,11 +38,11 @@ Please be aware of and follow the Simulation Systems
 
 ## What's included?
 
-You should have received this package as a tar file containing the
-directories: src/ make/ data/ examples/ idl/ python/ man/ sbin/ docs/
+The Socrates package contains the following directories:
+src/ make/ data/ examples/ idl/ python/ man/ sbin/ docs/
 
-`src/` contains the source code in Fortran 95 (.f90) and a few remaining
-in Fortran 77 (.f).
+`src/` contains the source code in Fortran 2018 (.f90) and a few remaining
+in fixed Fortran format (.f).
 
 `make/` contains the Makefile which then accesses the various Mk_*
 files.
@@ -58,7 +58,7 @@ See the CONTENTS in each directory under examples/ for instructions.
 `idl/` and `python/` contain scripts to generate atmospheric profiles etc
 in netCDF format to be used as input for the radiation code (l_run_cdf).
 
-`docs/` contain the user guide and technical guide for the ES code.
+`docs/` contain the user guide and technical guide for the Socrates code.
 
 ## Compiling the source code within the Met Office
 
@@ -93,7 +93,7 @@ your local netCDF installation.
 The following commands can then be run to build the suite and setup
 your path to the executables and man pages:
 
-`./build_code`
+`./build_code`\
 `. ./set_rad_env`
 
 See previous section for building individual routines.
@@ -103,7 +103,7 @@ See previous section for building individual routines.
 There are a small number of utilities in sbin/ which are written
 in C and require compilation. A Makefile has been provided:
 
-`cd $RAD_SCRIPT`
+`cd $RAD_SCRIPT`\
 `make`
 
 ## Running the code
@@ -114,7 +114,7 @@ find up-to-date instructions for running the following routines:
 Two-stream and spherical harmonics radiance codes using netCDF or
 text CDL input files:
 
-`man Cl_run_cdf`
+`man Cl_run_cdf`\
 `man Cl_run_cdl`
 
 A Mie scattering code for determining optical properties of aerosol
@@ -131,8 +131,8 @@ a netCDF input file:
 
 Auxillary routines for format conversion, interpolation etc:
 
-`man Ccdf2cdl`
-`man Ccdl2cdf`
+`man Ccdf2cdl`\
+`man Ccdl2cdf`\
 `man Cinterp`
 
 These scripts are a command line interface to interactive routines in
@@ -146,12 +146,12 @@ of the code.
 
 The full suite has been tested with the following compilers:
 
-Intel ifort 19
+Intel ifort 19\
 GCC gfortran 12.2
 
-To use these compilers within the Met Office run, respectively:
-`./build_code azure_ifort19`
+To use these compilers within the Met Office run, respectively:\
+`./build_code azure_ifort19`\
 `./build_code azure_gfortran12`
 
-On the Monsoon3 collaboration machine:
+On the Monsoon3 collaboration machine:\
 `./build_code monsoon3_gfortran12`
