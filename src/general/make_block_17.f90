@@ -249,7 +249,7 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
       END IF
     CASE (6)
       WRITE(*, '(a)') 'Enter location of data file:'
-      READ(*, *, IOSTAT=ios) cmip6_file
+      READ(*, '(a)', IOSTAT=ios) cmip6_file
       ! Open the file for reading
       CALL nf(nf90_open(TRIM(cmip6_file),NF90_NOWRITE,ncid))
       ! Get number of times
