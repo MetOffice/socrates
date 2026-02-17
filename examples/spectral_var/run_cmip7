@@ -14,6 +14,8 @@ CMIP7_DATA_DIR=${SOCRATES_DATA_DIR}/solarisheppa/cmip7
 PICON_FILE='multiple_input4MIPs_solar_CMIP_SOLARIS-HEPPA-CMIP-4-6_gn.nc'
 MONTH_FILE='multiple_input4MIPs_solar_CMIP_SOLARIS-HEPPA-CMIP-4-6_gn_185001-202312.nc'
 DAILY_FILE='multiple_input4MIPs_solar_CMIP_SOLARIS-HEPPA-CMIP-4-6_gn_18500101-20231231.nc'
+FUTURE_MONFILE='multiple_input4MIPs_solar_ScenarioMIP_SOLARIS-HEPPA-ScenarioMIP-4-6_gn_202201-229912.nc'
+FUTURE_DAYFILE='multiple_input4MIPs_solar_ScenarioMIP_SOLARIS-HEPPA-ScenarioMIP-4-6_gn_20220101-22991231.nc'
 
 # Download CMIP7 solar variability data
 if [[ -r $CMIP7_DATA_DIR ]]; then
@@ -21,25 +23,38 @@ if [[ -r $CMIP7_DATA_DIR ]]; then
   gunzip -c ${CMIP7_DATA_DIR}/${PICON_FILE}.gz > ${PICON_FILE}
   gunzip -c ${CMIP7_DATA_DIR}/${MONTH_FILE}.gz > ${MONTH_FILE}
   gunzip -c ${CMIP7_DATA_DIR}/${DAILY_FILE}.gz > ${DAILY_FILE}
+  FUTURE_MONFILE=${CMIP7_DATA_DIR}/${FUTURE_MONFILE}
+  FUTURE_DAYFILE=${CMIP7_DATA_DIR}/${FUTURE_DAYFILE}
 else
-  for i in $(seq 1 3); do
+  for i in $(seq 1 5); do
     if [[ $i == 1 ]]; then
       SOLARIS_FILE=$PICON_FILE
       CLOUD_LOC='XaSb85EpGNYqkEw'
     elif [[ $i == 2 ]]; then
       SOLARIS_FILE=$MONTH_FILE
       CLOUD_LOC='n7cacmRBjk5Gb8f'
-    else
+    elif [[ $i == 3 ]]; then
       SOLARIS_FILE=$DAILY_FILE
       CLOUD_LOC='nJFTPcnFwZ3smTo'
+    elif [[ $i == 4 ]]; then
+      SOLARIS_FILE=$FUTURE_MONFILE
+      CLOUD_LOC='QWorEALDriYabgN'
+    else
+      SOLARIS_FILE=$FUTURE_DAYFILE
+      CLOUD_LOC='j7ncYwoHXCtRwRE'
     fi
     if [[ ! -f $SOLARIS_FILE ]]; then
-      if [[ ! -f $SOLARIS_FILE.gz ]]; then
-	echo 'Downloading data from SOLARIS website'
+      if [[ $i == 4 ]] || [[ $i == 5 ]]; then
+        echo 'Downloading data from SOLARIS website'
+        wget https://cloud.iaa.es/index.php/s/${CLOUD_LOC}/download/$SOLARIS_FILE
+      elif [[ ! -f $SOLARIS_FILE.gz ]]; then
+        echo 'Downloading data from SOLARIS website'
         wget https://cloud.iaa.es/index.php/s/${CLOUD_LOC}/download/$SOLARIS_FILE.gz
       fi
-      echo "Gunzipping local data"
-      gunzip -c $SOLARIS_FILE.gz > $SOLARIS_FILE
+      if [[ -f $SOLARIS_FILE.gz ]]; then
+        echo "Gunzipping local data"
+        gunzip -c $SOLARIS_FILE.gz > $SOLARIS_FILE
+      fi
     fi
   done
 fi
@@ -52,12 +67,22 @@ if [[ $PICON_VN != 'source_version = "4.6"' ]]; then
 fi
 MONTH_VN=`ncdump -h $MONTH_FILE | grep -o 'source_version = ".*"'`
 if [[ $MONTH_VN != 'source_version = "4.6"' ]]; then
-  echo 'Monthly data is not at version 4.6: '$MONTH_VN
+  echo 'Monthly historical data is not at version 4.6: '$MONTH_VN
   exit 1
 fi
 DAILY_VN=`ncdump -h $DAILY_FILE | grep -o 'source_version = ".*"'`
 if [[ $DAILY_VN != 'source_version = "4.6"' ]]; then
-  echo 'Daily data is not at version 4.6: '$DAILY_VN
+  echo 'Daily historical data is not at version 4.6: '$DAILY_VN
+  exit 1
+fi
+FUTURE_MON_VN=`ncdump -h $FUTURE_MONFILE | grep -o 'source_version = ".*"'`
+if [[ $FUTURE_MON_VN != 'source_version = "4.6"' ]]; then
+  echo 'Monthly future scenario data is not at version 4.6: '$FUTURE_MON_VN
+  exit 1
+fi
+FUTURE_DAY_VN=`ncdump -h $FUTURE_DAYFILE | grep -o 'source_version = ".*"'`
+if [[ $FUTURE_DAY_VN != 'source_version = "4.6"' ]]; then
+  echo 'Daily future scenario data is not at version 4.6: '$FUTURE_DAY_VN
   exit 1
 fi
 
@@ -82,7 +107,7 @@ EOF
 mv sp_sw_ga9_var sp_sw_ga9_cmip7_picontrol_4_6
 rm $PICON_FILE
 
-echo 'Adding monthly solar reference scenario data to spectral file'
+echo 'Adding monthly solar reference & future scenario data to spectral file'
 prep_spec << EOF > ref_mon.log
 sp_sw_ga9
 a
@@ -92,14 +117,18 @@ y
 -2
 6
 $MONTH_FILE
+3312
+6
+$FUTURE_MONFILE
+2024 1 1
 0
 0
 -1
 EOF
-mv sp_sw_ga9_var sp_sw_ga9_cmip7_ref_mon_4_6
+mv sp_sw_ga9_var sp_sw_ga9_cmip7_scenario_mon_4_6
 rm $MONTH_FILE
 
-echo 'Adding daily solar reference scenario data to spectral file'
+echo 'Adding daily solar reference & future scenario data to spectral file'
 prep_spec << EOF > ref_day.log
 sp_sw_ga9
 a
@@ -109,11 +138,15 @@ y
 -2
 6
 $DAILY_FILE
+100807
+6
+$FUTURE_DAYFILE
+2024 1 1
 0
 0
 -1
 EOF
-mv sp_sw_ga9_var sp_sw_ga9_cmip7_ref_day_4_6
+mv sp_sw_ga9_var sp_sw_ga9_cmip7_scenario_day_4_6
 rm $DAILY_FILE
 
 exit 0

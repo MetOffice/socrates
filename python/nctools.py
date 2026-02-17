@@ -324,8 +324,8 @@ def ncout_view(file, lon, lat, direction, level, pol, azim, rlev):
 
     write_dim(ncdf_file, n_lon, lon, 'lon', 'f4', 'lon', 'degree', 'LONGITUDE')
     write_dim(ncdf_file, n_lat, lat, 'lat', 'f4', 'lat', 'degree', 'LATITUDE')
-    write_dim(ncdf_file, levels, p, 'level', 'i2', 'level', 'None', 'LEVEL')
     write_dim(ncdf_file, n_dir, direction, 'direction', 'i2', 'direction', 'None', 'MOMENT')
+    write_dim(ncdf_file, n_lvl, level, 'level', 'i2', 'level', 'None', 'LEVEL')
 
     write_var(ncdf_file, pols, 'pol', 'f4', ('direction', 'lat', 'lon')
               , 'degree', 'POLAR VIEWING ANGLE')
