@@ -9,19 +9,19 @@
 PROGRAM icedb2bin
 !
 ! Description:
-!    This program receives the ASCII database of scattering 
+!    This program receives the ASCII database of scattering
 ! properties and convertis it to a direct access unformatted
 ! file for use in calculating single scattering properties
 ! averaged over distributions.
 !
 ! Method:
 !    The file is opened and read to determine how many blocks
-! of data for a specific size and wavelength are contained 
+! of data for a specific size and wavelength are contained
 ! within it. An unformatted direct access file is then
-! opened and the data are written to it. 
+! opened and the data are written to it.
 !
 ! Note:
-!    The initial data are expected to be supplied in the 
+!    The initial data are expected to be supplied in the
 ! following units:
 !    Wavelength:                   Micron
 !    Mean maximum dimension:       Micron
@@ -117,10 +117,10 @@ PROGRAM icedb2bin
 ! Read through the input to find the number of blocks of data.
 ! In the current format the first element of an entry is the wavelength.
   n_block=0
-  count_block:  DO 
+  count_block:  DO
     READ(iunit_in, '(A)', IOSTAT=ios) line
 !   Conventionally negative errors denote an end of the file.
-    IF (ios < 0) EXIT
+    IF (ios < 0) EXIT count_block
     IF (line(17:28) == "; Wavelength") n_block=n_block+1
   ENDDO count_block
   REWIND(iunit_in)
@@ -168,13 +168,13 @@ PROGRAM icedb2bin
     n_angle=0
     READ(iunit_in, '()')
     read_phase:  DO
-!     If the line contains the string  "; Wavelength" it signals 
-!     the start of the next block, or the block may be at the end 
+!     If the line contains the string  "; Wavelength" it signals
+!     the start of the next block, or the block may be at the end
 !     of the file.
       READ(iunit_in, '(A)', IOSTAT=ios) line
       IF ( (ios < 0).OR.(line(17:28) == '; Wavelength') ) THEN
         BACKSPACE(iunit_in)
-        EXIT
+        EXIT read_phase
       ENDIF
       n_angle=n_angle+1
       IF (n_angle > npd_sct_db_angle) THEN
@@ -256,7 +256,7 @@ PROGRAM icedb2bin
 !   Advance the count of the number of blocks.
     i_block=i_block+1
 !   Stop at the last block.
-    IF (i_block > n_block) EXIT
+    IF (i_block > n_block) EXIT process_block
 !
   ENDDO process_block
 !

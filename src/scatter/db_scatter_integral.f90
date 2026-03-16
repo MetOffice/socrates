@@ -9,7 +9,7 @@ SUBROUTINE db_scatter_integral &
 (nd_wavelength, nd_size_scat, &
  SizeDist,wavelength_index,n_wavelength,wavelength,DBGeom, &
  ice_db_mono_info, &
- n_angle,mu_angle, & 
+ n_angle,mu_angle, &
  panel_ratio, &
  extinction, scattering, asymmetry, l_stokes, i_stokes, &
  nd_scatt_angle, &
@@ -19,27 +19,27 @@ SUBROUTINE db_scatter_integral &
 )
 !
 ! Method:
-!   The extinction, the scattering and the asymmetry are 
+!   The extinction, the scattering and the asymmetry are
 !   initialized to 0. Initial estimates of these quantities are
 !   made and the range of integration is extended until further
 !   extension does not sensibly alter these estimates. This is
 !   done by dividing the range of integration into panels and
-!   adding new panels as required. the resolution within a panel 
+!   adding new panels as required. the resolution within a panel
 !   is then increased until the integrals converge.
 !
 !
 !
 ! Modules used
   USE realtype_rd
-  USE def_size_dist  
-  USE def_std_io_icf  
-  USE prec_integral_tcf  
-  USE scatter_algorithm_pcf  
-  USE shape_particle_pcf  
-  USE error_pcf  
-  USE rad_ccf, ONLY: pi  
-  USE def_db_crystal_geometry  
-  USE def_db_ss_mono  
+  USE def_size_dist
+  USE def_std_io_icf
+  USE prec_integral_tcf
+  USE scatter_algorithm_pcf
+  USE shape_particle_pcf
+  USE error_pcf
+  USE rad_ccf, ONLY: pi
+  USE def_db_crystal_geometry
+  USE def_db_ss_mono
 !
 !
   IMPLICIT NONE
@@ -48,7 +48,7 @@ SUBROUTINE db_scatter_integral &
 !
 ! Dummy arguments
 !
-  INTEGER, Intent(IN) :: n_wavelength 
+  INTEGER, Intent(IN) :: n_wavelength
 !           Number of wavelengths
 !
 ! Sizes of dummy arrays:
@@ -252,7 +252,7 @@ SUBROUTINE db_scatter_integral &
 ! until the inclusion of further panels makes little change in the
 ! estimate of the integral.
 !
-  Set_range: DO ; IF ( .NOT.(l_add_upper .OR. l_add_lower) ) EXIT
+  Set_range: DO ; IF ( .NOT.(l_add_upper .OR. l_add_lower) ) EXIT Set_range
 !
     IF (l_add_upper) THEN
       dimen_panel_low = dimen_high
@@ -280,7 +280,7 @@ SUBROUTINE db_scatter_integral &
 !
         IF (number_point > 0.0_RealK) THEN
 !         The scattering code is not called if there are
-!         no particles at this size. 
+!         no particles at this size.
           CALL db_interp_ss_mono(nd_wavelength, &
                                  nd_scatt_angle, nd_size_scat, &
                                  dimen(i), &
@@ -378,7 +378,7 @@ SUBROUTINE db_scatter_integral &
 
         IF (number_point > 0.0_RealK) THEN
 !         The scattering code is not called if there are
-!         no particles at this size. 
+!         no particles at this size.
           CALL db_interp_ss_mono(nd_wavelength, &
                                  nd_scatt_angle, nd_size_scat, &
                                  dimen(i), &
@@ -407,7 +407,7 @@ SUBROUTINE db_scatter_integral &
           y(i, 4:3+n_angle) = number_point * s(1:n_angle)
 !
 !
-        y(i, 1) = number_point * extinction_point 
+        y(i, 1) = number_point * extinction_point
         y(i, 2) = number_point * scattering_point
         y(i, 3) = asymmetry_point * y(i, 2)
 !

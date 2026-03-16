@@ -49,7 +49,7 @@ SUBROUTINE corr_k_single &
   USE errormessagelength_mod, ONLY: errormessagelength
   USE ereport_mod, ONLY: ereport
 
-  IMPLICIT NONE 
+  IMPLICIT NONE
 
 
   TYPE StrLineParam
@@ -170,7 +170,7 @@ SUBROUTINE corr_k_single &
 !   Solar Spectrum
 !
   LOGICAL, Intent(IN) :: include_h2o_foreign_continuum
-!   Flag to include the foreign-broadened H2O continuum (with a 
+!   Flag to include the foreign-broadened H2O continuum (with a
 !   partial pressure of 0) with the line data
   LOGICAL, Intent(IN) :: l_use_h2o_frn_param
 !   Flag to use foreign broadened H2O continuum parametrisation
@@ -354,7 +354,7 @@ SUBROUTINE corr_k_single &
 !   including all k-terms
   REAL  (RealK), Pointer :: trans_pt_k(:, :, :)
 !   Actual transmissions for a single k-term only (used when fitting
-!   a scaling function) at the supplied range of pressures and 
+!   a scaling function) at the supplied range of pressures and
 !   temperatures
   REAL  (RealK), Pointer :: trans_calc(:)
 !   Calculated transmissions
@@ -375,7 +375,7 @@ SUBROUTINE corr_k_single &
   REAL  (RealK), Dimension(:), Allocatable :: u_c
 !   Pathlengths for continuum absorption
   REAL  (RealK), Pointer, Dimension(:, :) :: u_fit_c
-!   Products of the mass of absorber and the partial pressure in 
+!   Products of the mass of absorber and the partial pressure in
 !   continua
   REAL  (RealK), Dimension(:), Allocatable :: trans_c
 !   Continuum transmissions
@@ -402,7 +402,7 @@ SUBROUTINE corr_k_single &
 !   In order to apply a line transmission weighting to continuum absorption
 !   transmissions the column mass of the weighting gas is needed. This is
 !   calculated as u_gas = max_path_wgt*sqrt(u_cont/max_path) for  self-
-!   broadened continua (l_wgt_scale_sqrt == .TRUE.) and 
+!   broadened continua (l_wgt_scale_sqrt == .TRUE.) and
 !   as u_gas = max_path_wgt*u_cont/max_path if a foreign-broadened continuum
 !   (l_wgt_scale_sqrt == .FALSE.). u_wgt_scale is used to store the quantity
 !   max_path_wgt/sqrt(max_path) or max_path_wgt/max_path.
@@ -410,7 +410,7 @@ SUBROUTINE corr_k_single &
   INTEGER :: i_index_c
 !   Variable indicating the type of the continuum
   REAL  (RealK) :: k_ave_tmp(nd_k_term)
-!   Mean k-value across the band: temporary value at conditions 
+!   Mean k-value across the band: temporary value at conditions
 !   other than the reference
   REAL  (RealK) :: k_opt_tmp(nd_k_term)
 !   Optimal k-value across the band: temporary value at conditions
@@ -445,7 +445,7 @@ SUBROUTINE corr_k_single &
 
   REAL :: start_band, finish_band, timer1, timer2
 !   Timers
-  
+
   LOGICAL :: l_debug = .FALSE.
 !  LOGICAL :: l_debug = .TRUE.
   LOGICAL :: l_output_reference_weight = .FALSE.
@@ -459,7 +459,7 @@ SUBROUTINE corr_k_single &
   INTERFACE
 !
     SUBROUTINE rad_weight_90(i_weight, nu, SolarSpec, T, weight)
-!     Function to calculate the array of radiant weightings 
+!     Function to calculate the array of radiant weightings
 !
       USE def_solarspec
 !
@@ -991,7 +991,7 @@ SUBROUTINE corr_k_single &
             "Wavenumbers of min and max lines are: ", &
             hitran_data(1) % frequency, &
             hitran_data(num_lines_in_band) % frequency
-!         
+!
 !         Set aside space for the adjusted line parameters:
 !         this will be reused each time T and p change.
           ALLOCATE(adj_line_parm(num_lines_in_band))
@@ -1078,7 +1078,7 @@ SUBROUTINE corr_k_single &
             DEALLOCATE(xsc(i)%data)
           END DO
           DEALLOCATE(xsc)
-        
+
         END IF
 
         IF (l_fit_cont_data .AND. l_cont_line_abs_weight) THEN
@@ -1218,7 +1218,7 @@ SUBROUTINE corr_k_single &
                 kabs = max_p_calc/(max_path*kabs_rank2)
               END WHERE
             END IF
-          
+
 !           Read mapping, g-points and reference k-term weights
             CALL input_map_band_cdf
 
@@ -1447,14 +1447,14 @@ SUBROUTINE corr_k_single &
             ELSE
               wgt=wgt_sv
             END IF
-          
+
             IF (l_fit_cont_data .AND. l_cont_line_abs_weight) &
               kabs_lines=kabs_all_lines(1:n_nu,ipt)
-          
+
             IF (ipt == ipt_ref) THEN
               wgt_ref(1:n_nu) = nu_inc * wgt(1:n_nu)
             END IF
-          
+
 !           Perform the appropriate fits.
             IF (l_fit_self_continuum) THEN
               kabs=kabs_all(1:n_nu,ipt)
@@ -1496,12 +1496,12 @@ SUBROUTINE corr_k_single &
               END IF
             END IF
           ENDDO
-          
+
           IF (l_fit_frn_continuum) k_cont => k_opt_frn(ib)
           IF (l_fit_self_continuum) k_cont => k_opt_self(ib)
-          
+
           IF (l_scale_pT) THEN
-!         
+!
             IF (l_fit_line_data) THEN
               SELECT CASE(i_scale_function)
               CASE (IP_scale_power_law, IP_scale_power_quad,  &
@@ -1528,7 +1528,7 @@ SUBROUTINE corr_k_single &
               END IF
             END IF
           END IF
-          
+
           IF (l_fit_line_data .AND. l_scale_pT) DEALLOCATE(trans_pt_k)
         END IF
 
@@ -1647,7 +1647,7 @@ SUBROUTINE corr_k_single &
         i_scale_function, scale_cont(:, :, ib))
       DEALLOCATE(trans_app_c)
     ENDIF
-    
+
     IF (l_fit_cont_data .AND. l_cont_line_abs_weight) &
       kabs_all=kabs_all_lines
     IF (.NOT.l_lbl_exist) CALL output_lbl_band_cdf
@@ -1669,7 +1669,7 @@ SUBROUTINE corr_k_single &
       DEALLOCATE(hitran_data, STAT = alloc_status)
       IF (alloc_status /= 0) THEN
         WRITE(*,"(a)") "Error deallocating array for HITRAN line data"
-        EXIT
+        EXIT bands
       ENDIF
     ENDIF
 
@@ -1691,7 +1691,7 @@ SUBROUTINE corr_k_single &
   IF (l_lbl_exist) DEALLOCATE(nu_wgt_all)
   DEALLOCATE(band_min)
   DEALLOCATE(band_max)
-  
+
   CALL close_lbl_files
   CALL close_map_files
 
@@ -1894,7 +1894,7 @@ CONTAINS
   SUBROUTINE fit_transparent_int
 !
 !
-    IMPLICIT NONE 
+    IMPLICIT NONE
 !
     n_k(ib)=1
     w_k(1, ib)=1.0_RealK
@@ -1944,13 +1944,13 @@ CONTAINS
 !
   SUBROUTINE set_wgt_int
 
-    IMPLICIT NONE 
+    IMPLICIT NONE
 
 !   Set up the array of wavenumbers at the weighting points within the
 !   band. The band should contain a whole number of intervals (band limits
 !   have been adjusted in the calling routine if required). Care is taken
 !   to ensure excluded bands are properly dealt with.
-    
+
 !   Calculate band width
     band_width = band_max(ib) - band_min(ib)
     DO jx = 1, n_band_exclude(ib)
@@ -2013,7 +2013,7 @@ CONTAINS
     USE spline_evaluate_mod, ONLY: spline_evaluate
 !
 !
-    IMPLICIT NONE 
+    IMPLICIT NONE
 !
     IF (include_instrument_response) THEN
       DO i=1, n_nu
@@ -2021,7 +2021,7 @@ CONTAINS
           filter%wavenumber, filter%response, filter%d2_response, &
           nu_wgt(i), response_0)
         IF (ierr == i_err_range) THEN
-!         The filter function is taken to be 0 outside 
+!         The filter function is taken to be 0 outside
 !         the explicit range. We therefore zero the response and
 !         recover from the error.
           response_0 = 0.0
@@ -2291,7 +2291,7 @@ CONTAINS
     DO j = 1, n_nu
 !     Lookup wavenumer in cm-1
       waveno = nu_wgt(j) * 0.01_RealK
-      
+
 !     Reset interpolation quantities
       t_cia = 0.0_RealK
       n_t_cia = 0
@@ -2376,7 +2376,7 @@ CONTAINS
 
   SUBROUTINE ck_trans_fit
 
-    IMPLICIT NONE 
+    IMPLICIT NONE
 
 !   Integrate the sorted weightings across the band.
     integ_wgt=nu_inc * SUM(wgt(1:n_nu))
@@ -2391,7 +2391,7 @@ CONTAINS
     umin=umin_kopt
     IF (k_opt(n_k(ib),ib) > 0.0_RealK) umin = &
       MAX(umin_kopt, -LOG(1.0_RealK-tol)/k_opt(n_k(ib),ib))
-!   Optimization over paths is likely to be simpler with 
+!   Optimization over paths is likely to be simpler with
 !   fewer k-terms.
     n_path=2*n_k(ib)+1
     DO i=1, n_path
@@ -2480,7 +2480,7 @@ CONTAINS
   SUBROUTINE calc_self_trans_int
 !
 !
-    IMPLICIT NONE 
+    IMPLICIT NONE
 !
 !   Local variables
     INTEGER :: i_pp
@@ -2521,9 +2521,9 @@ CONTAINS
 !
       FUNCTION trans_k_dist(n_nu, k, nu_inc, wgt, integ_wgt, n_path, u) &
         RESULT (trans)
-!  
+!
         USE realtype_rd
-!  
+!
         INTEGER, Intent(IN) :: n_nu
         INTEGER, Intent(IN) :: n_path
         REAL  (RealK), Intent(IN), Dimension(n_nu) :: k
@@ -2531,10 +2531,10 @@ CONTAINS
         REAL  (RealK), Intent(IN), Dimension(n_nu) :: wgt
         REAL  (RealK), Intent(IN) :: integ_wgt
         REAL  (RealK), Intent(IN), Dimension(n_path) :: u
-!  
+!
         REAL  (RealK), Dimension(n_path) :: trans
-   
-!  
+
+!
       END FUNCTION trans_k_dist
 !
 !
@@ -2547,7 +2547,7 @@ CONTAINS
     trans_line = &
       trans_k_dist(n_nu, kabs, nu_inc, wgt, integ_wgt, n_path_c, u_c)
 !
-!   The continuum is calculated at a range of partial pressures up to 
+!   The continuum is calculated at a range of partial pressures up to
 !   the saturation value.
     e_sat = sat_vap_press(t_calc(ipt), p_calc(ipt))
     ALLOCATE(k_self(n_nu))
@@ -2558,7 +2558,7 @@ CONTAINS
 !$OMP NUM_THREADS(n_omp_threads)
     DO i_pp = 1, n_pp
 !
-      pp = e_sat * REAL(i_pp, RealK) / REAL(n_pp, RealK) 
+      pp = e_sat * REAL(i_pp, RealK) / REAL(n_pp, RealK)
 !
 !     Calculate the self-broadened continuum coefficients at this
 !     partial pressure.
@@ -2578,7 +2578,7 @@ CONTAINS
       il = 1 + (i_pp - 1) * n_path_c
       ih = i_pp * n_path_c
       trans_fit_c(il:ih, ipt) = trans_c / (trans_line + TINY(trans_line) )
-!     Eventually, the continuum coefficient will be in units of 
+!     Eventually, the continuum coefficient will be in units of
 !     m5/(mol.kg).
       u_fit_c(il:ih, ipt) = u_c * &
         ( pp / (molar_gas_constant * t_calc(ipt)) )
@@ -2619,7 +2619,7 @@ CONTAINS
   SUBROUTINE calc_frn_trans_int
 !
 !
-    IMPLICIT NONE 
+    IMPLICIT NONE
 !
 !   Local variables
     INTEGER :: i_pp
@@ -2660,9 +2660,9 @@ CONTAINS
 !
       FUNCTION trans_k_dist(n_nu, k, nu_inc, wgt, integ_wgt, n_path, u) &
         RESULT (trans)
-!  
+!
         USE realtype_rd
-!  
+!
         INTEGER, Intent(IN) :: n_nu
         INTEGER, Intent(IN) :: n_path
         REAL  (RealK), Intent(IN), Dimension(n_nu) :: k
@@ -2670,10 +2670,10 @@ CONTAINS
         REAL  (RealK), Intent(IN), Dimension(n_nu) :: wgt
         REAL  (RealK), Intent(IN) :: integ_wgt
         REAL  (RealK), Intent(IN), Dimension(n_path) :: u
-!  
+!
         REAL  (RealK), Dimension(n_path) :: trans
-   
-!  
+
+!
       END FUNCTION trans_k_dist
 !
 !
@@ -2686,7 +2686,7 @@ CONTAINS
     trans_line = &
       trans_k_dist(n_nu, kabs, nu_inc, wgt, integ_wgt, n_path_c, u_c)
 !
-!   The continuum is calculated at a range of partial pressures up to 
+!   The continuum is calculated at a range of partial pressures up to
 !   the saturation value.
     e_sat = sat_vap_press(t_calc(ipt), p_calc(ipt))
     ALLOCATE(k_frn(n_nu))
@@ -2697,7 +2697,7 @@ CONTAINS
 !$OMP NUM_THREADS(n_omp_threads)
     DO i_pp = 1, n_pp
 !
-      pp = e_sat * REAL(i_pp, RealK) / REAL(n_pp, RealK) 
+      pp = e_sat * REAL(i_pp, RealK) / REAL(n_pp, RealK)
 !
 !     Calculate the foreign-broadened continuum coefficients at this
 !     partial pressure.
@@ -2717,7 +2717,7 @@ CONTAINS
       il = 1 + (i_pp - 1) * n_path_c
       ih = i_pp * n_path_c
       trans_fit_c(il:ih, ipt) = trans_c / (trans_line + TINY(trans_line) )
-!     Eventually, the continuum coefficient will be in units of 
+!     Eventually, the continuum coefficient will be in units of
 !     m5/(mol.kg).
       u_fit_c(il:ih, ipt) = u_c * &
         ( (p_calc(ipt) - pp) / (molar_gas_constant * t_calc(ipt)) )
@@ -2758,7 +2758,7 @@ CONTAINS
   SUBROUTINE fit_scale_line_int
 !
 !
-    IMPLICIT NONE 
+    IMPLICIT NONE
 !
     DO ik=1, n_k(ib)
 !
@@ -2844,11 +2844,11 @@ CONTAINS
         IF (l_debug) &
           print*,'Fitting 2 scaling functions split at pressure: ', &
           p_calc(index_k_ref)
-        
+
         err_norm_old=err_norm
-        
+
 !       Fit 2 scaling functions, one either side of the maximum k.
-        
+
 !       Ininitialize the parameters of the first scaling function.
         SELECT CASE(i_scale_function2)
           CASE (IP_scale_power_law)
@@ -2861,7 +2861,7 @@ CONTAINS
             scale_vector(1:4, ik, ib) = &
               (/ 1.0_RealK, -2.0_RealK, 0.0_RealK, 0.0_RealK /)
         END SELECT
-        
+
 !       Now if the absorption coefficient for the term is 0, there is
 !       no optimal scaling function, so no scaling function can be
 !       determined. We relate this to the machine's precision.
@@ -2885,7 +2885,7 @@ CONTAINS
           ENDIF
           err_norm=rms_residual*(index_k_ref-1)
         ENDIF
-        
+
 !       Ininitialize the parameters of the second scaling function.
         SELECT CASE(i_scale_function2)
           CASE (IP_scale_power_law)
@@ -2919,7 +2919,7 @@ CONTAINS
           ENDIF
           err_norm=err_norm + rms_residual*(n_pt_pair-index_k_ref)
         ENDIF
-        
+
         IF (err_norm < err_norm_old) THEN
 !         Set reference P, T, and absorption for each k-term:
           scale_vector(n_scale_variable(i_scale_function2)*2+1,ik,ib) = &
@@ -2940,7 +2940,7 @@ CONTAINS
   SUBROUTINE fit_scale_cont_int
 !
 !
-    IMPLICIT NONE 
+    IMPLICIT NONE
 !
     WRITE(iu_monitor, '(/a, /a)') &
      "===================", &
@@ -3006,7 +3006,7 @@ CONTAINS
 !   Allocate array with all wavenumbers
     ALLOCATE(nu_wgt_all(dim_len))
 
-!   Read and get step in wavenumber array 
+!   Read and get step in wavenumber array
     CALL nf(nf90_inq_varid(ncidin_lbl,'nu',varid))
     CALL nf(nf90_get_att(ncidin_lbl,varid,'step',nu_inc))
     CALL nf(nf90_get_var(ncidin_lbl,varid,nu_wgt_all))
@@ -3033,7 +3033,7 @@ CONTAINS
     END DO
 
 !   Read pressures and temperatures
-    CALL nf(nf90_inq_varid(ncidin_lbl,'p_calc',varid)) 
+    CALL nf(nf90_inq_varid(ncidin_lbl,'p_calc',varid))
     CALL nf(nf90_get_var(ncidin_lbl,varid,p_calc_in))
     CALL nf(nf90_inq_varid(ncidin_lbl,'t_calc',varid))
     CALL nf(nf90_get_var(ncidin_lbl,varid,t_calc_in))
@@ -3052,7 +3052,7 @@ CONTAINS
 
     IF (l_self_broadening) THEN
 !     Read gas fractions
-      CALL nf(nf90_inq_varid(ncidin_lbl,'gas_frac',varid)) 
+      CALL nf(nf90_inq_varid(ncidin_lbl,'gas_frac',varid))
       CALL nf(nf90_get_var(ncidin_lbl,varid,gas_frac_in))
 
 !     Check gas fractions in lbl file
@@ -3339,7 +3339,7 @@ CONTAINS
     INTEGER :: dimid1, dimid2, dimid3, dimid4 ! dimension ID
     INTEGER :: varid                          ! variable ID
     INTEGER :: n_nu_band(n_selected_band)     ! number of frequency points
-    LOGICAL :: l_map_exist                    ! flag for mapping file existing 
+    LOGICAL :: l_map_exist                    ! flag for mapping file existing
 
 !   Calculate total number of frequency points
     DO ibb=1, n_selected_band
@@ -3585,17 +3585,17 @@ CONTAINS
   END SUBROUTINE close_lbl_files
 
   SUBROUTINE close_map_files
-  
+
     use netcdf
     IMPLICIT NONE
-  
+
 !   Close files
     IF (l_load_map) THEN
       CALL nf(nf90_close(ncidin_map))
     ELSE IF (l_save_map) THEN
       CALL nf(nf90_close(ncidout_map))
     ENDIF
-      
+
   END SUBROUTINE close_map_files
 
   Subroutine nf(status)

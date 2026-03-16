@@ -14,9 +14,9 @@ PROGRAM scatter_average_90
 ! file. Optionally, the data may be fitted.
 !
 ! Method:
-!    A file containing blocks of monochromatic single 
+!    A file containing blocks of monochromatic single
 ! scattering properties is read in. These monochromatic
-! values are averaged across the bands given in a 
+! values are averaged across the bands given in a
 ! spectral file. The averaged values may be written to
 ! a file or fitted using a recognized parametrization.
 !
@@ -322,7 +322,7 @@ PROGRAM scatter_average_90
 !
     IF ( (char_yn == 'y') .OR. (char_yn == 'Y') ) THEN
 !
-!     The data are checked to ensure that they are all for 
+!     The data are checked to ensure that they are all for
 !     the same type of scatterer.
       DO i=2, n_block
         IF (i_scatter_type(i) /= i_scatter_type(1)) THEN
@@ -359,7 +359,7 @@ PROGRAM scatter_average_90
 !
     ELSE IF ( (char_yn == 'n') .OR. (char_yn == 'N') ) THEN
       STOP
-    ELSE 
+    ELSE
 !
       WRITE(iu_err, '(a)') '+++ Illegal response.'
       IF (l_interactive) THEN
@@ -397,12 +397,12 @@ CONTAINS
         include_instrument_response=.TRUE.
         CALL read_instrument_response_90(filter, ierr)
         IF (ierr /= i_normal) STOP
-        EXIT
+        EXIT Inst
 !
       ELSE IF ( (char_if == 'N') .OR. (char_if == 'n') ) THEN
 !
         include_instrument_response=.FALSE.
-        EXIT
+        EXIT Inst
 !
       ELSE
 !
@@ -415,7 +415,7 @@ CONTAINS
 !
       ENDIF
 !
-    ENDDO Inst  
+    ENDDO Inst
 !
 !
 !
@@ -480,7 +480,7 @@ CONTAINS
 !     Effective albedo of single scattering
 !
 !
-!    
+!
 !   Calculate the mean scattering.
     mean_scattering = 0.0_RealK
     DO k = 0, n_int_weight

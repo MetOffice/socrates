@@ -76,7 +76,7 @@ SUBROUTINE make_block_5(Spectrum, ierr)
   REAL (RealK), ALLOCATABLE :: arr_tmp_real_6d(:, :, :, :, :, :)
 !   Temporary arrays used when resizing existing arrays
   REAL (RealK) :: t_lookup_pressure
-!   Single pressure used for temperature lookup tables 
+!   Single pressure used for temperature lookup tables
 
 ! Alias pointers to dimensions to the actual structure.
   nd_band            => Spectrum%Dim%nd_band
@@ -200,7 +200,7 @@ SUBROUTINE make_block_5(Spectrum, ierr)
       END IF
     END DO inner
     READ(iu_esft, '(15x, i5, //)', IOSTAT=ios) i_input_type
-    IF (ios < 0) EXIT
+    IF (ios < 0) EXIT outer
     IF (i_input_type == it_file_line_fit .OR. &
         i_input_type == it_file_line_fit_self) THEN
       READ(iu_esft, '(14x, i5, 21x, i5)') i_band, i_index
@@ -281,7 +281,7 @@ SUBROUTINE make_block_5(Spectrum, ierr)
       Spectrum%Gas%i_scat(nd_k_term_alloc+1:,:,:) = 0
       DEALLOCATE(arr_tmp_int_3d)
 
-      ALLOCATE(arr_tmp_real_3d(nd_k_term_alloc, nd_band, nd_species))   
+      ALLOCATE(arr_tmp_real_3d(nd_k_term_alloc, nd_band, nd_species))
       arr_tmp_real_3d = Spectrum%Gas%k
       DEALLOCATE(Spectrum%Gas%k)
       ALLOCATE(Spectrum%Gas%k(nd_k_term, nd_band, nd_species))
@@ -508,7 +508,7 @@ SUBROUTINE make_block_5(Spectrum, ierr)
           DEALLOCATE(arr_tmp_real_4d)
         ELSE
           ALLOCATE(Spectrum%Gas%k_t_lookup_gas(Spectrum%Dim%nd_t_lookup_gas, &
-            nd_k_term, nd_species, nd_band))          
+            nd_k_term, nd_species, nd_band))
         END IF
       END IF
 
