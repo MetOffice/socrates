@@ -31,7 +31,7 @@ SUBROUTINE get_db_wavelengths &
   INTEGER, Intent(In) :: nd_wavelength
 !   Size allocated for array of wavelengths
   INTEGER, Intent(In) :: nd_size_scat
-!   Size allocated for the number of scattering 
+!   Size allocated for the number of scattering
 !   entries at each wavelength
 !
   INTEGER, Intent(IN) :: iu_db_input
@@ -61,7 +61,7 @@ SUBROUTINE get_db_wavelengths &
   INTEGER :: n_block
 !   Number of blocks of scattering data
   INTEGER :: i_block
-!   Loop variable   
+!   Loop variable
   LOGICAL :: new_wavelength
 !   Flag that states if a new wavelength
 !   has been read from the database
@@ -119,7 +119,7 @@ SUBROUTINE get_db_wavelengths &
     db_record(j_pt_wl, n_rec_block(j_pt_wl)) = i_block+1
 !
 !
-!   Check if number of scattering angles is consistent 
+!   Check if number of scattering angles is consistent
 !   throughout the records
     IF (i_block == 1) n_angle = ice_sct%n_angle
     IF ( ice_sct%n_angle /= n_angle .AND. i_block > 1 ) THEN
@@ -133,7 +133,7 @@ SUBROUTINE get_db_wavelengths &
 !   Advance to the next block
     i_block = i_block+1
 !   Stop at the last block.
-    IF (i_block > n_block) EXIT
+    IF (i_block > n_block) EXIT process_block
 !
   ENDDO process_block
 !
