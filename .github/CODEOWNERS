@@ -1,0 +1,7 @@
+# This CODEOWNERS file includes a codeowner
+# who serves as a valid point of contact for
+# discussing changes and seeking approval for work
+
+**/     @mo-jmanners
+**/cosp_control     @Petzi1
+**/cosp_github      @Petzi1
