@@ -186,7 +186,7 @@ TYPE StrCtrl
 !   Flag for absorption by OSO-S
   LOGICAL :: l_h2s                                                = .FALSE.
 !   Flag for absorption by Hydrogen sulphide
-  LOGICAL :: l_ocs                                               = .FALSE.
+  LOGICAL :: l_ocs                                                = .FALSE.
 !   Flag for absorption by carbonyl sulphide
   LOGICAL :: l_ch3cho                                             = .FALSE.
 !   Flag for absorption by Acetaldehyde
