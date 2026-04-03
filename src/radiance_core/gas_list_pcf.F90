@@ -1667,6 +1667,163 @@ REAL (RealK), PARAMETER :: threshold_wavelength_n2o3(npd_products) &
   398.0E-09_RealK,                  & ! N2O3 -> NO2 + NO
   (0.0_RealK, i=1, npd_products-1)]   ! Venot 2012-highest non zero xsc
 
+! Name used by UKCA for photolysis pathway
+CHARACTER(LEN=56), PARAMETER :: photol_fldname(0:npd_products, npd_gases) &
+  = RESHAPE([CHARACTER(LEN=56) ::    &
+  (blank, i=0, 1),                   & ! H2O
+  "jh2o                          ",  & ! H2O -> OH(X2Pi) + H
+  (blank, i=3, npd_products),        & ! H2O
+  (blank, i=0, 0),                   & ! CO2
+  "jco2                          ",  & ! CO2 -> CO + O(3P)
+  (blank, i=2, npd_products),        & ! CO2
+  (blank, i=0, 0),                   & ! O3
+  "jo3b                          ",  & ! O3 -> O(3P) + O2(X3Sigmag-)
+  (blank, i=2, 3),                   & ! O3
+  "jo3a                          ",  & ! O3 -> O(1D) + O2(X3Sigmag-)
+  (blank, i=5, npd_products),        & ! O3
+  (blank, i=0, npd_products),        & ! N2O
+  (blank, i=0, npd_products),        & ! CO
+  (blank, i=0, npd_products),        & ! CH4
+  "jo2                           ",  & ! O2 -> Unspecified
+  "jo2                           ",  & ! O2 -> O(3P) + O(3P)
+  "jo2b                          ",  & ! O2 -> O(3P) + O(1D)
+  (blank, i=3, npd_products),        & ! O2
+  (blank, i=0, npd_products),        & ! NO
+  (blank, i=0, npd_products),        & ! SO2
+  (blank, i=0, 0),                   & ! NO2
+  "jno2                          ",  & ! NO2 -> NO + O(3P)
+  (blank, i=2, npd_products),        & ! NO2
+  (blank, i=0, npd_products),        & ! NH3
+  (blank, i=0, 0),                   & ! HNO3
+  "jhono2                        ",  & ! HNO3 -> OH + NO2
+  (blank, i=2, npd_products),        & ! HNO3
+  (blank, i=0, npd_products),        & ! N2
+  (blank, i=0, npd_products),        & ! CFC11
+  (blank, i=0, npd_products),        & ! CFC12
+  (blank, i=0, npd_products),        & ! CFC113
+  (blank, i=0, npd_products),        & ! HCFC22
+  (blank, i=0, npd_products),        & ! HFC125
+  (blank, i=0, npd_products),        & ! HFC134a
+  (blank, i=0, npd_products),        & ! CFC114
+  (blank, i=0, npd_products),        & ! TiO
+  (blank, i=0, npd_products),        & ! VO
+  (blank, i=0, npd_products),        & ! H2
+  (blank, i=0, npd_products),        & ! He
+  (blank, i=0, npd_products),        & ! OCS
+  (blank, i=0, npd_products),        & ! Na
+  (blank, i=0, npd_products),        & ! K
+  (blank, i=0, npd_products),        & ! FeH
+  (blank, i=0, npd_products),        & ! CrH
+  (blank, i=0, npd_products),        & ! Li
+  (blank, i=0, npd_products),        & ! Rb
+  (blank, i=0, npd_products),        & ! Cs
+  (blank, i=0, npd_products),        & ! PH3
+  (blank, i=0, npd_products),        & ! C2H2
+  (blank, i=0, npd_products),        & ! HCN
+  (blank, i=0, npd_products),        & ! H2S
+  (blank, i=0, npd_products),        & ! Ar
+  (blank, i=0, npd_products),        & ! Dry air
+  (blank, i=0, npd_products),        & ! O
+  (blank, i=0, npd_products),        & ! N
+  (blank, i=0, 0),                   & ! NO3
+  "jno3a                         ",  & ! NO3 -> NO + O2
+  "jno3b                         ",  & ! NO3 -> NO2 + O(3P)
+  (blank, i=3, npd_products),        & ! NO3
+  (blank, i=0, 0),                   & ! N2O5
+  "jn2o5                         ",  & ! N2O5 -> NO3 + NO2
+  (blank, i=2, npd_products),        & ! N2O5
+  (blank, i=0, 0),                   & ! HONO
+  "jhono                         ",  & ! HONO -> OH + NO
+  (blank, i=2, npd_products),        & ! HONO
+  "jpna                          ",  & ! HO2NO2 -> Unspecified
+  "jpna67                        ",  & ! HO2NO2 -> HO2 + NO2
+  "jpna33                        ",  & ! HO2NO2 -> OH + NO3
+  (blank, i=3, npd_products),        & ! HO2NO2
+  (blank, i=0, 0),                   & ! H2O2
+  "jh2o2                         ",  & ! H2O2 -> OH + OH
+  (blank, i=2, npd_products),        & ! H2O2
+  (blank, i=0, npd_products),        & ! C2H6
+  (blank, i=0, npd_products),        & ! CH3
+  "jhchoa                        ",  & ! H2CO -> Unspecified
+  (blank, i=1, 1),                   & ! H2CO
+  "jhchob                        ",  & ! H2CO -> H2 + CO
+  (blank, i=3, npd_products),        & ! H2CO
+  (blank, i=0, npd_products),        & ! HO2
+  (blank, i=0, npd_products),        & ! HDO
+  (blank, i=0, npd_products),        & ! HCl
+  (blank, i=0, npd_products),        & ! HF
+  (blank, i=0, npd_products),        & ! cis-OSSO
+  (blank, i=0, npd_products),        & ! trans-OSSO
+  (blank, i=0, npd_products),        & ! OSO-S
+  "jaceta                        ",  & ! CH3CHO -> Unspecified
+  (blank, i=1, 1),                   & ! CH3CHO
+  "jacetb                        ",  & ! CH3CHO -> CH4 + CO
+  (blank, i=3, npd_products),        & ! CH3CHO
+  "jmhp                          ",  & ! CH3OOH -> Unspecified
+  (blank, i=1, npd_products),        & ! CH3OOH
+  "jaceto                        ",  & ! CH3COCH3 -> Unspecified
+  (blank, i=1, npd_products),        & ! CH3COCH3
+  "jmkal                         ",  & ! CH3COCHO -> Unspecified
+  (blank, i=1, npd_products),        & ! CH3COCHO
+  (blank, i=0, npd_products),        & ! CHOCHO
+  "jetcho                        ",  & ! C2H5CHO -> Unspecified
+  (blank, i=1, npd_products),        & ! C2H5CHO
+  (blank, i=0, npd_products),        & ! HOCH2CHO
+  (blank, i=0, npd_products),        & ! C2H5COCH3
+  "jmvk                          ",  & ! MVK -> Unspecified
+  (blank, i=1, npd_products),        & ! MVK
+  "jmacr                         ",  & ! MACR -> Unspecified
+  (blank, i=1, npd_products),        & ! MACR
+  (blank, i=0, 0),                   & ! PAN
+  "jpan                          ",  & ! CH3C(O)OONO2 -> CH3C(O)OO + NO2
+  (blank, i=2, npd_products),        & ! PAN
+  "jmena                         ",  & ! CH3ONO2 -> Unspecified
+  (blank, i=1, npd_products),        & ! CH3ONO2
+  (blank, i=0, npd_products),        & ! C2H3
+  (blank, i=0, npd_products),        & ! C2H4
+  (blank, i=0, npd_products),        & ! OH
+  (blank, i=0, npd_products),        & ! HCO
+  (blank, i=0, npd_products),        & ! N2O4
+  (blank, i=0, npd_products),        & ! C2N2
+  (blank, i=0, npd_products),        & ! N2H4
+  (blank, i=0, npd_products),        & ! N2O3
+  (blank, i=0, npd_products),        & ! Si
+  (blank, i=0, npd_products),        & ! SiO
+  (blank, i=0, npd_products),        & ! SiO2
+  (blank, i=0, npd_products),        & ! Mg
+  (blank, i=0, npd_products),        & ! Mg2
+  (blank, i=0, npd_products),        & ! MgO
+  (blank, i=0, npd_products),        & ! TiO2
+  (blank, i=0, npd_products),        & ! Fe
+  (blank, i=0, npd_products),        & ! FeO
+  (blank, i=0, npd_products),        & ! Ca
+  (blank, i=0, npd_products),        & ! CaO
+  (blank, i=0, npd_products),        & ! AlO
+  (blank, i=0, npd_products),        & ! Na2
+  (blank, i=0, npd_products),        & ! NaO
+  (blank, i=0, npd_products),        & ! NaOH
+  (blank, i=0, npd_products),        & ! KOH
+  (blank, i=0, npd_products),        & ! H-
+  (blank, i=0, npd_products),        & ! PS
+  (blank, i=0, npd_products),        & ! PO
+  (blank, i=0, npd_products),        & ! PN
+  (blank, i=0, npd_products),        & ! CH3SH
+  (blank, i=0, npd_products),        & ! CH3S
+  (blank, i=0, npd_products),        & ! C2H6S
+  (blank, i=0, npd_products),        & ! C2H6S2
+  (blank, i=0, npd_products),        & ! C3H4
+  (blank, i=0, npd_products),        & ! C4H3
+  (blank, i=0, npd_products),        & ! SiH4
+  (blank, i=0, npd_products),        & ! S2
+  (blank, i=0, npd_products),        & ! SF6
+  (blank, i=0, npd_products),        & ! CS2
+  (blank, i=0, npd_products),        & ! S8
+  (blank, i=0, npd_products),        & ! CN
+  (blank, i=0, npd_products),        & ! CH3Cl
+  (blank, i=0, npd_products),        & ! CH3F
+  (blank, i=0, npd_products)         & ! CH3Br
+  ], shape=[npd_products+1, npd_gases] )
+
 CHARACTER(LEN=56), PARAMETER :: photol_products(npd_products, npd_gases) &
   = RESHAPE([CHARACTER(LEN=56) ::    &
   photol_products_h2o,               & !   1: H2O
