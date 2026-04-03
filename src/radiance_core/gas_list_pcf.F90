@@ -891,7 +891,782 @@ INTEGER, PARAMETER :: npd_products = 9
 INTEGER, PARAMETER :: npd_pathway = npd_gases * (npd_products + 1)
 
 CHARACTER(LEN=56), PARAMETER :: blank = ""
+
 ! Description of photolysis products
+! 1: H2O
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_h2o(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "H2O -> O(3P) + H2             ",  &
+  "H2O -> OH(X2Pi) + H           ",  &
+  "H2O -> O(1D) + H2             ",  &
+  "H2O -> OH(A2Sigma+) + H       ",  &
+  "H2O -> O(3P) + H + H          ",  &
+  (blank, i=1, npd_products-5)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_h2o(npd_products) &
+  = [REAL(RealK) ::                 &
+  246.0E-09_RealK,                  & ! H2O -> O(3P) + H2
+  242.0E-09_RealK,                  & ! H2O -> OH(X2Pi) + H
+  175.0E-09_RealK,                  & ! H2O -> O(1D) + H2
+  134.0E-09_RealK,                  & ! H2O -> OH(A2Sigma+) + H
+  129.0E-09_RealK,                  & ! H2O -> O(3P) + H + H
+  (0.0_RealK, i=1, npd_products-5)]
+
+! 2: CO2
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_co2(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "CO2 -> CO + O(3P)             ",  &
+  "CO2 -> CO + O(1D)             ",  &
+  "CO2 -> CO + O(1S)             ",  &
+  "CO2 -> CO(a3Pi) + O(3P)       ",  &
+  "CO2 -> CO2+                   ",  &
+  "CO2 -> CO + O+                ",  &
+  "CO2 -> CO+ + O(3P)            ",  &
+  "CO2 -> O2 + C+                ",  &
+  (blank, i=1, npd_products-8)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_co2(npd_products) &
+  = [REAL(RealK) ::                 &
+  227.5E-09_RealK,                  & ! CO2 -> CO + O(3P)
+  167.1E-09_RealK,                  & ! CO2 -> CO + O(1D)
+  128.6E-09_RealK,                  & ! CO2 -> CO + O(1S)
+  108.2E-09_RealK,                  & ! CO2 -> CO(a3Pi) + O(3P)
+  89.922E-09_RealK,                 & ! CO2 -> CO2+
+  65.026E-09_RealK,                 & ! CO2 -> CO + O+
+  63.693E-09_RealK,                 & ! CO2 -> CO+ + O
+  54.655E-09_RealK,                 & ! CO2 -> O2 + C+
+  (0.0_RealK, i=1, npd_products-8)]   ! Heubner 92
+
+! 3: O3
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_o3(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "O3 -> O(3P) + O2(X3Sigmag-)   ",  &
+  "O3 -> O(3P) + O2(a1Deltag)    ",  &
+  "O3 -> O(3P) + O2(b1Sigmag+)   ",  &
+  "O3 -> O(1D) + O2(X3Sigmag-)   ",  &
+  "O3 -> O(1D) + O2(a1Deltag)    ",  &
+  "O3 -> O(1D) + O2(b1Sigmag+)   ",  &
+  "O3 -> 3 O(3P)                 ",  &
+  "O3 -> O(1S) + O2(a1Deltag)    ",  &
+  (blank, i=1, npd_products-8)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_o3(npd_products) &
+  = [REAL(RealK) ::                 &
+  1180.0E-09_RealK,                 & ! O3 -> O(3P) + O2(X3Sigmag-)
+   612.0E-09_RealK,                 & ! O3 -> O(3P) + O2(a1Deltag)
+   463.0E-09_RealK,                 & ! O3 -> O(3P) + O2(b1Sigmag+)
+   411.0E-09_RealK,                 & ! O3 -> O(1D) + O2(X3Sigmag-)
+   310.0E-09_RealK,                 & ! O3 -> O(1D) + O2(a1Deltag)
+   267.0E-09_RealK,                 & ! O3 -> O(1D) + O2(b1Sigmag+)
+   201.0E-09_RealK,                 & ! O3 -> 3 O(3P)
+   196.0E-09_RealK,                 & ! O3 -> O(1S) + O2(a1Deltag)
+  (0.0_RealK, i=1, npd_products-8)]
+
+! 4: N2O
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_n2o(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "N2O -> N2 + O(1D)             ",  &
+  "N2O -> N2 + O(3P)             ",  &
+  "N2O -> N(4S) + NO(2Pi)        ",  &
+  "N2O -> N2 + O(1S)             ",  &
+  (blank, i=1, npd_products-4)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_n2o(npd_products) &
+  = [REAL(RealK) ::                 &
+  336.0E-09_RealK,                  & ! N2O -> N2 + O(1D)
+  713.0E-09_RealK,                  & ! N2O -> N2 + O(3P)
+  248.0E-09_RealK,                  & ! N2O -> N(4S) + NO(2Pi)
+  210.0E-09_RealK,                  & ! N2O -> N2 + O(1S)
+  (0.0_RealK, i=1, npd_products-4)]
+
+! 5: CO
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_co(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "CO -> C + O(3P)               ",  &
+  (blank, i=1, npd_products-1)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_co(npd_products) &
+  = [REAL(RealK) ::                 &
+  111.78E-09_RealK,                 & ! CO -> CO + O(3P)
+  (0.0_RealK, i=1, npd_products-1)]   ! Huebner 92
+
+! 6: CH4
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_ch4(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "CH4 -> CH3 + H                ",  &
+  "CH4 -> CH2(1) + H2            ",  &
+  "CH4 -> CH2(3) + H + H         ",  &
+  "CH4 -> CH + H2 + H            ",  &
+  (blank, i=1, npd_products-4)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_ch4(npd_products) &
+  = [REAL(RealK) ::                 &
+  277.0E-09_RealK,                  & ! CH4 -> CH3 + H
+  237.3E-09_RealK,                  & ! CH4 -> CH2(1) + H2
+  132.2E-09_RealK,                  & ! CH4 -> CH2(3) + H + H
+  137.0E-09_RealK,                  & ! CH4 -> CH + H2 + H
+  (0.0_RealK, i=1, npd_products-4)]   ! Huebner 92
+
+! 7: O2
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_o2(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "O2 -> O(3P) + O(3P)           ",  &
+  "O2 -> O(3P) + O(1D)           ",  &
+  "O2 -> O(1D) + O(1D)           ",  &
+  "O2 -> O(3P) + O(1S)           ",  &
+  "O2 -> O(1D) + O(1S)           ",  &
+  "O2 -> O2+                     ",  &
+  "O2 -> O+ + O                  ",  &
+  (blank, i=1, npd_products-7)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_o2(npd_products) &
+  = [REAL(RealK) ::                 &
+  242.3E-09_RealK,                  & ! O2 -> O(3P) + O(3P)
+  175.0E-09_RealK,                  & ! O2 -> O(3P) + O(1D)
+  137.0E-09_RealK,                  & ! O2 -> O(1D) + O(1D)
+  132.0E-09_RealK,                  & ! O2 -> O(3P) + O(1S)
+  110.0E-09_RealK,                  & ! O2 -> O(1D) + O(1S)
+  102.78E-09_RealK,                 & ! O2 -> O2+
+   66.2E-09_RealK,                  & ! O2 -> O+ + O
+  (0.0_RealK, i=1, npd_products-7)]
+
+! 8: NO
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_no(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "NO -> O(3P) + N(4S)           ",  &
+  (blank, i=1, npd_products-1)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_no(npd_products) &
+  = [REAL(RealK) ::                 &
+  191.0E-09_RealK,                  & ! NO -> O(3P) + N(4S)
+  (0.0_RealK, i=1, npd_products-1)]   ! Huebner 92
+
+! 9: SO2
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_so2(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "SO2 -> SO + O(3P)             ",  &
+  (blank, i=1, npd_products-1)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_so2(npd_products) &
+  = [REAL(RealK) ::                 &
+  218.7E-09_RealK,                  & ! SO2 -> SO + O(3P)
+  (0.0_RealK, i=1, npd_products-1)]   ! Becker 95
+
+! 10: NO2
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_no2(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "NO2 -> NO + O(3P)             ",  &
+  "NO2 -> NO + O(1D)             ",  &
+  (blank, i=1, npd_products-2)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_no2(npd_products) &
+  = [REAL(RealK) ::                 &
+  398.0E-09_RealK,                  & ! NO2 -> NO + O(3P)
+  244.0E-09_RealK,                  & ! NO2 -> NO + O(1D)
+  (0.0_RealK, i=1, npd_products-2)]
+
+! 11: NH3
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_nh3(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "NH3 -> NH2 + H                ",  &
+  (blank, i=1, npd_products-1)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_nh3(npd_products) &
+  = [REAL(RealK) ::                 &
+  279.8E-09_RealK,                  & ! NH3 -> NH2 + H
+  (0.0_RealK, i=1, npd_products-1)]   ! Huebner 92
+
+! 12: HNO3
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_hno3(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "HNO3 -> OH + NO2              ",  &
+  "HNO3 -> HONO + O(3P)          ",  &
+  "HNO3 -> H + NO3               ",  &
+  "HNO3 -> OH + NO2*(12B2)       ",  &
+  "HNO3 -> HONO + O(1D)          ",  &
+  "HNO3 -> HONO (a3A)+ O(3P)     ",  &
+  (blank, i=1, npd_products-6)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_hno3(npd_products) &
+  = [REAL(RealK) ::                 &
+  604.0E-09_RealK,                  & ! HNO3 -> OH + NO2
+  393.0E-09_RealK,                  & ! HNO3 -> HONO + O(3P)
+  278.0E-09_RealK,                  & ! HNO3 -> H + NO3
+  381.0E-09_RealK,                  & ! HNO3 -> OH + NO2*(12B2)
+  242.0E-09_RealK,                  & ! HNO3 -> HONO + O(1D)
+  216.0E-09_RealK,                  & ! HNO3 -> HONO (a3A)+ O(3P)
+  (0.0_RealK, i=1, npd_products-6)]   ! IUPAC PNOx2
+
+! 13: N2
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_n2(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "N2 -> N + N                   ",  &
+  "N2 -> N2+                     ",  &
+  "N2 -> N+ + N                  ",  &
+  (blank, i=1, npd_products-3)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_n2(npd_products) &
+  = [REAL(RealK) ::                 &
+   98.6E-09_RealK,                  & ! N2 -> N + N
+   79.8E-09_RealK,                  & ! N2 -> N2+
+   51.0E-09_RealK,                  & ! N2 -> N+ + N
+  (0.0_RealK, i=1, npd_products-3)]
+
+! 23: H2
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_h2(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "H2 -> H + H                   ",  &
+  (blank, i=1, npd_products-1)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_h2(npd_products) &
+  = [REAL(RealK) ::                 &
+  276.885E-09_RealK,                & ! H2 -> H + H
+  (0.0_RealK, i=1, npd_products-1)]   ! Huebner 92
+
+! 25: OCS
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_ocs(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "OCS -> CO + S(3P)             ",  &
+  "OCS -> CO + S(1D)             ",  &
+  "OCS -> CO + S(1S)             ",  &
+  (blank, i=1, npd_products-3)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_ocs(npd_products) &
+  = [REAL(RealK) ::                 &
+  388.0E-09_RealK,                  & ! OCS -> CO + S(3P)
+  285.0E-09_RealK,                  & ! OCS -> CO + S(1D)
+  209.0E-09_RealK,                  & ! OCS -> CO + S(1S)
+  (0.0_RealK, i=1, npd_products-3)]
+
+! 34: C2H2
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_c2h2(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "C2H2 -> C2H + H               ",  &
+  (blank, i=1, npd_products-1)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_c2h2(npd_products) &
+  = [REAL(RealK) ::                 &
+  230.6E-09_RealK,                  & ! C2H2 -> C2H + H
+  (0.0_RealK, i=1, npd_products-1)]   ! Huebner 92
+
+! 35: HCN
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_hcn(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "HCN -> CN + H                 ",  &
+  (blank, i=1, npd_products-1)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_hcn(npd_products) &
+  = [REAL(RealK) ::                 &
+  195.0E-09_RealK,                  & ! HCN -> CN + H
+  (0.0_RealK, i=1, npd_products-1)]   ! Huebner 92
+
+! 39: O
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_o(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "O -> O+(4S)                   ",  &
+  "O -> O+(2D)                   ",  &
+  "O -> O+(2P)                   ",  &
+  "O -> O+(4Pe)                  ",  &
+  "O -> O+(2Pe)                  ",  &
+  "O -> O++                      ",  &
+  "O -> O+++                     ",  &
+  (blank, i=1, npd_products-7)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_o(npd_products) &
+  = [REAL(RealK) ::                 &
+   91.25E-09_RealK,                 & ! O -> O+(4S)
+   73.18E-09_RealK,                 & ! O -> O+(2D)
+   66.58E-09_RealK,                 & ! O -> O+(2P)
+   43.50E-09_RealK,                 & ! O -> O+(4Pe)
+   31.00E-09_RealK,                 & ! O -> O+(2Pe)
+   24.80E-09_RealK,                 & ! O -> O++
+   12.179E-09_RealK,                & ! O -> O+++
+  (0.0_RealK, i=1, npd_products-7)]
+
+! 40: N
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_n(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "N -> N+                       ",  &
+  "N -> N++                      ",  &
+  (blank, i=1, npd_products-2)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_n(npd_products) &
+  = [REAL(RealK) ::                 &
+   85.92E-09_RealK,                 & ! N -> N+
+   28.00E-09_RealK,                 & ! N -> N++
+  (0.0_RealK, i=1, npd_products-2)]
+
+! 41: NO3
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_no3(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "NO3 -> NO + O2                ",  &
+  "NO3 -> NO2 + O(3P)            ",  &
+  (blank, i=1, npd_products-2)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_no3(npd_products) &
+  = [REAL(RealK) ::                 &
+   7320.0E-09_RealK,                & ! NO3 -> NO + O2
+   574.0E-09_RealK,                 & ! NO3 -> NO2 + O(3P)
+  (0.0_RealK, i=1, npd_products-2)]   ! JPL 19-5
+
+! 42: N2O5
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_n2o5(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "N2O5 -> NO3 + NO2             ",  &
+  "N2O5 -> NO3 + NO + O(3P)      ",  &
+  (blank, i=1, npd_products-2)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_n2o5(npd_products) &
+  = [REAL(RealK) ::                 &
+   1255.0E-09_RealK,                & ! N2O5 -> NO3 + NO2
+   298.0E-09_RealK,                 & ! N2O5 -> NO3 + NO + O(3P)
+  (0.0_RealK, i=1, npd_products-2)]   ! JPL 19-5
+
+! 43: HONO
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_hono(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "HONO -> OH + NO               ",  &
+  "HONO -> H + NO2               ",  &
+  (blank, i=1, npd_products-2)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_hono(npd_products) &
+  = [REAL(RealK) ::                 &
+   579.0E-09_RealK,                 & ! HONO -> OH + NO
+   362.0E-09_RealK,                 & ! HONO -> H + NO2
+  (0.0_RealK, i=1, npd_products-2)]   ! JPL 19-5
+
+! 44: HO2NO2
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_ho2no2(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "HO2NO2 -> HO2 + NO2           ",  &
+  "HO2NO2 -> OH + NO3            ",  &
+  "HO2NO2 -> O(3P) + HNO3        ",  &
+  "HO2NO2 -> H + NO2 + O2        ",  &
+  "HO2NO2 -> HO2 + NO + O(3P)    ",  &
+  "HO2NO2 -> OH + NO2 + O(3P)    ",  &
+  "HO2NO2 -> H + O(3P) + NO3     ",  &
+  "HO2NO2 -> HONO + O2(1Sigma)   ",  &
+  "HO2NO2 -> HONO + O2(1Lambda)  ",  &
+  (blank, i=1, npd_products-9)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_ho2no2(npd_products) &
+  = [REAL(RealK) ::                 &
+  1207.0E-09_RealK,                 & ! HO2NO2 -> HO2 + NO2
+   726.0E-09_RealK,                 & ! HO2NO2 -> OH + NO3
+   713.0E-09_RealK,                 & ! HO2NO2 -> O(3P) + HNO3
+   393.0E-09_RealK,                 & ! HO2NO2 -> H + NO2 + O2
+   339.0E-09_RealK,                 & ! HO2NO2 -> HO2 + NO + O(3P)
+   321.0E-09_RealK,                 & ! HO2NO2 -> OH + NO2 + O(3P)
+   201.0E-09_RealK,                 & ! HO2NO2 -> H + O(3P) + NO3
+   911.0E-09_RealK,                 & ! HO2NO2 -> HONO + O2(1Sigma)
+   1744.0E-09_RealK,                & ! HO2NO2 -> HONO + O2(1Lambda)
+  (0.0_RealK, i=1, npd_products-9)]   ! JPL 19-5
+
+! 45: H2O2
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_h2o2(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "H2O2 -> OH + OH               ",  &
+  "H2O2 -> H2O + O(1D)           ",  &
+  "H2O2 -> H + HO2               ",  &
+  (blank, i=1, npd_products-3)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_h2o2(npd_products) &
+  = [REAL(RealK) ::                 &
+   557.0E-09_RealK,                 & ! H2O2 -> OH + OH
+   359.0E-09_RealK,                 & ! H2O2 -> H2O + O(1D)
+   324.0E-09_RealK,                 & ! H2O2 -> H + HO2
+  (0.0_RealK, i=1, npd_products-3)]   ! JPL 19-5
+
+! 46: C2H6
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_c2h6(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "C2H6 -> C2H4 + H2             ",  &
+  "C2H6 -> C2H4 + H + H          ",  &
+  "C2H6 -> C2H2 + H2 + H2        ",  &
+  "C2H6 -> CH4 + CH2(1)          ",  &
+  "C2H6 -> CH3 + CH3             ",  &
+  (blank, i=1, npd_products-5)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_c2h6(npd_products) &
+  = [REAL(RealK) ::                 &
+   874.3E-09_RealK,                 & ! C2H6 -> C2H4 + H2 : Huebner 92
+   290.0E-09_RealK,                 & ! C2H6 -> C2H4 + H + H :Huebner 92/Lias 70
+   428.7E-09_RealK,                 & ! C2H6 -> C2H2 + H2 + H2 :Chang 2020
+   272.6E-09_RealK,                 & ! C2H6 -> CH4 + CH2(1) :Huebner 92
+   322.0E-09_RealK,                 & ! C2H6 -> CH3 + CH3 :Huebner 92
+  (0.0_RealK, i=1, npd_products-5)]
+
+! 47: CH3
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_ch3(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "CH3 -> CH2(1) + H             ",  &
+  (blank, i=1, npd_products-1)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_ch3(npd_products) &
+  = [REAL(RealK) ::                 &
+   216.0E-09_RealK,                 & ! CH3 -> CH2(1) + H
+  (0.0_RealK, i=1, npd_products-1)]   ! Venot 2012-highest non zero qy
+
+! 48: H2CO
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_h2co(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "H2CO -> H + HCO               ",  &
+  "H2CO -> H2 + CO               ",  &
+  "H2CO -> H + H + CO            ",  &
+  (blank, i=1, npd_products-3)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_h2co(npd_products) &
+  = [REAL(RealK) ::                 &
+   330.0E-09_RealK,                 & ! H2CO -> H + HCO
+   361.0E-09_RealK,                 & ! H2CO -> H2 + CO
+   283.0E-09_RealK,                 & ! H2CO -> H + H + CO
+  (0.0_RealK, i=1, npd_products-3)]   ! JPL 19-5
+
+! 49: HO2
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_ho2(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "HO2 -> OH + O(3P)             ",  &
+  "HO2 -> OH + O(1D)             ",  &
+  (blank, i=1, npd_products-2)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_ho2(npd_products) &
+  = [REAL(RealK) ::                 &
+   438.0E-09_RealK,                 & ! HO2 -> OH + O(3P)
+   259.0E-09_RealK,                 & ! HO2 -> OH + O(1D)
+  (0.0_RealK, i=1, npd_products-2)]   ! JPL 19-5
+
+! 56: CH3CHO
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_ch3cho(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "CH3CHO -> CH3 + HCO           ",  &
+  "CH3CHO -> CH4 + CO            ",  &
+  "CH3CHO -> CH3CO + H           ",  &
+  (blank, i=1, npd_products-3)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_ch3cho(npd_products) &
+  = [REAL(RealK) ::                 &
+   335.0E-09_RealK,                 & ! CH3CHO -> CH3 + HCO
+   1.0_RealK,                       & ! CH3CHO -> CH4 + CO
+   320.0E-09_RealK,                 & ! CH3CHO -> CH3CO + H
+  (0.0_RealK, i=1, npd_products-3)]   ! JPL 19-5
+
+! 57: CH3OOH
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_ch3ooh(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "CH3OOH -> CH3O + OH           ",  &
+  "CH3OOH -> CH3 + HO2           ",  &
+  "CH3OOH -> CH3O2 + H           ",  &
+  "CH3OOH -> CH3OH + O(3P)       ",  &
+  (blank, i=1, npd_products-4)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_ch3ooh(npd_products) &
+  = [REAL(RealK) ::                 &
+   645.0E-09_RealK,                 & ! CH3OOH -> CH3O + OH
+   410.0E-09_RealK,                 & ! CH3OOH -> CH3 + HO2
+   334.0E-09_RealK,                 & ! CH3OOH -> CH3O2 + H
+   670.0E-09_RealK,                 & ! CH3OOH -> CH3OH + O(3P)
+  (0.0_RealK, i=1, npd_products-4)]   ! JPL 19-5
+
+! 58: CH3COCH3
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_ch3coch3(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "CH3COCH3 -> CH3CO + CH3       ",  &
+  "CH3COCH3 -> 2 CH3 + CO        ",  &
+  (blank, i=1, npd_products-2)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_ch3coch3(npd_products) &
+  = [REAL(RealK) ::                 &
+   338.0E-09_RealK,                 & ! CH3COCH3 -> CH3CO + CH3
+   299.0E-09_RealK,                 & ! CH3COCH3 -> 2 CH3 + CO
+  (0.0_RealK, i=1, npd_products-2)]   ! JPL 19-5
+
+! 59: CH3COCHO
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_ch3cocho(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "CH3COCHO -> CH3CO + HCO       ",  &
+  "CH3COCHO -> CH4 + 2 CO        ",  &
+  "CH3COCHO -> CH3CHO + CO       ",  &
+  (blank, i=1, npd_products-3)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_ch3cocho(npd_products) &
+  = [REAL(RealK) ::                 &
+   422.0E-09_RealK,                 & ! CH3COCHO -> CH3CO + HCO
+   1.0_RealK,                       & ! CH3COCHO -> CH4 + 2 CO
+   1.0_RealK,                       & ! CH3COCHO -> CH3CHO + CO
+  (0.0_RealK, i=1, npd_products-3)]   ! JPL 19-5
+
+! 60: CHOCHO
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_chocho(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "CHOCHO -> HCO + HCO           ",  &
+  "CHOCHO -> H2 + 2 CO           ",  &
+  "CHOCHO -> HCHO + CO           ",  &
+  "CHOCHO -> H + CO + HCO        ",  &
+  (blank, i=1, npd_products-4)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_chocho(npd_products) &
+  = [REAL(RealK) ::                 &
+   399.0E-09_RealK,                 & ! CHOCHO -> HCO + HCO
+   1.0_RealK,                       & ! CHOCHO -> H2 + 2 CO
+   1.0_RealK,                       & ! CHOCHO -> HCHO + CO
+   329.0E-09_RealK,                 & ! CHOCHO -> H + CO + HCO
+  (0.0_RealK, i=1, npd_products-4)]   ! JPL 19-5
+
+! 61: C2H5CHO
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_c2h5cho(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "C2H5CHO -> C2H5 + HCO         ",  &
+  "C2H5CHO -> C2H6 + CO          ",  &
+  "C2H5CHO -> C2H4 + HCHO        ",  &
+  "C2H5CHO -> CH3 + CH2CHO       ",  &
+  (blank, i=1, npd_products-4)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_c2h5cho(npd_products) &
+  = [REAL(RealK) ::                 &
+   341.0E-09_RealK,                 & ! C2H5CHO -> C2H5 + HCO
+   1.0_RealK,                       & ! C2H5CHO -> C2H6 + CO
+   926.0E-09_RealK,                 & ! C2H5CHO -> C2H4 + HCHO
+   349.0E-09_RealK,                 & ! C2H5CHO -> CH3 + CH2CHO
+  (0.0_RealK, i=1, npd_products-4)]   ! JPL 19-5
+
+! 62: HOCH2CHO
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_hoch2cho(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "HOCH2CHO -> CH2OH + HCO       ",  &
+  "HOCH2CHO -> CH3OH + CO        ",  &
+  "HOCH2CHO -> OH + CH2CHO       ",  &
+  "HOCH2CHO -> HOCH2CO + H       ",  &
+  (blank, i=1, npd_products-4)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_hoch2cho(npd_products) &
+  = [REAL(RealK) ::                 &
+   347.0E-09_RealK,                 & ! HOCH2CHO -> CH2OH + HCO
+  1910.0E-09_RealK,                 & ! HOCH2CHO -> CH3OH + CO
+   328.0E-09_RealK,                 & ! HOCH2CHO -> OH + CH2CHO
+   314.0E-09_RealK,                 & ! HOCH2CHO -> HOCH2CO + H
+  (0.0_RealK, i=1, npd_products-4)]
+
+! 63: C2H5COCH3
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_c2h5coch3(npd_products) &
+  = [CHARACTER(LEN=56) ::            &
+  "C2H5COCH3 -> CH3CO + C2H5     ",  &
+  "C2H5COCH3 -> C2H5CO + CH3     ",  &
+  "C2H5COCH3 -> C2H5 + CO + CH3  ",  &
+  (blank, i=1, npd_products-3)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_c2h5coch3(npd_products) &
+  = [REAL(RealK) ::                 &
+   342.0E-09_RealK,                 & ! C2H5COCH3 -> CH3CO + C2H5
+   339.0E-09_RealK,                 & ! C2H5COCH3 -> C2H5CO + CH3
+   303.0E-09_RealK,                 & ! C2H5COCH3 -> C2H5 + CO + CH3
+  (0.0_RealK, i=1, npd_products-3)]   ! Zborowska 21
+
+! 64: CH3C(O)CH=CH2 (MVK)
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_mvk(npd_products) &
+  = [CHARACTER(LEN=56) ::               &
+  "CH3C(O)CH=CH2 -> CH3-CH=CH2 + CO  ", &
+  "CH3C(O)CH=CH2 -> CH=CH2 + CH3C(O) ", &
+  "CH3C(O)CH=CH2 -> CH=CH2C(O) + CH3 ", &
+  (blank, i=1, npd_products-3)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_mvk(npd_products) &
+  = [REAL(RealK) ::                 &
+   1.0_RealK,                       & ! CH3C(O)CH=CH2 -> CH3-CH=CH2 + CO
+   1.0_RealK,                       & ! CH3C(O)CH=CH2 -> CH=CH2 + CH3C(O)
+   1.0_RealK,                       & ! CH3C(O)CH=CH2 -> CH=CH2C(O) + CH3
+  (0.0_RealK, i=1, npd_products-3)]   ! JPL 19-5
+
+! 65: CH2=C(CH3)CHO (MACR)
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_macr(npd_products) &
+  = [CHARACTER(LEN=56) ::               &
+  "CH2=C(CH3)CHO -> CH2=CCH3 + CHO   ", &
+  "CH2=C(CH3)CHO -> C3H6 + CO        ", &
+  "CH2=C(CH3)CHO -> H + CH2=C(CH3)CO ", &
+  (blank, i=1, npd_products-3)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_macr(npd_products) &
+  = [REAL(RealK) ::                 &
+   1.0_RealK,                       & ! CH2=C(CH3)CHO -> CH2=CCH3 + CHO
+   1.0_RealK,                       & ! CH2=C(CH3)CHO -> C3H6 + CO
+   1.0_RealK,                       & ! CH2=C(CH3)CHO -> H + CH2=C(CH3)CO
+  (0.0_RealK, i=1, npd_products-3)]   ! JPL 19-5
+
+! 66: CH3C(O)OONO2 (PAN)
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_pan(npd_products) &
+  = [CHARACTER(LEN=56) ::               &
+  "CH3C(O)OONO2 -> CH3C(O)OO + NO2   ", &
+  "CH3C(O)OONO2 -> CH3C(O)O + NO3    ", &
+  (blank, i=1, npd_products-2)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_pan(npd_products) &
+  = [REAL(RealK) ::                 &
+  1004.0E-09_RealK,                 & ! CH3C(O)OONO2 -> CH3C(O)OO + NO2
+   963.0E-09_RealK,                 & ! CH3C(O)OONO2 -> CH3C(O)O + NO3
+  (0.0_RealK, i=1, npd_products-2)]   ! IUPAC P21
+
+! 67: CH3ONO2
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_ch3ono2(npd_products) &
+  = [CHARACTER(LEN=56) ::               &
+  "CH3ONO2 -> CH3O + NO2             ", &
+  "CH3ONO2 -> HCHO + HONO            ", &
+  "CH3ONO2 -> HCHO + NO + OH         ", &
+  "CH3ONO2 -> CH3ONO + O(3P)         ", &
+  "CH3ONO2 -> CH3 + NO3              ", &
+  "CH3ONO2 -> CH2ONO2 + H            ", &
+  "CH3ONO2 -> CH3O + NO + O(3P)      ", &
+  "CH3ONO2 -> CH3ONO + O(1D)         ", &
+  (blank, i=1, npd_products-8)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_ch3ono2(npd_products) &
+  = [REAL(RealK) ::                 &
+   697.0E-09_RealK,                 & ! CH3ONO2 -> CH3O + NO2
+   1.0_RealK,                       & ! CH3ONO2 -> HCHO + HONO
+   497.0E-09_RealK,                 & ! CH3ONO2 -> HCHO + NO + OH
+   391.0E-09_RealK,                 & ! CH3ONO2 -> CH3ONO + O(3P)
+   344.0E-09_RealK,                 & ! CH3ONO2 -> CH3 + NO3
+   294.0E-09_RealK,                 & ! CH3ONO2 -> CH2ONO2 + H
+   250.0E-09_RealK,                 & ! CH3ONO2 -> CH3O + NO + O(3P)
+   241.0E-09_RealK,                 & ! CH3ONO2 -> CH3ONO + O(1D)
+  (0.0_RealK, i=1, npd_products-8)]   ! JPL 19-5
+
+! 68: C2H3
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_c2h3(npd_products) &
+  = [CHARACTER(LEN=56) ::               &
+  "C2H3 -> C2H2 + H                  ", &
+  (blank, i=1, npd_products-1)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_c2h3(npd_products) &
+  = [REAL(RealK) ::                 &
+   237.0E-09_RealK,                 & ! C2H3 -> C2H2 + H
+  (0.0_RealK, i=1, npd_products-1)]   ! Venot 2012-highest non zero qy
+
+! 69: C2H4
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_c2h4(npd_products) &
+  = [CHARACTER(LEN=56) ::               &
+  "C2H4 -> C2H2 + H2                 ", &
+  "C2H4 -> C2H2 + H + H              ", &
+  (blank, i=1, npd_products-2)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_c2h4(npd_products) &
+  = [REAL(RealK) ::                 &
+   720.0E-09_RealK,                 & ! C2H4 -> C2H2 + H2
+   196.0E-09_RealK,                 & ! C2H4 -> C2H2 + H + H
+  (0.0_RealK, i=1, npd_products-2)]   ! Huebner 92
+
+! 70: OH
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_oh(npd_products) &
+  = [CHARACTER(LEN=56) ::               &
+  "OH -> O(1D) + H                   ", &
+  (blank, i=1, npd_products-1)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_oh(npd_products) &
+  = [REAL(RealK) ::                 &
+   511.4E-09_RealK,                 & ! OH -> O(1D) + H
+  (0.0_RealK, i=1, npd_products-1)]   ! Huebner 1992
+
+! 71: HCO
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_hco(npd_products) &
+  = [CHARACTER(LEN=56) ::               &
+  "HCO -> H + CO                     ", &
+  (blank, i=1, npd_products-1)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_hco(npd_products) &
+  = [REAL(RealK) ::                 &
+   229.0E-09_RealK,                 & ! HCO -> H + CO
+  (0.0_RealK, i=1, npd_products-1)]   ! Venot 2012-highest non zero xsc
+
+! 72: N2O4
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_n2o4(npd_products) &
+  = [CHARACTER(LEN=56) ::               &
+  "N2O4 -> NO2 + NO2                 ", &
+  (blank, i=1, npd_products-1)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_n2o4(npd_products) &
+  = [REAL(RealK) ::                 &
+  453.0E-09_RealK,                  & ! N2O4 -> NO2 + NO2
+  (0.0_RealK, i=1, npd_products-1)]   ! Venot 2012-highest non zero xsc
+
+! 73: C2N2
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_c2n2(npd_products) &
+  = [CHARACTER(LEN=56) ::               &
+  "C2N2 -> C2 + N2                   ", &
+  (blank, i=1, npd_products-1)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_c2n2(npd_products) &
+  = [REAL(RealK) ::                 &
+  224.0E-09_RealK,                  & ! C2N2 -> C2 + N2
+  (0.0_RealK, i=1, npd_products-1)]   ! Venot 2012-highest non zero xsc
+
+! 74: N2H4
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_n2h4(npd_products) &
+  = [CHARACTER(LEN=56) ::               &
+  "N2H4 -> N2H3 + H                  ", &
+  (blank, i=1, npd_products-1)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_n2h4(npd_products) &
+  = [REAL(RealK) ::                 &
+  290.0E-09_RealK,                  & ! N2H4 -> N2H3 + H
+  (0.0_RealK, i=1, npd_products-1)]   ! Venot 2012-highest non zero xsc
+
+! 75: N2O3
+! --------------------------
+CHARACTER(LEN=56), PARAMETER :: photol_products_n2o3(npd_products) &
+  = [CHARACTER(LEN=56) ::               &
+  "N2O3 -> NO2 + NO                  ", &
+  (blank, i=1, npd_products-1)]
+
+REAL (RealK), PARAMETER :: threshold_wavelength_n2o3(npd_products) &
+  = [REAL(RealK) ::                 &
+  398.0E-09_RealK,                  & ! N2O3 -> NO2 + NO
+  (0.0_RealK, i=1, npd_products-1)]   ! Venot 2012-highest non zero xsc
+
 CHARACTER(LEN=56), PARAMETER :: photol_products(npd_products, npd_gases) &
   = RESHAPE([CHARACTER(LEN=56) ::    &
   "H2O -> O(3P) + H2             ",  &
