@@ -2088,6 +2088,118 @@ CHARACTER(LEN=56), PARAMETER :: photol_fldname(0:npd_products, npd_gases) &
 ! Threshold wavelength defining energy required for photolysis
 REAL (RealK), PARAMETER :: threshold_wavelength(npd_products, npd_gases) &
   = RESHAPE ( [REAL(RealK) ::       &
+  threshold_wavelength_h2o,         & !   1: H2O
+  threshold_wavelength_co2,         & !   2: CO2
+  threshold_wavelength_o3,          & !   3: O3
+  threshold_wavelength_n2o,         & !   4: N2O
+  threshold_wavelength_co,          & !   5: CO
+  threshold_wavelength_ch4,         & !   6: CH4
+  threshold_wavelength_o2,          & !   7: O2
+  threshold_wavelength_no,          & !   8: NO
+  threshold_wavelength_so2,         & !   9: SO2
+  threshold_wavelength_no2,         & !  10: NO2
+  threshold_wavelength_nh3,         & !  11: NH3
+  threshold_wavelength_hno3,        & !  12: HNO3
+  threshold_wavelength_n2,          & !  13: N2
+  (0.0_RealK, i=1, npd_products),   & !  14: CFC11
+  (0.0_RealK, i=1, npd_products),   & !  15: CFC12
+  (0.0_RealK, i=1, npd_products),   & !  16: CFC113
+  (0.0_RealK, i=1, npd_products),   & !  17: HCFC22
+  (0.0_RealK, i=1, npd_products),   & !  18: HFC125
+  (0.0_RealK, i=1, npd_products),   & !  19: HFC134a
+  (0.0_RealK, i=1, npd_products),   & !  20: CFC114
+  (0.0_RealK, i=1, npd_products),   & !  21: TiO
+  (0.0_RealK, i=1, npd_products),   & !  22: VO
+  threshold_wavelength_h2,          & !  23: H2
+  (0.0_RealK, i=1, npd_products),   & !  24: He
+  threshold_wavelength_ocs,         & !  25: OCS
+  (0.0_RealK, i=1, npd_products),   & !  26: Na
+  (0.0_RealK, i=1, npd_products),   & !  27: K
+  (0.0_RealK, i=1, npd_products),   & !  28: FeH
+  (0.0_RealK, i=1, npd_products),   & !  29: CrH
+  (0.0_RealK, i=1, npd_products),   & !  30: Li
+  (0.0_RealK, i=1, npd_products),   & !  31: Rb
+  (0.0_RealK, i=1, npd_products),   & !  32: Cs
+  (0.0_RealK, i=1, npd_products),   & !  33: PH3
+  threshold_wavelength_c2h2,        & !  34: C2H2
+  threshold_wavelength_hcn,         & !  35: HCN
+  (0.0_RealK, i=1, npd_products),   & !  36: H2S
+  (0.0_RealK, i=1, npd_products),   & !  37: Ar
+  (0.0_RealK, i=1, npd_products),   & !  38: Dry air
+  threshold_wavelength_o,           & !  39: O
+  threshold_wavelength_n,           & !  40: N
+  threshold_wavelength_no3,         & !  41: NO3
+  threshold_wavelength_n2o5,        & !  42: N2O5
+  threshold_wavelength_hono,        & !  43: HONO
+  threshold_wavelength_ho2no2,      & !  44: HO2NO2
+  threshold_wavelength_h2o2,        & !  45: H2O2
+  threshold_wavelength_c2h6,        & !  46: C2H6
+  threshold_wavelength_ch3,         & !  47: CH3
+  threshold_wavelength_h2co,        & !  48: H2CO
+  threshold_wavelength_ho2,         & !  49: HO2
+  (0.0_RealK, i=1, npd_products),   & !  50: HDO
+  (0.0_RealK, i=1, npd_products),   & !  51: HCl
+  (0.0_RealK, i=1, npd_products),   & !  52: HF
+  (0.0_RealK, i=1, npd_products),   & !  53: cis-OSSO
+  (0.0_RealK, i=1, npd_products),   & !  54: trans-OSSO
+  (0.0_RealK, i=1, npd_products),   & !  55: OSO-S
+  threshold_wavelength_ch3cho,      & !  56: CH3CHO
+  threshold_wavelength_ch3ooh,      & !  57: CH3OOH
+  threshold_wavelength_ch3coch3,    & !  58: CH3COCH3
+  threshold_wavelength_ch3cocho,    & !  59: CH3COCHO
+  threshold_wavelength_chocho,      & !  60: CHOCHO
+  threshold_wavelength_c2h5cho,     & !  61: C2H5CHO
+  threshold_wavelength_hoch2cho,    & !  62: HOCH2CHO
+  threshold_wavelength_c2h5coch3,   & !  63: C2H5COCH3
+  threshold_wavelength_mvk,         & !  64: CH3C(O)CH=CH2 (MVK)
+  threshold_wavelength_macr,        & !  65: CH2=C(CH3)CHO (MACR)
+  threshold_wavelength_pan,         & !  66: CH3C(O)OONO2 (PAN)
+  threshold_wavelength_ch3ono2,     & !  67: CH3ONO2
+  threshold_wavelength_c2h3,        & !  68: C2H3
+  threshold_wavelength_c2h4,        & !  69: C2H4
+  threshold_wavelength_oh,          & !  70: OH
+  threshold_wavelength_hco,         & !  71: HCO
+  threshold_wavelength_n2o4,        & !  72: N2O4
+  threshold_wavelength_c2n2,        & !  73: C2N2
+  threshold_wavelength_n2h4,        & !  74: N2H4
+  threshold_wavelength_n2o3,        & !  75: N2O3
+  (0.0_RealK, i=1, npd_products),   & !  76: Si
+  (0.0_RealK, i=1, npd_products),   & !  77: SiO
+  (0.0_RealK, i=1, npd_products),   & !  78: SiO2
+  (0.0_RealK, i=1, npd_products),   & !  79: Mg
+  (0.0_RealK, i=1, npd_products),   & !  80: Mg2
+  (0.0_RealK, i=1, npd_products),   & !  81: MgO
+  (0.0_RealK, i=1, npd_products),   & !  82: TiO2
+  (0.0_RealK, i=1, npd_products),   & !  83: Fe
+  (0.0_RealK, i=1, npd_products),   & !  84: FeO
+  (0.0_RealK, i=1, npd_products),   & !  85: Ca
+  (0.0_RealK, i=1, npd_products),   & !  86: CaO
+  (0.0_RealK, i=1, npd_products),   & !  87: AlO
+  (0.0_RealK, i=1, npd_products),   & !  88: Na2
+  (0.0_RealK, i=1, npd_products),   & !  89: NaO
+  (0.0_RealK, i=1, npd_products),   & !  90: NaOH
+  (0.0_RealK, i=1, npd_products),   & !  91: KOH
+  (0.0_RealK, i=1, npd_products),   & !  92: H-
+  (0.0_RealK, i=1, npd_products),   & !  93: PS
+  (0.0_RealK, i=1, npd_products),   & !  94: PO
+  (0.0_RealK, i=1, npd_products),   & !  95: PN
+  (0.0_RealK, i=1, npd_products),   & !  96: CH3SH
+  (0.0_RealK, i=1, npd_products),   & !  97: CH3S
+  (0.0_RealK, i=1, npd_products),   & !  98: C2H6S
+  (0.0_RealK, i=1, npd_products),   & !  99: C2H6S2
+  (0.0_RealK, i=1, npd_products),   & ! 100: C3H4
+  (0.0_RealK, i=1, npd_products),   & ! 101: C4H3
+  (0.0_RealK, i=1, npd_products),   & ! 102: SiH4
+  (0.0_RealK, i=1, npd_products),   & ! 103: S2
+  (0.0_RealK, i=1, npd_products),   & ! 104: SF6
+  (0.0_RealK, i=1, npd_products),   & ! 105: CS2
+  (0.0_RealK, i=1, npd_products),   & ! 106: S8
+  (0.0_RealK, i=1, npd_products),   & ! 107: CN
+  (0.0_RealK, i=1, npd_products),   & ! 108: CH3Cl
+  (0.0_RealK, i=1, npd_products),   & ! 109: CH3F
+  (0.0_RealK, i=1, npd_products)    & ! 110: CH3Br
+  ], shape=[npd_products, npd_gases] )
+  = RESHAPE ( [REAL(RealK) ::       &
   246.0E-09_RealK,                  & ! H2O -> O(3P) + H2
   242.0E-09_RealK,                  & ! H2O -> OH(X2Pi) + H
   175.0E-09_RealK,                  & ! H2O -> O(1D) + H2
