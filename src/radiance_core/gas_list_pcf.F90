@@ -1669,6 +1669,119 @@ REAL (RealK), PARAMETER :: threshold_wavelength_n2o3(npd_products) &
 
 CHARACTER(LEN=56), PARAMETER :: photol_products(npd_products, npd_gases) &
   = RESHAPE([CHARACTER(LEN=56) ::    &
+  photol_products_h2o,               & !   1: H2O
+  photol_products_co2,               & !   2: CO2
+  photol_products_o3,                & !   3: O3
+  photol_products_n2o,               & !   4: N2O
+  photol_products_co,                & !   5: CO
+  photol_products_ch4,               & !   6: CH4
+  photol_products_o2,                & !   7: O2
+  photol_products_no,                & !   8: NO
+  photol_products_so2,               & !   9: SO2
+  photol_products_no2,               & !  10: NO2
+  photol_products_nh3,               & !  11: NH3
+  photol_products_hno3,              & !  12: HNO3
+  photol_products_n2,                & !  13: N2
+  (blank, i=1, npd_products),        & !  14: CFC11
+  (blank, i=1, npd_products),        & !  15: CFC12
+  (blank, i=1, npd_products),        & !  16: CFC113
+  (blank, i=1, npd_products),        & !  17: HCFC22
+  (blank, i=1, npd_products),        & !  18: HFC125
+  (blank, i=1, npd_products),        & !  19: HFC134a
+  (blank, i=1, npd_products),        & !  20: CFC114
+  (blank, i=1, npd_products),        & !  21: TiO
+  (blank, i=1, npd_products),        & !  22: VO
+  photol_products_h2,                & !  23: H2
+  (blank, i=1, npd_products),        & !  24: He
+  photol_products_ocs,               & !  25: OCS
+  (blank, i=1, npd_products),        & !  26: Na
+  (blank, i=1, npd_products),        & !  27: K
+  (blank, i=1, npd_products),        & !  28: FeH
+  (blank, i=1, npd_products),        & !  29: CrH
+  (blank, i=1, npd_products),        & !  30: Li
+  (blank, i=1, npd_products),        & !  31: Rb
+  (blank, i=1, npd_products),        & !  32: Cs
+  (blank, i=1, npd_products),        & !  33: PH3
+  photol_products_c2h2,              & !  34: C2H2
+  photol_products_hcn,               & !  35: HCN
+  (blank, i=1, npd_products),        & !  36: H2S
+  (blank, i=1, npd_products),        & !  37: Ar
+  (blank, i=1, npd_products),        & !  38: Dry air
+  photol_products_o,                 & !  39: O
+  photol_products_n,                 & !  40: N
+  photol_products_no3,               & !  41: NO3
+  photol_products_n2o5,              & !  42: N2O5
+  photol_products_hono,              & !  43: HONO
+  photol_products_ho2no2,            & !  44: HO2NO2
+  photol_products_h2o2,              & !  45: H2O2
+  photol_products_c2h6,              & !  46: C2H6
+  photol_products_ch3,               & !  47: CH3
+  photol_products_h2co,              & !  48: H2CO
+  photol_products_ho2,               & !  49: HO2
+  (blank, i=1, npd_products),        & !  50: HDO
+  (blank, i=1, npd_products),        & !  51: HCl
+  (blank, i=1, npd_products),        & !  52: HF
+  (blank, i=1, npd_products),        & !  53: cis-OSSO
+  (blank, i=1, npd_products),        & !  54: trans-OSSO
+  (blank, i=1, npd_products),        & !  55: OSO-S
+  photol_products_ch3cho,            & !  56: CH3CHO
+  photol_products_ch3ooh,            & !  57: CH3OOH
+  photol_products_ch3coch3,          & !  58: CH3COCH3
+  photol_products_ch3cocho,          & !  59: CH3COCHO
+  photol_products_chocho,            & !  60: CHOCHO
+  photol_products_c2h5cho,           & !  61: C2H5CHO
+  photol_products_hoch2cho,          & !  62: HOCH2CHO
+  photol_products_c2h5coch3,         & !  63: C2H5COCH3
+  photol_products_mvk,               & !  64: CH3C(O)CH=CH2 (MVK)
+  photol_products_macr,              & !  65: CH2=C(CH3)CHO (MACR)
+  photol_products_pan,               & !  66: CH3C(O)OONO2 (PAN)
+  photol_products_ch3ono2,           & !  67: CH3ONO2
+  photol_products_c2h3,              & !  68: C2H3
+  photol_products_c2h4,              & !  69: C2H4
+  photol_products_oh,                & !  70: OH
+  photol_products_hco,               & !  71: HCO
+  photol_products_n2o4,              & !  72: N2O4
+  photol_products_c2n2,              & !  73: C2N2
+  photol_products_n2h4,              & !  74: N2H4
+  photol_products_n2o3,              & !  75: N2O3
+  (blank, i=1, npd_products),        & !  76: Si
+  (blank, i=1, npd_products),        & !  77: SiO
+  (blank, i=1, npd_products),        & !  78: SiO2
+  (blank, i=1, npd_products),        & !  79: Mg
+  (blank, i=1, npd_products),        & !  80: Mg2
+  (blank, i=1, npd_products),        & !  81: MgO
+  (blank, i=1, npd_products),        & !  82: TiO2
+  (blank, i=1, npd_products),        & !  83: Fe
+  (blank, i=1, npd_products),        & !  84: FeO
+  (blank, i=1, npd_products),        & !  85: Ca
+  (blank, i=1, npd_products),        & !  86: CaO
+  (blank, i=1, npd_products),        & !  87: AlO
+  (blank, i=1, npd_products),        & !  88: Na2
+  (blank, i=1, npd_products),        & !  89: NaO
+  (blank, i=1, npd_products),        & !  90: NaOH
+  (blank, i=1, npd_products),        & !  91: KOH
+  (blank, i=1, npd_products),        & !  92: H-
+  (blank, i=1, npd_products),        & !  93: PS
+  (blank, i=1, npd_products),        & !  94: PO
+  (blank, i=1, npd_products),        & !  95: PN
+  (blank, i=1, npd_products),        & !  96: CH3SH
+  (blank, i=1, npd_products),        & !  97: CH3S
+  (blank, i=1, npd_products),        & !  98: C2H6S
+  (blank, i=1, npd_products),        & !  99: C2H6S2
+  (blank, i=1, npd_products),        & ! 100: C3H4
+  (blank, i=1, npd_products),        & ! 101: C4H3
+  (blank, i=1, npd_products),        & ! 102: SiH4
+  (blank, i=1, npd_products),        & ! 103: S2
+  (blank, i=1, npd_products),        & ! 104: SF6
+  (blank, i=1, npd_products),        & ! 105: CS2
+  (blank, i=1, npd_products),        & ! 106: S8
+  (blank, i=1, npd_products),        & ! 107: CN
+  (blank, i=1, npd_products),        & ! 108: CH3Cl
+  (blank, i=1, npd_products),        & ! 109: CH3F
+  (blank, i=1, npd_products)         & ! 110: CH3Br
+  ], shape=[npd_products, npd_gases] )
+
+  = RESHAPE([CHARACTER(LEN=56) ::    &
   "H2O -> O(3P) + H2             ",  &
   "H2O -> OH(X2Pi) + H           ",  &
   "H2O -> O(1D) + H2             ",  &
