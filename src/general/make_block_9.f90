@@ -121,7 +121,7 @@ SUBROUTINE make_block_9(Spectrum, ierr)
       END IF
     END DO inner
     READ(iu_esft, '(15x, i5, //)', IOSTAT=ios) i_input_type
-    IF (ios < 0) EXIT
+    IF (ios < 0) EXIT outer
     IF (i_input_type /= it_file_cont_fit) THEN
       WRITE(*, '(/a)') &
         '*** error: the input file is of an invalid type.'

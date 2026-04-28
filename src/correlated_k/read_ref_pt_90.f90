@@ -93,7 +93,7 @@ SUBROUTINE read_ref_pt_90 &
   Input: DO
     READ(iu_file_in, '(a)', IOSTAT=ios) line
 !
-    IF (ios /= 0) EXIT
+    IF (ios /= 0) EXIT Input
 !
 !   Lines of valid data begin with the directive *REF.
     IF (line(1:4) == '*REF') THEN

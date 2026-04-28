@@ -140,7 +140,7 @@ SUBROUTINE make_block_19(Spectrum, ierr)
       END IF
     END DO inner
     READ(iu_esft, '(15x, i5, //)', IOSTAT=ios) i_input_type
-    IF (ios < 0) EXIT
+    IF (ios < 0) EXIT outer
     IF (i_input_type /= it_file_cont_gen_fit) THEN
       WRITE(*, '(/a)') &
         '***error: the esft data have an invalid file type.'
@@ -267,7 +267,7 @@ SUBROUTINE make_block_19(Spectrum, ierr)
         arr_tmp_real_4d
       DEALLOCATE(arr_tmp_real_4d)
     END IF
-    
+
     READ(iu_esft, '(6(1PE13.6))', IOSTAT=ios) &
       (Spectrum%ContGen%t_lookup_cont(it), &
        it=1, Spectrum%ContGen%n_t_lookup_cont)

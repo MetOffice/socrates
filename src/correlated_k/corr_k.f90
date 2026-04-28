@@ -24,9 +24,9 @@ PROGRAM corr_k
 !
 !
 ! Local scalars:
-  INTEGER :: start_time(8) 
+  INTEGER :: start_time(8)
 !   Start/finish of program
-  INTEGER :: end_time(8)   
+  INTEGER :: end_time(8)
 !   End of program
   INTEGER :: iu_lbl
 !   Unit number for input of the LbL database in HITRAN format
@@ -369,7 +369,7 @@ PROGRAM corr_k
       CALL open_file_in(ierr, iu_lbl, &
         "Give the name of the bespoke HITRAN .bpar database.")
       IF (ierr /= i_normal) THEN
-        WRITE(iu_err, '(A, i5)') 'Error in open_file_in: ', ierr        
+        WRITE(iu_err, '(A, i5)') 'Error in open_file_in: ', ierr
         STOP
       END IF
       CALL read_parsum_dat
@@ -401,7 +401,7 @@ PROGRAM corr_k
       CALL open_file_in(ierr, iu_lbl, &
         "Give the name of the .uvxsc database.")
       IF (ierr /= i_normal) THEN
-        WRITE(iu_err, '(A, i5)') 'Error in open_file_in: ', ierr        
+        WRITE(iu_err, '(A, i5)') 'Error in open_file_in: ', ierr
         STOP
       END IF
       EXIT
@@ -480,12 +480,12 @@ PROGRAM corr_k
       include_instrument_response=.TRUE.
       CALL read_instrument_response_90(filter, ierr)
       IF (ierr /= i_normal) STOP
-      EXIT
+      EXIT Inst
 !
     ELSE IF ( (char_if == 'N') .OR. (char_if == 'n') ) THEN
 !
       include_instrument_response=.FALSE.
-      EXIT
+      EXIT Inst
 !
     ELSE
 !
@@ -529,7 +529,7 @@ PROGRAM corr_k
     i_line_prof_corr, l_self_broadening, n_gas_frac, gas_frac, npd_gas_frac, &
     ierr)
 !
-! Allocate arrays for the k-fit, now that the size of the scaling 
+! Allocate arrays for the k-fit, now that the size of the scaling
 ! vector is known.
   ALLOCATE(w_k(npd_k_term, Spectrum%Dim%nd_band))
   ALLOCATE(k_opt(npd_k_term, Spectrum%Dim%nd_band))
@@ -545,7 +545,7 @@ PROGRAM corr_k
       l_fit_self_continuum .OR. l_fit_frn_continuum) THEN
 !   Select the weighting to be applied.
     CALL select_weight_ck_90(i_weight, SolarSpec, l_interactive, ierr)
-!   
+!
 !   Set the output file.
     CALL get_free_unit(ierr, iu_k_out)
     IF (ierr /= i_normal) STOP
@@ -554,7 +554,7 @@ PROGRAM corr_k
       file_k, ierr)
     IF (ierr /= i_normal) STOP
   END IF
-    
+
 ! Define the output file of detailed monitoring information.
   CALL get_free_unit(ierr, iu_monitor)
   IF (ierr /= i_normal) STOP

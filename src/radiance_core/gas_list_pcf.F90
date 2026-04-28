@@ -301,138 +301,159 @@ CHARACTER (LEN=20), PARAMETER :: name_absorb(npd_gases) = (/ &
 ! Molecular weights taken from "General Inorganic Chemistry"
 ! by J. A. Duffy (1970), Longmans (except where stated).
 REAL (RealK), PARAMETER :: molar_weight(npd_gases) = (/ &
-  18.0153_RealK,     & ! H2O
-  44.0100_RealK,     & ! CO2
-  47.9982_RealK,     & ! O3
-  44.0128_RealK,     & ! N2O
-  28.0106_RealK,     & ! CO
-  16.0430_RealK,     & ! CH4
-  31.9988_RealK,     & ! O2
-  30.0061_RealK,     & ! NO
-  64.0628_RealK,     & ! SO2
-  46.0055_RealK,     & ! NO2
-  17.0306_RealK,     & ! NH3
-  63.0129_RealK,     & ! HNO3
-  28.0134_RealK,     & ! N2
-  137.3686_RealK,    & ! CFC11
-  120.9140_RealK,    & ! CFC12
-  187.3765_RealK,    & ! CFC113
-  86.46892_RealK,    & ! HCFC22
-  120.02227_RealK,   & ! HFC125
-  102.03184_RealK,   & ! HFC134a
-  170.921_RealK,     & ! CFC114 (from NIST)
-  63.866_RealK,      & ! TiO (from NIST)
-  66.9409_RealK,     & ! VO (from NIST)
-  2.01588_RealK,     & ! H2 (from NIST)
-  4.002602_RealK,    & ! He (from NIST)
-  60.075_RealK,      & ! OCS
-  22.98976928_RealK, & ! Na (from NIST)
-  39.0983_RealK,     & ! K (from NIST)
-  56.853_RealK,      & ! FeH (from NIST)
-  53.004_RealK,      & ! CrH (from NIST)
-  6.941_RealK,       & ! Li (from NIST)
-  85.4678_RealK,     & ! Rb (from NIST)
-  132.9054519_RealK, & ! Cs (from NIST)
-  33.99758_RealK,    & ! PH3 (from NIST)
-  26.0373_RealK,     & ! C2H2 (from NIST)
-  27.0253_RealK,     & ! HCN (from NIST)
-  34.081_RealK,      & ! H2S (from NIST)
-  39.948_RealK,      & ! Ar (from NIST)
-  28.966_RealK,      & ! Dry air
-  15.9994_RealK,     & ! O (from NIST)
-  14.00674_RealK,    & ! N (from NIST)
-  63.0128_RealK,     & ! NO3 (from NIST)
-  108.0104_RealK,    & ! N2O5 (from NIST)
-  47.0134_RealK,     & ! HONO (from NIST)
-  79.0122_RealK,     & ! HO2NO2 (from NIST)
-  34.0147_RealK,     & ! H2O2 (from NIST)
-  30.0690_RealK,     & ! C2H6 (from NIST)
-  15.0345_RealK,     & ! CH3  (from NIST)
-  30.0260_RealK,     & ! H2CO (from NIST
-  33.0067_RealK,     & ! HO2 (from NIST)
-  19.0214_RealK,     & ! HDO (from NIST)
-  36.461_RealK,      & ! HCl (from NIST)
-  20.00689_RealK,    & ! HF (from NIST)
-  96.129_RealK,      & ! cis-OSSO (from NIST)
-  96.129_RealK,      & ! trans-OSSO (from NIST)
-  96.129_RealK,      & ! OSO-S (from NIST)
-  44.0526_RealK,     & ! CH3CHO (from NIST)
-  48.0413_RealK,     & ! CH3OOH (from NIST)
-  58.0791_RealK,     & ! CH3COCH3 (from NIST)
-  72.0627_RealK,     & ! CH3COCHO (from NIST)
-  58.0361_RealK,     & ! CHOCHO (from NIST)
-  58.0791_RealK,     & ! C2H5CHO (from NIST)
-  60.0520_RealK,     & ! HOCH2CHO (from NIST)
-  72.1057_RealK,     & ! C2H5COCH3 (from NIST)
-  70.0898_RealK,     & ! MVK (from NIST)
-  70.0898_RealK,     & ! MACR (from NIST)
-  121.0489_RealK,    & ! PAN (from NIST)
-  77.0394_RealK,     & ! CH3ONO2 (from NIST)
-  27.0452_RealK,     & ! C2H3 (from NIST)
-  28.0532_RealK,     & ! C2H4 (from NIST)
-  17.0073_RealK,     & ! OH (from NIST)
-  29.0180_RealK,     & ! HCO (from NIST)
-  91.0110_RealK,     & ! N2O4 (from NIST)
-  52.0348_RealK,     & ! C2N2 (from NIST)
-  32.0452_RealK,     & ! N2H4 (from NIST)
-  76.0116_RealK     /) ! N2O3 (from NIST)
+  18.0153_RealK,     & !  1: H2O
+  44.0100_RealK,     & !  2: CO2
+  47.9982_RealK,     & !  3: O3
+  44.0128_RealK,     & !  4: N2O
+  28.0106_RealK,     & !  5: CO
+  16.0430_RealK,     & !  6: CH4
+  31.9988_RealK,     & !  7: O2
+  30.0061_RealK,     & !  8: NO
+  64.0628_RealK,     & !  9: SO2
+  46.0055_RealK,     & ! 10: NO2
+  17.0306_RealK,     & ! 11: NH3
+  63.0129_RealK,     & ! 12: HNO3
+  28.0134_RealK,     & ! 13: N2
+  137.3686_RealK,    & ! 14: CFC11
+  120.9140_RealK,    & ! 15: CFC12
+  187.3765_RealK,    & ! 16: CFC113
+  86.46892_RealK,    & ! 17: HCFC22
+  120.02227_RealK,   & ! 18: HFC125
+  102.03184_RealK,   & ! 19: HFC134a
+  170.921_RealK,     & ! 20: CFC114 (from NIST)
+  63.866_RealK,      & ! 21: TiO (from NIST)
+  66.9409_RealK,     & ! 22: VO (from NIST)
+  2.01588_RealK,     & ! 23: H2 (from NIST)
+  4.002602_RealK,    & ! 24: He (from NIST)
+  60.075_RealK,      & ! 25: OCS
+  22.98976928_RealK, & ! 26: Na (from NIST)
+  39.0983_RealK,     & ! 27: K (from NIST)
+  56.853_RealK,      & ! 28: FeH (from NIST)
+  53.004_RealK,      & ! 29: CrH (from NIST)
+  6.941_RealK,       & ! 30: Li (from NIST)
+  85.4678_RealK,     & ! 31: Rb (from NIST)
+  132.9054519_RealK, & ! 32: Cs (from NIST)
+  33.99758_RealK,    & ! 33: PH3 (from NIST)
+  26.0373_RealK,     & ! 34: C2H2 (from NIST)
+  27.0253_RealK,     & ! 35: HCN (from NIST)
+  34.081_RealK,      & ! 36: H2S (from NIST)
+  39.948_RealK,      & ! 37: Ar (from NIST)
+  28.966_RealK,      & ! 38: Dry air
+  15.9994_RealK,     & ! 39: O (from NIST)
+  14.00674_RealK,    & ! 40: N (from NIST)
+  63.0128_RealK,     & ! 41: NO3 (from NIST)
+  108.0104_RealK,    & ! 42: N2O5 (from NIST)
+  47.0134_RealK,     & ! 43: HONO (from NIST)
+  79.0122_RealK,     & ! 44: HO2NO2 (from NIST)
+  34.0147_RealK,     & ! 45: H2O2 (from NIST)
+  30.0690_RealK,     & ! 46: C2H6 (from NIST)
+  15.0345_RealK,     & ! 47: CH3  (from NIST)
+  30.0260_RealK,     & ! 48: H2CO (from NIST
+  33.0067_RealK,     & ! 49: HO2 (from NIST)
+  19.0214_RealK,     & ! 50: HDO (from NIST)
+  36.461_RealK,      & ! 51: HCl (from NIST)
+  20.00689_RealK,    & ! 52: HF (from NIST)
+  96.129_RealK,      & ! 53: cis-OSSO (from NIST)
+  96.129_RealK,      & ! 54: trans-OSSO (from NIST)
+  96.129_RealK,      & ! 55: OSO-S (from NIST)
+  44.0526_RealK,     & ! 56: CH3CHO (from NIST)
+  48.0413_RealK,     & ! 57: CH3OOH (from NIST)
+  58.0791_RealK,     & ! 58: CH3COCH3 (from NIST)
+  72.0627_RealK,     & ! 59: CH3COCHO (from NIST)
+  58.0361_RealK,     & ! 60: CHOCHO (from NIST)
+  58.0791_RealK,     & ! 61: C2H5CHO (from NIST)
+  60.0520_RealK,     & ! 62: HOCH2CHO (from NIST)
+  72.1057_RealK,     & ! 63: C2H5COCH3 (from NIST)
+  70.0898_RealK,     & ! 64: MVK (from NIST)
+  70.0898_RealK,     & ! 65: MACR (from NIST)
+  121.0489_RealK,    & ! 66: PAN (from NIST)
+  77.0394_RealK,     & ! 67: CH3ONO2 (from NIST)
+  27.0452_RealK,     & ! 68: C2H3 (from NIST)
+  28.0532_RealK,     & ! 69: C2H4 (from NIST)
+  17.0073_RealK,     & ! 70: OH (from NIST)
+  29.0180_RealK,     & ! 71: HCO (from NIST)
+  91.0110_RealK,     & ! 72: N2O4 (from NIST)
+  52.0348_RealK,     & ! 73: C2N2 (from NIST)
+  32.0452_RealK,     & ! 74: N2H4 (from NIST)
+  76.0116_RealK     /) ! 75: N2O3 (from NIST)
 
 
 ! Array of identifiers in HITRAN for each gas in the radiation code.
 INTEGER, PARAMETER :: hitran_number(npd_gases) = (/ &
-  1,   & ! H2O
-  2,   & ! CO2
-  3,   & ! O3
-  4,   & ! N2O
-  5,   & ! CO
-  6,   & ! CH4
-  7,   & ! O2
-  8,   & ! NO
-  9,   & ! SO2
-  10,  & ! NO2
-  11,  & ! NH3
-  12,  & ! HNO3
-  22,  & ! N2
-  0,   & ! CFC11
-  0,   & ! CFC12
-  0,   & ! CFC113
-  0,   & ! HCFC22
-  0,   & ! HFC125
-  0,   & ! HFC134a
-  0,   & ! CFC114
-  0,   & ! TiO
-  0,   & ! VO
-  45,  & ! H2
-  0,   & ! He
-  19,  & ! OCS
-  0,   & ! Na
-  0,   & ! K
-  0,   & ! FeH
-  0,   & ! CrH
-  0,   & ! Li
-  0,   & ! Rb
-  0,   & ! Cs
-  28,  & ! PH3
-  26,  & ! C2H2
-  23,  & ! HCN
-  31,  & ! H2S
-  0,   & ! Ar
-  0,   & ! Dry air
-  34,  & ! O
-  0,   & ! N
-  0,   & ! NO3
-  0,   & ! N2O5
-  0,   & ! HONO
-  0,   & ! HO2NO2
-  25,  & ! H2O2
-  27,  & ! C2H6
-  0,   & ! CH3
-  20,  & ! H2CO
-  33,  & ! HO2
-  1,   & ! HDO
-  15,  & ! HCl
-  14,  & ! HF
-  (0, i=ip_cosso, npd_gases) /)
+  1,   & !  1: H2O
+  2,   & !  2: CO2
+  3,   & !  3: O3
+  4,   & !  4: N2O
+  5,   & !  5: CO
+  6,   & !  6: CH4
+  7,   & !  7: O2
+  8,   & !  8: NO
+  9,   & !  9: SO2
+  10,  & ! 10: NO2
+  11,  & ! 11: NH3
+  12,  & ! 12: HNO3
+  22,  & ! 13: N2
+  0,   & ! 14: CFC11
+  0,   & ! 15: CFC12
+  0,   & ! 16: CFC113
+  0,   & ! 17: HCFC22
+  0,   & ! 18: HFC125
+  0,   & ! 19: HFC134a
+  0,   & ! 20: CFC114
+  0,   & ! 21: TiO
+  0,   & ! 22: VO
+  45,  & ! 23: H2
+  0,   & ! 24: He
+  19,  & ! 25: OCS
+  0,   & ! 26: Na
+  0,   & ! 27: K
+  0,   & ! 28: FeH
+  0,   & ! 29: CrH
+  0,   & ! 30: Li
+  0,   & ! 31: Rb
+  0,   & ! 32: Cs
+  28,  & ! 33: PH3
+  26,  & ! 34: C2H2
+  23,  & ! 35: HCN
+  31,  & ! 36: H2S
+  0,   & ! 37: Ar
+  0,   & ! 38: Dry air
+  34,  & ! 39: O
+  0,   & ! 40: N
+  0,   & ! 41: NO3
+  0,   & ! 42: N2O5
+  60,  & ! 43: HONO
+  0,   & ! 44: HO2NO2
+  25,  & ! 45: H2O2
+  27,  & ! 46: C2H6
+  57,  & ! 47: CH3
+  20,  & ! 48: H2CO
+  33,  & ! 49: HO2
+  1,   & ! 50: HDO
+  15,  & ! 51: HCl
+  14,  & ! 52: HF
+  0,   & ! 53: cis-OSSO
+  0,   & ! 54: trans-OSSO
+  0,   & ! 55: OSO-S
+  0,   & ! 56: CH3CHO
+  0,   & ! 57: CH3OOH
+  0,   & ! 58: CH3COCH3
+  0,   & ! 59: CH3COCHO
+  0,   & ! 60: CHOCHO
+  0,   & ! 61: C2H5CHO
+  0,   & ! 62: HOCH2CHO
+  0,   & ! 63: C2H5COCH3
+  0,   & ! 64: MVK
+  0,   & ! 65: MACR
+  0,   & ! 66: PAN
+  0,   & ! 67: CH3ONO2
+  0,   & ! 68: C2H3
+  38,  & ! 69: C2H4
+  13,  & ! 70: OH
+  0,   & ! 71: HCO
+  0,   & ! 72: N2O4
+  48,  & ! 73: C2N2
+  (0, i=ip_n2h4, npd_gases) /)
 
 ! Maximum number of specified HITRAN isotopes for a given absorber
 INTEGER, PARAMETER :: npd_isotopes = 3

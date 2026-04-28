@@ -102,16 +102,16 @@ SUBROUTINE read_pt_line_90 &
         'Specify pressure and corresponding temperatures (*END to finish)'
     ENDIF
 !
-    l_next= .TRUE. 
+    l_next= .TRUE.
 !   The next line will be read until l_next is false.
     Input: DO
-      IF (.NOT.l_next) EXIT
+      IF (.NOT.l_next) EXIT Input
       READ(iu_pt, '(a)', IOSTAT=ios) line
       IF (ios /= 0) THEN
         WRITE(iu_err, "(a)") "Erroneous input"
         IF ( l_interactive .AND. (.NOT.l_file) ) THEN
           WRITE(iu_stdout, '(a)') "Please re-enter this line."
-          CYCLE
+          CYCLE Input
         ELSE
           ierr=i_err_fatal
           RETURN
@@ -156,19 +156,19 @@ SUBROUTINE read_pt_line_90 &
     j=2
     Process: DO
 !
-      IF (j >= length) EXIT
+      IF (j >= length) EXIT Process
 !
       IF ( (list(j-1:j-1) == ' ') .AND. (list(j:j) /= ' ') ) THEN
 !       Beginning of word found.
         begin=j
         n_word=n_word+1
-!       Check for termination of input: a line begins with 'F' 
+!       Check for termination of input: a line begins with 'F'
 !       or 'f' or the directive "*END"
         IF (n_word == 1) THEN
           IF ( (list(j:j) == 'f') .OR. &
                (list(j:j) == 'f') .OR.  &
-               (list(j:j+3) == '*END') ) THEN  
-            l_finish= .TRUE. 
+               (list(j:j+3) == '*END') ) THEN
+            l_finish= .TRUE.
             RETURN
           ENDIF
         ENDIF
@@ -188,7 +188,7 @@ SUBROUTINE read_pt_line_90 &
           ELSE
             WRITE(iu_stdout, '(a)') 'Please re-enter the list.'
             l_reread=.TRUE.
-            EXIT
+            EXIT Process
           ENDIF
         ENDIF
         word(1:n_char_word) = '            '
@@ -204,7 +204,7 @@ SUBROUTINE read_pt_line_90 &
           ELSE
             WRITE(iu_stdout, '(/a/)') 'Please re-enter'
             l_reread=.TRUE.
-            EXIT
+            EXIT Process
           ENDIF
         ENDIF
       ENDIF
