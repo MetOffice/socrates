@@ -58,7 +58,7 @@ SUBROUTINE read_scatter_block_90(iu_scatter, i_input_type, ss_data, &
 !   Loop variable
   CHARACTER  (LEN=80) :: line
 !   Input line of data
-  LOGICAL :: non_blank
+  LOGICAL, EXTERNAL :: non_blank
 !   Test for blank line
   INTEGER , Allocatable :: map(:)
 !   Mapping array for sorting by wavenumber
