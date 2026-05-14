@@ -3,8 +3,8 @@
 # Add CMIP7 solar variability data (version 4.6) to the GA9 spectral files
 # This script creates the following files:
 #   sp_sw_ga9_cmip7_picontrol_4_6
-#   sp_sw_ga9_cmip7_ref_mon_4_6
-#   sp_sw_ga9_cmip7_ref_day_4_6
+#   sp_sw_ga9_cmip7_scenario_mon_4_6
+#   sp_sw_ga9_cmip7_scenario_day_4_6
 
 if [ ! $SOCRATES_DATA_DIR ] ; then
   SOCRATES_DATA_DIR=.
@@ -43,6 +43,7 @@ function check_for_solaris_file () {
     if [[ "$extension" == "gz" ]]; then
       echo "Gunzipping local data"
       gunzip -c $ret_file_name > $file_name
+      rm $ret_file_name
     fi
   fi
 }
@@ -60,30 +61,6 @@ else
   check_for_solaris_file $DAILY_FILE 'nJFTPcnFwZ3smTo' "gz"
   check_for_solaris_file $FUTURE_MONFILE 'QWorEALDriYabgN' ""
   check_for_solaris_file $FUTURE_DAYFILE 'j7ncYwoHXCtRwRE' ""
-    elif [[ $i == 3 ]]; then
-      SOLARIS_FILE=$DAILY_FILE
-      CLOUD_LOC='nJFTPcnFwZ3smTo'
-    elif [[ $i == 4 ]]; then
-      SOLARIS_FILE=$FUTURE_MONFILE
-      CLOUD_LOC='QWorEALDriYabgN'
-    else
-      SOLARIS_FILE=$FUTURE_DAYFILE
-      CLOUD_LOC='j7ncYwoHXCtRwRE'
-    fi
-    if [[ ! -f $SOLARIS_FILE ]]; then
-      if [[ $i == 4 ]] || [[ $i == 5 ]]; then
-        echo 'Downloading data from SOLARIS website'
-        wget https://cloud.iaa.es/index.php/s/${CLOUD_LOC}/download/$SOLARIS_FILE
-      elif [[ ! -f $SOLARIS_FILE.gz ]]; then
-        echo 'Downloading data from SOLARIS website'
-        wget https://cloud.iaa.es/index.php/s/${CLOUD_LOC}/download/$SOLARIS_FILE.gz
-      fi
-      if [[ -f $SOLARIS_FILE.gz ]]; then
-        echo "Gunzipping local data"
-        gunzip -c $SOLARIS_FILE.gz > $SOLARIS_FILE
-      fi
-    fi
-  done
 fi
 
 echo 'Checking files are at vn4.6'
