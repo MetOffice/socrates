@@ -55,13 +55,11 @@ if [[ -r $CMIP7_DATA_DIR ]]; then
   FUTURE_MONFILE=${CMIP7_DATA_DIR}/${FUTURE_MONFILE}
   FUTURE_DAYFILE=${CMIP7_DATA_DIR}/${FUTURE_DAYFILE}
 else
-  for i in $(seq 1 5); do
-    if [[ $i == 1 ]]; then
-      SOLARIS_FILE=$PICON_FILE
-      CLOUD_LOC='XaSb85EpGNYqkEw'
-    elif [[ $i == 2 ]]; then
-      SOLARIS_FILE=$MONTH_FILE
-      CLOUD_LOC='n7cacmRBjk5Gb8f'
+  check_for_solaris_file $PICON_FILE 'XaSb85EpGNYqkEw' "gz"
+  check_for_solaris_file $MONTH_FILE 'n7cacmRBjk5Gb8f' "gz"
+  check_for_solaris_file $DAILY_FILE 'nJFTPcnFwZ3smTo' "gz"
+  check_for_solaris_file $FUTURE_MONFILE 'QWorEALDriYabgN' ""
+  check_for_solaris_file $FUTURE_DAYFILE 'j7ncYwoHXCtRwRE' ""
     elif [[ $i == 3 ]]; then
       SOLARIS_FILE=$DAILY_FILE
       CLOUD_LOC='nJFTPcnFwZ3smTo'
