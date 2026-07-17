@@ -10,7 +10,9 @@ on:
   pull_request:
 
 jobs:
-   fortitude-lint:
-     uses: MetOffice/growss/.github/workflows/fortran-lint.yaml@main
-     with:
-       runner: "ubuntu-24.04"
+  fortitude-lint:
+    permissions:
+      contents: read  # Required to evaluate the event trigger metadata safely
+    uses: MetOffice/growss/.github/workflows/fortran-lint.yaml@develop
+    with:
+      runner: 'ubuntu-24.04'
