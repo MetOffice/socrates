@@ -8,13 +8,6 @@
 # rules to ignore for specific workflow files, allowing for exceptions to be
 # made where necessary while still enforcing best practices across the codebase.
 rules:
-  unpinned-uses:
-    ignore:
-      - "check-cr-approved.yaml"
-      - "cla-check.yaml"
-      - "lint-fortran.yaml"
-      - "track-review-project.yaml"
-      - "trigger-project-workflow.yaml"
   dangerous-triggers:
     ignore:
       - "cla-check.yaml"
