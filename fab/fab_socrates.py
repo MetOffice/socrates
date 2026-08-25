@@ -142,7 +142,7 @@ class FabSocrates(FabBase):
 if __name__ == "__main__":
 
     # Initialise a top-level logger
-    logger = logging.getLogger('um')
+    logger = logging.getLogger('fab')
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
     formatter = logging.Formatter('%(levelname)s: %(name)s: %(message)s')
