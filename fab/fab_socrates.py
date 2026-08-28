@@ -10,14 +10,13 @@ This module contains a Fab-based build script for Socrates.
 '''
 
 import argparse
-from dataclasses import dataclass
 import logging
 from pathlib import Path
 from typing import cast, Iterable, List, Optional, Union
 
 from fab.fab_base.fab_base import FabBase
 from fab.api import (AddFlags, Category, Compiler, Exclude, find_source_files,
-                     git_checkout, Include, root_inc_files)
+                     Include, root_inc_files)
 
 
 # Since we don't have a proper python package, we cannot use __name__, so set
@@ -46,7 +45,6 @@ class FabSocrates(FabBase):
         elif self._root == this_dir.parent:
             # We are one up from the Socrates root directory
             self._root = Path("..")
-
 
     def define_command_line_options(
             self,
