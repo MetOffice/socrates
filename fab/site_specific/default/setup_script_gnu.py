@@ -41,22 +41,8 @@ def setup_script_gnu(build_config: BuildConfig,
 
     # The base flags
     # ==============
-    default_flags = ['-ffree-line-length-none', '-Wall',
-                     '-g', '-Werror=tabs', '-std=f2018']
-    gfortran.add_flags(default_flags, 'base')
-
-    # Note we cannot use -Werror, since Fab adds pragmas SysIncludeStart/End
-    # pragmas to handle system includes, and the warning 'unknown-pragmas'
-    # is then triggering an error and abort.
-    gcc.add_flags(["-g", "-std=gnu99", "-Wall", "-Wextra",
-                   "-Wformat=2", "-Winit-self",
-                   "-Wfloat-equal", "-Wpointer-arith", "-Wbad-function-cast",
-                   "-Wcast-qual", "-Wcast-align", "-Wconversion",
-                   "-Wlogical-op", "-Wstrict-prototypes",
-                   "-Wmissing-declarations", "-Wredundant-decls",
-                   "-Wnested-externs", "-Woverlength-strings",
-                   "-fdiagnostics-show-option"],
-                  "base")
+    gfortran.add_flags(["-w", "-std=legacy", "-fallow-argument-mismatch"],
+                       'base')
 
     # Rigorous
     # ========
@@ -72,24 +58,30 @@ def setup_script_gnu(build_config: BuildConfig,
 
     # Debug
     # =====
-    gfortran.add_flags(["-O0"], "debug")
+    # -std=f2018 does compile, even though it's listed in the original
+    # makefile???
+    gfortran.add_flags(["-O0", "-fcheck=all,no-recursion", "-fbacktrace",
+                        "-g", "-Wtabs", "-Werror"], "debug")
 
     # Safe
     # ====
-    # Again skipping -Werror
     gfortran.add_flags(["-O1"], "safe")
 
     # High
     # ====
-    # Again skipping -Werror
     gfortran.add_flags(["-O2"], "high")
 
     # Set up the linker
-    # =================
+    # =================z
     # This will implicitly affect all gfortran based linkers, e.g.
     # linker-mpif90-gfortran will use these flags as well.
     linker = tr.get_tool(Category.LINKER, f"linker-{gfortran.name}")
     linker = cast(Linker, linker)
 
     # This likely needs to be update for each site (e.g. adding paths)
-    #linker.add_lib_flags("", [""])
+    tr = ToolRepository()
+    shell = tr.get_default(Category.SHELL)
+    # We must remove the trailing new line, and create a list:
+    nc_flibs = shell.run(additional_parameters=["-c", "nf-config --flibs"],
+                         capture_output=True).strip().split()
+    linker.add_lib_flags("netcdf", nc_flibs, silent_replace=True)

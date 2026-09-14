@@ -46,12 +46,7 @@ def setup_script_intel_llvm(build_config: BuildConfig,
 
     # The base flags
     # ==============
-    # The following flags will be applied to all modes:
-    ifx.add_flags(["-stand", "f08"],               "base")
-    ifx.add_flags(["-mcmodel=medium"],             "base")
-    ifx.add_flags(["-assume", "nosource_include"], "base")
-    ifx.add_flags(["-g", "-traceback"],            "base")
-
+    ifx.add_flags(["-g", "-traceback"], "base")
     icx.add_flags(["-g", "-traceback"], "base")
 
     # Rigorous
@@ -68,8 +63,6 @@ def setup_script_intel_llvm(build_config: BuildConfig,
 
     # Safe
     # ====
-    # These overrides are based on Intel 16 and Intel 17 build configs.
-    # Be aware that they have not yet been tuned for Intel 19.
     ifx.add_flags(["-O2", "-no-vec", "-fp-model", "precise"], "safe")
 
     # High

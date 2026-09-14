@@ -47,12 +47,8 @@ def setup_script_intel_classic(build_config: BuildConfig,
     # The base flags
     # ==============
     # The following flags will be applied to all modes:
-    ifort.add_flags(["-stand", "f08"],               "base")
-    ifort.add_flags(["-mcmodel=medium"],             "base")
-    ifort.add_flags(["-assume", "nosource_include"], "base")
-    ifort.add_flags(["-g", "-traceback"],            "base")
-
-    icc.add_flags(["-g", "-traceback"],   "base")
+    ifort.add_flags(["-g", "-traceback"], "base")
+    icc.add_flags(["-g", "-traceback"], "base")
 
     # Rigorous
     # ========
@@ -65,15 +61,10 @@ def setup_script_intel_classic(build_config: BuildConfig,
 
     # Debug
     # =====
-    # These overrides are based on Intel 16 and Intel 17 build configs.
-    # Be aware that they have not yet been tuned for Intel 19.
-
     ifort.add_flags(["-O0", "-fp-model=precise"], "debug")
 
     # Safe
     # ====
-    # These overrides are based on Intel 16 and Intel 17 build configs.
-    # Be aware that they have not yet been tuned for Intel 19.
     ifort.add_flags(["-O2", "-no-vec", "-fp-model", "precise"], "safe")
 
     # High
