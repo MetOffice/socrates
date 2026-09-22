@@ -3467,21 +3467,23 @@ DO
     END DO
     DEALLOCATE(rayleigh_coeff)
 
-    ! Determine fraction of solar spectrum in each sub-band
-    i_sub_band_gas = 0
-    DO i=1, Sp%Var%n_sub_band
-      i_band = Sp%Var%index_sub_band(1, i)
-      IF (Sp%Var%index_sub_band(2, i) == 0) THEN
-        Sp%Var%solar_flux_sub_band(i, 0) &
-          = Sp%Solar%solar_flux_band(i_band)
-      ELSE
-        i_gas = Sp%Gas%index_absorb(1, i_band)
-        i_sub_band_gas(i_band) = i_sub_band_gas(i_band) + 1
-        Sp%Var%solar_flux_sub_band(i, 0) &
-          = Sp%Solar%solar_flux_band(i_band) &
-          * Sp%Gas%sub_band(i_band, i_gas)%w(i_sub_band_gas(i_band))
-      END IF
-    END DO
+    IF (nd_sub_band_gas > 1) THEN
+      ! Determine fraction of solar spectrum in each sub-band
+      i_sub_band_gas = 0
+      DO i=1, Sp%Var%n_sub_band
+        i_band = Sp%Var%index_sub_band(1, i)
+        IF (Sp%Var%index_sub_band(2, i) == 0) THEN
+          Sp%Var%solar_flux_sub_band(i, 0) &
+            = Sp%Solar%solar_flux_band(i_band)
+        ELSE
+          i_gas = Sp%Gas%index_absorb(1, i_band)
+          i_sub_band_gas(i_band) = i_sub_band_gas(i_band) + 1
+          Sp%Var%solar_flux_sub_band(i, 0) &
+            = Sp%Solar%solar_flux_band(i_band) &
+            * Sp%Gas%sub_band(i_band, i_gas)%w(i_sub_band_gas(i_band))
+        END IF
+      END DO
+    END IF
 
     CALL release_file_unit(iu_spc2, handler="fortran")
   END SELECT
