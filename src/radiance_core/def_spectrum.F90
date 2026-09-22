@@ -21,7 +21,7 @@ USE realtype_rd, ONLY: RealK
 IMPLICIT NONE
 
 
-INTEGER, PARAMETER :: n_dim = 41
+INTEGER, PARAMETER :: n_dim = 42
 !   Number of dimensions in StrSpecDim
 INTEGER, PARAMETER :: n_int = 18
 !   Number of (non-allocatable) integers
