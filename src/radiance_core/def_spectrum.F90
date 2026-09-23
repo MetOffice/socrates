@@ -23,7 +23,7 @@ IMPLICIT NONE
 
 INTEGER, PARAMETER :: n_dim = 42
 !   Number of dimensions in StrSpecDim
-INTEGER, PARAMETER :: n_int = 18
+INTEGER, PARAMETER :: n_int = 19
 !   Number of (non-allocatable) integers
 INTEGER, PARAMETER :: n_real = 1
 !   Number of (non-allocatable) reals
