@@ -283,8 +283,8 @@
      &      , w, v, wrk
      &    )
           IF (ierr /= i_normal) RETURN
-  !
-  !       Zero very small terms of the diagonal matrix.
+!
+!       Zero very small terms of the diagonal matrix.
           wmax=0.0_RealK
           DO j=0, n_deg_fit
             IF (w(j) > wmax) THEN
