@@ -11,8 +11,8 @@ do
 echo "Effective Radius and Variance: ${1} $NE"
 DIST=`./convert $1 $NE`
 #echo $DIST
-Cscatter -w $RAD_DATA/cloud/wl_cloud \
-         -r $RAD_DATA/cloud/refract_ice \
+Cscatter -w $RAD_DATA/cloud/wl_ice_warren2008 \
+         -r $RAD_DATA/cloud/refract_ice_warren2008 \
          -c -M -o Css${1}_${NE} \
          -t 3 -n 1.e8 -m 1.0 $DIST
 done

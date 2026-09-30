@@ -201,7 +201,7 @@ SUBROUTINE cloud_fit_90 &
 !
       WRITE(iu_monitor, '(a)') &
         '---------------------------------------------------------'
-      WRITE(iu_monitor, '(/, a16, i3, a2, a10, a10, i3, //)') &
+      WRITE(iu_monitor, '(/, a16, i3, a2, a10, a10, i4, //)') &
         'Fitted property ', i, ' (', property(i), ') in band ', i_b
 !
 !     Set the position in the full array of parameters.

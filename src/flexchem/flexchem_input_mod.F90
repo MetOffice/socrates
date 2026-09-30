@@ -126,6 +126,7 @@ do i = 1, nfile
   open(newunit=iunit, &
     file=trim(dir_network)//'reactions_'//trim(adjustl(ifile))//'.dat')
   do
+    if (ireac > nreac) exit
     ! read in format depends on the method of calculation for reactions in file
     if (reac_method(i) == 1) then
       read(iunit, '(5(1x, a10),5(1x, a10),5(1x, e10.3))', end=1) &

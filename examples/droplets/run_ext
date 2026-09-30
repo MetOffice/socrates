@@ -1,0 +1,89 @@
+#!/bin/bash
+
+# Initialise error status to test for output differences:
+# these tests will only pass when using ifort19 at the Met Office
+ierr=0
+rm -f convert scatter_drop_ext 2>/dev/null
+
+# Calculate the optical properties for spherical droplets over a range
+# of sizes and discreet wavelengths
+cc -o convert convert.c
+for RE in 1.0 1.5 2.0 3.0 4.5 6.0 7.5 9.0 10.5 12.0 13.5 15.0 16.5 18.0 \
+          20.0 22.0 24.0 26.0 28.0 30.0 33.0 36.0 39.0 42.0 46.0 50.0 55.0
+do
+  if [ ! -s ss_drop_ext${RE}_0.1 ] ; then
+    ./run_scatter_ext ${RE} &
+  fi
+done
+wait
+
+for RE in 1.0 1.5 2.0 3.0 4.5 6.0 7.5 9.0 10.5 12.0 13.5 15.0 16.5 18.0 \
+          20.0 22.0 24.0 26.0 28.0 30.0 33.0 36.0 39.0 42.0 46.0 50.0 55.0
+do
+   cat ss_drop_ext${RE}* >> scatter_drop_ext
+done
+
+diff -q scatter_drop_ext ${RAD_DATA}/cloud/scatter_drop_ext || \
+ ierr=1
+
+# Average the optical properties over the bands in the GA9 reference
+# spectral files (260 band SW, 300 band LW)
+rm -f fit_drop_sw_ga9_ref mon_drop_sw_ga9_ref
+Cscatter_average \
+  -s $RAD_DATA/spectra/ga9_ref/sp_sw_260_jm3 \
+  -P 1 -t -u \
+  -f 5 fit_drop_sw_ga9_ref mon_drop_sw_ga9_ref 1.e3 \
+  ${RAD_DATA}/cloud/scatter_drop_ext
+
+rm -f fit_drop_lw_ga9_ref mon_drop_lw_ga9_ref
+Cscatter_average \
+  -s $RAD_DATA/spectra/ga9_ref/sp_lw_300_jm3 \
+  -P 1 -t -u \
+  -f 5 fit_drop_lw_ga9_ref mon_drop_lw_ga9_ref 1.e3 \
+  ${RAD_DATA}/cloud/scatter_drop_ext
+
+# Add the fits to the ga9_ref spectral files:
+rm -f sp_sw_260_drop_ext
+prep_spec <<EOF > prep_spec_sw_drop_ext_log
+$RAD_DATA/spectra/ga9_ref/sp_sw_260_jm3
+n
+sp_sw_260_drop_ext
+10
+6
+y
+fit_drop_sw_ga9_ref
+1.50000E-06 5.00000E-05
+-1
+EOF
+
+diff -q sp_sw_260_drop_ext $RAD_DATA/spectra/ga9_ref/sp_sw_260_jm3 || \
+ ierr=1
+
+rm -f sp_lw_300_drop_ext
+prep_spec <<EOF > prep_spec_lw_drop_ext_log
+$RAD_DATA/spectra/ga9_ref/sp_lw_300_jm3
+n
+sp_lw_300_drop_ext
+10
+6
+y
+fit_drop_lw_ga9_ref
+1.50000E-06 5.00000E-05
+-1
+EOF
+
+diff -q sp_lw_300_drop_ext $RAD_DATA/spectra/ga9_ref/sp_lw_300_jm3 || \
+ ierr=1
+
+if [ $ierr -gt 0 ] ; then
+  exit 1
+else
+  rm -f ss_drop_ext* convert scatter_drop_ext 2>/dev/null
+  rm -f fit_drop_sw_ga9_ref mon_drop_sw_ga9_ref
+  rm -f fit_drop_lw_ga9_ref mon_drop_lw_ga9_ref
+  rm -f sp_sw_260_drop_ext sp_lw_300_drop_ext
+  rm -f sp_sw_260_drop_ext_k sp_lw_300_drop_ext_k
+  rm -f prep_spec_sw_drop_ext_log prep_spec_lw_drop_ext_log
+  echo OK
+  exit 0
+fi
