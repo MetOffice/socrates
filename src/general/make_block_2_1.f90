@@ -9,7 +9,7 @@
 ! Method:
 !   A solar spectrum, giving the irradiance against wavelength,
 !   is read in. The total flux in the spectrum is determined,
-!   using a Rayleigh-Jeans distribution for the far infra-red.
+!   using a Planck distribution for the far infra-red.
 !   The fraction of this flux in each band is calculated. The
 !   band will probably not cover the whole spectrum. If 
 !   simulating observations this is as required, since the
@@ -19,7 +19,8 @@
 !   the fluxes in the outside bands to include the full flux.
 !
 !- ---------------------------------------------------------------------
-SUBROUTINE make_block_2_1(Sp, Sol, filter, l_filter, l_enhance, l_verbose, ierr)
+SUBROUTINE make_block_2_1(Sp, Sol, filter, l_filter, l_enhance_short, &
+  l_enhance_long, l_verbose, short_fraction, ierr)
 
   USE realtype_rd, ONLY: RealK
   USE rad_pcf, ONLY: i_normal, i_err_range
@@ -40,10 +41,12 @@ SUBROUTINE make_block_2_1(Sp, Sol, filter, l_filter, l_enhance, l_verbose, ierr)
 !   Instrumental response function
   LOGICAL, INTENT(IN) :: l_filter
 !   Weight with a filter function
-  LOGICAL, INTENT(IN) :: l_enhance
+  LOGICAL, INTENT(IN) :: l_enhance_short, l_enhance_long
 !   Enhance outer bands
   LOGICAL, INTENT(IN) :: l_verbose
 !   Print diagnostic output
+  REAL (RealK) :: short_fraction
+!   Fraction of solar spectrum missing at short wavelengths
   INTEGER, INTENT(INOUT) :: ierr
 !   Error flag
 
@@ -71,7 +74,7 @@ SUBROUTINE make_block_2_1(Sp, Sol, filter, l_filter, l_enhance, l_verbose, ierr)
   REAL (RealK) :: irradiance_tail
 !       Irradiance in tail
   REAL (RealK) :: irradiance_tail_band
-!       Irradiance in Rayleigh-Jeans tail in the band
+!       Irradiance in Planck tail in the band
   REAL (RealK) :: wave_length_begin
 !       Beginning of range
   REAL (RealK) :: wave_length_end
@@ -87,8 +90,8 @@ SUBROUTINE make_block_2_1(Sp, Sol, filter, l_filter, l_enhance, l_verbose, ierr)
 ! Functions called:
   REAL (RealK), EXTERNAL :: trapezoid
 !       Integrating function
-  REAL (RealK), EXTERNAL :: rayleigh_jeans_tail
-!       Tail of rayleigh jeans function
+  REAL (RealK), EXTERNAL :: planck_tail
+!       Tail of Planck function
   REAL (RealK), EXTERNAL :: solar_intensity
 !       Solar intensity at a given wavelength
 
@@ -109,15 +112,19 @@ SUBROUTINE make_block_2_1(Sp, Sol, filter, l_filter, l_enhance, l_verbose, ierr)
   IF (l_verbose) WRITE(*, '(a,f21.9)') &
     'Total irradiance of solar spectrum = ', total_solar_irradiance
 
-! Add on the tail of the distribution using a rayleigh-jeans law.
+! Add on the tail of the Planck distribution.
   irradiance_tail = &
-    rayleigh_jeans_tail(Sol, sol_wavelength_end)
+    planck_tail(Sol, sol_wavelength_end)
   total_solar_irradiance = total_solar_irradiance+irradiance_tail
   IF (l_verbose) WRITE(*, '(a,f16.9)') &
-    'Total irradiance of Rayleigh-Jeans tail = ', irradiance_tail
+    'Total irradiance of Planck tail = ', irradiance_tail
+
+! Add on the short wavelength fraction
+  total_solar_irradiance = total_solar_irradiance &
+                         / (1.0_RealK - short_fraction)
 
 ! Find the position of the shortest and longest wavelength bands
-  IF (l_enhance) THEN
+  IF (l_enhance_short .OR. l_enhance_long) THEN
     i_first_band=1
     i_last_band=Sp%Basic%n_band
     DO i=1, Sp%Basic%n_band
@@ -134,26 +141,26 @@ SUBROUTINE make_block_2_1(Sp, Sol, filter, l_filter, l_enhance, l_verbose, ierr)
 !   Find the points of the spectrum just within the band.
     wave_length_begin = Sp%Basic%wavelength_short(i)
     wave_length_end   = Sp%Basic%wavelength_long(i)
-    IF (l_enhance .AND. i == i_first_band) THEN
+    IF (l_enhance_short .AND. i == i_first_band) THEN
       wave_length_begin = min(sol_wavelength_begin, &
                               wave_length_begin)
     END IF
-    IF (l_enhance .AND. i == i_last_band) THEN
+    IF (l_enhance_long .AND. i == i_last_band) THEN
       wave_length_end   = max(sol_wavelength_end, &
                               wave_length_end)
     END IF
 
     IF (wave_length_begin > sol_wavelength_end) THEN
-!     The whole band is within the Rayleigh-Jeans tail so we set directly
+!     The whole band is within the Planck tail so we set directly
       Sp%Solar%solar_flux_band(i)= &
-        (rayleigh_jeans_tail(Sol, wave_length_begin) - &
-         rayleigh_jeans_tail(Sol, wave_length_end)) &
+        (planck_tail(Sol, wave_length_begin) - &
+         planck_tail(Sol, wave_length_end)) &
         /total_solar_irradiance
     ELSE
       IF (wave_length_end > sol_wavelength_end) THEN
-!       Part of the band is in the Rayleigh-Jeans tail
+!       Part of the band is in the Planck tail
         irradiance_tail_band = &
-          irradiance_tail - rayleigh_jeans_tail(Sol, wave_length_end)
+          irradiance_tail - planck_tail(Sol, wave_length_end)
         wave_length_end = sol_wavelength_end
       ELSE
         irradiance_tail_band = 0.0_RealK
@@ -248,16 +255,22 @@ SUBROUTINE make_block_2_1(Sp, Sol, filter, l_filter, l_enhance, l_verbose, ierr)
 
 ! Add the tail to the last band if required. The setting of limits
 ! above dealt with the contributions within the region of solar data.
-  IF (l_enhance) THEN
+  IF (l_enhance_long) THEN
     IF (Sp%Basic%wavelength_long(i_last_band) > &
         Sol%wavelength(Sol%n_points)) THEN
       irradiance_tail= &
-        rayleigh_jeans_tail(Sol, Sp%Basic%wavelength_long(i_last_band))
+        planck_tail(Sol, Sp%Basic%wavelength_long(i_last_band))
     END IF
     Sp%Solar%solar_flux_band(i_last_band) = &
       Sp%Solar%solar_flux_band(i_last_band) &
       + irradiance_tail/total_solar_irradiance
   ENDIF
+
+! Add on the short fraction to the first band
+  IF (l_enhance_short) THEN
+    Sp%Solar%solar_flux_band(i_first_band) = &
+      Sp%Solar%solar_flux_band(i_first_band) + short_fraction
+  END IF
 
 ! Reduce the solar flux in bands which contain exclusions if necessary.
   IF (Sp%Basic%l_present(14)) THEN

@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Create a merged solar spectrum for the pre-industrial period
+
+mkdir solar_cmip7_pi_whi_lya
+cd solar_cmip7_pi_whi_lya
+
+# Get high-resolution spectra over the Lyman-alpha region (121.427 - 121.708 nm at 0.001 nm resolution)
+# wget https://lasp.colorado.edu/lisird/resources/lasp/lyman_alpha/shape_lya_profile_model.ncdf
+cp $SOCRATES_DATA_DIR/lisird/shape_lya_profile_model.ncdf .
+
+# Get the Whole Heliosphere Interval (WHI) Reference Spectra data (0.05 - 2400 nm at 0.1 nm resolution)
+# wget https://lasp.colorado.edu/lisird/resources/whi_ref_spectra/data/ref_solar_irradiance_whi-2008_ver2.dat
+cp $SOCRATES_DATA_DIR/lisird/ref_solar_irradiance_whi-2008_ver2.dat .
+
+# Get the SOLARIS-HEPPA CMIP7 solar Pre-Industrial data (10 - 750 nm at 1nm resolution,
+# 750 - 5000 nm at 5 nm resolution, 5 - 10 micron at 10 nm resolution, 10 - 100 micron at 50 nm resolution)
+cp $SOCRATES_DATA_DIR/solarisheppa/cmip7/multiple_input4MIPs_solar_CMIP_SOLARIS-HEPPA-CMIP-4-6_gn.nc.gz .
+gunzip multiple_input4MIPs_solar_CMIP_SOLARIS-HEPPA-CMIP-4-6_gn.nc.gz
+
+# Create mean high-resolution Lyman-alpha and WHI spectra
+lya2sol shape_lya_profile_model.ncdf lya
+whi2sol ref_solar_irradiance_whi-2008_ver2.dat whi
+
+# Create a low-resolution CMIP7 spectrum for the pre-industrial period
+cmip2sol multiple_input4MIPs_solar_CMIP_SOLARIS-HEPPA-CMIP-4-6_gn.nc cmip7_picontrol
+
+# Merge the Lyman-alpha spectrum into the WHI spectrum with a single scaling (-s) for the entire Lyman-alpha data
+merge_solar_spectra whi_mean lya_mean whi_lya_mean -s
+
+# Merge the WHI-Lyman-alpha spectrum (up to 310 nm) into the CMIP7 spectrum
+# keeping the same integrated flux per bin of the CMIP7 spectrum
+merge_solar_spectra cmip7_picontrol whi_lya_mean cmip7_pi_whi_lya_mean -u 310.0e-9
+
+# Fit an effective temperature for extapolation of the solar spectrum to longer wavelengths
+solar_tail_temperature cmip7_pi_whi_lya_mean cmip7_pi_whi_lya_mean_tfit
+
+# Plot the merged spectrum
+python ../../../python/plot_solar_spectrum.py cmip7_pi_whi_lya_mean_tfit
+cd ..
+
+exit 0

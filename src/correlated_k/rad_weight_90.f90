@@ -4,30 +4,26 @@
 ! which you should have received as part of this distribution.
 ! *****************************COPYRIGHT*******************************
 !
-!+ Subroutine to calculate the weightings for correlated-k.
-!
-SUBROUTINE rad_weight_90 &
-!
-(i_weight, nu_wgt, SolarSpec, t, wgt)
-!
+! Subroutine to calculate the weightings for correlated-k.
 !
 ! Description:
 !   Weightings at the frequencies supplied are calculated. nu_wgt and wgt
 !   should have the same lengths.
 !
-!
-!
-! Modules used:
-  USE realtype_rd
-  USE def_solarspec
-  USE weighting_pcf
-!
-!
+!------------------------------------------------------------------------------
+SUBROUTINE rad_weight_90(i_weight, nu_wgt, SolarSpec, t, wgt)
+
+  USE realtype_rd, ONLY: RealK
+  USE def_solarspec, ONLY: StrSolarSpec
+  USE weighting_pcf, ONLY: IP_weight_planck, IP_weight_d_planck, &
+                           IP_weight_solar, &
+                           IP_weight_uniform
+  USE planck_nu_mod, ONLY: planck_nu
+  USE d_planck_nu_mod, ONLY: d_planck_nu
+  USE solar_intensity_nu_mod, ONLY: solar_intensity_nu
+
   IMPLICIT NONE
-!
-!
-!
-! Dummy variables.
+
   INTEGER, Intent(IN) :: i_weight
 !   Method of weighting
   TYPE (StrSolarSpec), Intent(IN) :: SolarSpec
@@ -38,66 +34,17 @@ SUBROUTINE rad_weight_90 &
 !   Frequencies where weighting is applied
   REAL  (RealK), Intent(OUT) :: wgt(:)
 !   Calculated weightings
-!
-! Local variables
-!
-!
-! Subroutines called:
-  INTERFACE
-!
-    SUBROUTINE planck_90(nu, t, b)
-!     Subroutine to calculate the Planckian radiance
-!
-      USE realtype_rd
-!
-      REAL  (RealK), Intent(IN) :: nu(:)
-      REAL  (RealK), Intent(IN) :: t
-!
-      REAL  (RealK), Intent(OUT) :: b(:)
-!
-    END SUBROUTINE planck_90
-!
-!
-    SUBROUTINE d_planck_90(nu, t, db)
-!     Subroutine to calculate the differential Planckian radiance
-!
-      USE realtype_rd
-!
-      REAL  (RealK), Intent(IN) :: nu(:)
-      REAL  (RealK), Intent(IN) :: t
-!
-      REAL  (RealK), Intent(OUT) :: db(:)
-!
-    END SUBROUTINE d_planck_90
-!
-!
-    SUBROUTINE solar_intensity_90(nu, SolarSpec, solar_irrad)
-!     Subroutine to calculate the solar intensity
-!
-      USE realtype_rd
-      USE def_solarspec
-!
-      REAL  (RealK), Intent(IN)        :: nu(:)
-      TYPE  (StrSolarSpec), Intent(IN) :: SolarSpec
-!
-      REAL  (RealK), Intent(OUT) :: solar_irrad(:)
-!
-    END SUBROUTINE solar_intensity_90
-!
-  END INTERFACE
-!
-!
+
+
   SELECT CASE (i_weight)
     CASE (IP_weight_planck)
-      CALL planck_90(nu_wgt, t, wgt)
+      CALL planck_nu(nu_wgt, t, wgt)
     CASE (IP_weight_d_planck)
-      CALL d_planck_90(nu_wgt, t, wgt)
+      CALL d_planck_nu(nu_wgt, t, wgt)
     CASE (IP_weight_solar)
-      CALL solar_intensity_90(nu_wgt, SolarSpec, wgt)
+      CALL solar_intensity_nu(nu_wgt, SolarSpec, wgt)
     CASE (IP_weight_uniform)
       wgt(:)=1.0_RealK
   END SELECT
-!
-!
-!
+
 END SUBROUTINE rad_weight_90

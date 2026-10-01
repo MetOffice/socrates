@@ -14,7 +14,7 @@ scatter_90: scatter_90.o scatlib.$(LIBSUFFIX)
 	$(LINK) -o scatter_90 scatter_90.o scatlib.$(LIBSUFFIX)
 
 scatter_average_90: scatter_average_90.o scatlib.$(LIBSUFFIX)
-	$(LINK) -o scatter_average_90 scatter_average_90.o \
+	$(LINK) $(OMPARG) -o scatter_average_90 scatter_average_90.o \
 	   scatlib.$(LIBSUFFIX)
 
 reduce_casim_ice: reduce_casim_ice.o scatlib.$(LIBSUFFIX)

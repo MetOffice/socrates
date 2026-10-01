@@ -75,11 +75,15 @@ SUBROUTINE out_spectrum(file_spectral, Spectrum, ierr)
   ENDIF
 
 ! Determine if an extended file is required and open it if so.
-  l_exist_k = Spectrum%Planck%l_planck_tbl &
-         .OR. Spectrum%Dim%nd_sub_band_gas > 1
+  l_exist_k = Spectrum%Planck%l_planck_tbl
+  IF (ALLOCATED(Spectrum%Gas%n_sub_band_gas)) THEN
+    l_exist_k = l_exist_k .OR. &
+      ANY(Spectrum%Gas%n_sub_band_gas(1:Spectrum%Basic%n_band, &
+                                      1:Spectrum%Gas%n_absorb) > 1)
+  END IF
   IF (ALLOCATED(Spectrum%Gas%i_scale_fnc)) THEN
     l_exist_k = l_exist_k .OR. &
-     ANY(Spectrum%Gas%i_scale_fnc == ip_scale_lookup)
+      ANY(Spectrum%Gas%i_scale_fnc == ip_scale_lookup)
   END IF
   IF (ALLOCATED(Spectrum%ContGen%i_band_k_cont)) THEN
     l_exist_k = l_exist_k .OR. &
@@ -187,6 +191,7 @@ CONTAINS
       'Number of spectral bands =', Spectrum%Basic%n_band
     WRITE(iu_spc, '(a35, 1x, i5)') &
       'Total number of gaseous absorbers =', Spectrum%Gas%n_absorb
+
     IF (ALLOCATED(Spectrum%Gas%i_band_k)) THEN
       nd_k_term = 0
       DO i=1, Spectrum%Basic%n_band
@@ -503,8 +508,6 @@ CONTAINS
 !     Loop variables
     INTEGER :: i_index
 !     Index of gas
-    INTEGER :: i_index_sb
-!     Index of gas in arrays with self-broadening
 
 
     WRITE(iu_spc, '(a19, a16, a16)') &
@@ -584,12 +587,11 @@ CONTAINS
             WRITE(iu_spc1,'(/,3(a,i4))') 'Band: ',i,', gas: ',i_index, &
               ', k-terms: ',SpGas%i_band_k(i, i_index)
             IF (SpGas%l_self_broadening(i_index)) THEN
-              i_index_sb = SpGas%index_sb(i_index)
               DO k=1, SpGas%i_band_k(i, i_index)
                 DO igf=1, SpGas%n_gas_frac
                   DO ip=1, Spectrum%Dim%nd_pre
                     WRITE(iu_spc1,'(6(1PE13.6))') &
-                      SpGas%k_lookup_sb(:,ip,igf,k,i_index_sb,i)
+                      SpGas%lookup(i_index,i)%k_sb(:,ip,igf,k)
                   END DO
                 END DO
               END DO
@@ -597,7 +599,7 @@ CONTAINS
               DO k=1, SpGas%i_band_k(i, i_index)
                 DO ip=1, Spectrum%Dim%nd_pre
                   WRITE(iu_spc1,'(6(1PE13.6))') &
-                    SpGas%k_lookup(:,ip,k,i_index,i)
+                    SpGas%lookup(i_index,i)%k(:,ip,k)
                 END DO
               END DO
             END IF
@@ -628,8 +630,7 @@ CONTAINS
               ', k-terms: ',SpGas%i_band_k(i, i_index)
             DO k=1, SpGas%i_band_k(i, i_index)
               WRITE(iu_spc1,'(6(1PE13.6))') &
-                SpGas%k_t_lookup_gas(1:SpGas%n_t_lookup_gas(i_index), &
-                                     k, i_index, i)
+                SpGas%lookup(i_index,i)%k_t(1:SpGas%n_t_lookup_gas(i_index), k)
             END DO
           END IF
         END DO
@@ -650,9 +651,9 @@ CONTAINS
               'Sub-band','k-term','weight','wavelength_short','wavelength_long'
             DO isb=1, SpGas%n_sub_band_gas(i, i_index)
               WRITE(iu_spc1, '(2i8, 3(2x,1PE16.9))') isb, &
-                SpGas%sub_band_k(isb, i, i_index), &
-                SpGas%sub_band_w(isb, i, i_index), &
-                SpGas%wavelength_sub_band(:, isb, i, i_index)
+                SpGas%sub_band(i, i_index)%k(isb), &
+                SpGas%sub_band(i, i_index)%w(isb), &
+                SpGas%sub_band(i, i_index)%wavelength(:, isb)
             END DO
           END IF
         END DO
@@ -1224,21 +1225,45 @@ CONTAINS
         'Number of times for periodic repetition = ', SpVar%n_repeat_times
       IF (SpVar%n_rayleigh_coeff > 0) WRITE(iu_spc2, '(a, i0)') &
         'Number of Rayleigh coefficients given = ', SpVar%n_rayleigh_coeff
+      IF (SpVar%n_var_band < SpVar%n_sub_band) THEN
+        WRITE(iu_spc2, '(a, i0)') &
+          'Number of var-bands in look-up table = ', SpVar%n_var_band
+        WRITE(iu_spc2, '(a)') '*MAPPING'
+        WRITE(iu_spc2, '(a)') &
+          'Sub-band Var-band  Lower limit  ' // &
+          '   Upper limit    Frac var-band     Frac TSI    '
+        DO i=1, SpVar%n_sub_band
+          WRITE(iu_spc2, '(2(i7,1x),4(1pe16.9))') &
+            i, SpVar%var_band_map(i), SpVar%wavelength_sub_band(1:2,i), &
+            SpVar%var_band_fraction(i), SpVar%solar_flux_sub_band(i, 0)
+        END DO
+        WRITE(iu_spc2, *)
+      END IF
       WRITE(iu_spc2, '(a)') &
         'Year  Month  Day(of month)  Seconds(since midnight)  TSI(Wm-2 at 1 AU)'
-      WRITE(iu_spc2, '(a)') &
-        'Fraction of solar flux in each sub-band.'
-      IF (SpVar%n_rayleigh_coeff > 0) WRITE(iu_spc2, '(a,i0,a)') &
-        'Rayleigh coefficient in the first ', SpVar%n_rayleigh_coeff, &
-        ' sub-bands.'
+      IF (SpVar%n_var_band < SpVar%n_sub_band) THEN
+        WRITE(iu_spc2, '(a)') &
+          'Fraction of solar flux in each var-band.'
+      ELSE
+        WRITE(iu_spc2, '(a)') &
+          'Fraction of solar flux in each sub-band.'
+        IF (SpVar%n_rayleigh_coeff > 0) WRITE(iu_spc2, '(a,i0,a)') &
+          'Rayleigh coefficient in the first ', SpVar%n_rayleigh_coeff, &
+          ' sub-bands.'
+      END IF
       WRITE(iu_spc2, '(a)') '*BEGIN: spectral variability data'
       DO i=1, SpVar%n_times
         WRITE(iu_spc2, '(4(i6),4x,1pe16.9)') &
           SpVar%time(1:4, i), SpVar%total_solar_flux(i)
-        WRITE(iu_spc2, '(5(1pe16.9))') &
-          SpVar%solar_flux_sub_band(1:SpVar%n_sub_band, i)
-        IF (SpVar%n_rayleigh_coeff > 0) WRITE(iu_spc2, '(5(1pe16.9))') &
-          SpVar%rayleigh_coeff(1:SpVar%n_rayleigh_coeff, i)
+        IF (SpVar%n_var_band < SpVar%n_sub_band) THEN
+          WRITE(iu_spc2, '(5(1pe16.9))') &
+            SpVar%solar_flux_var_band(1:SpVar%n_var_band, i)
+        ELSE
+          WRITE(iu_spc2, '(5(1pe16.9))') &
+            SpVar%solar_flux_sub_band(1:SpVar%n_sub_band, i)
+          IF (SpVar%n_rayleigh_coeff > 0) WRITE(iu_spc2, '(5(1pe16.9))') &
+            SpVar%rayleigh_coeff(1:SpVar%n_rayleigh_coeff, i)
+        END IF
       END DO
       CLOSE(iu_spc2)
     END IF

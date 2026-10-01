@@ -23,15 +23,15 @@ Band        Lower limit         Upper limit
 *BLOCK: TYPE =    2: SUBTYPE =    0: VERSION =    0
 Normalized solar flux in each spectral interval.
 Band        Normalized flux
-    1        1.510641549E-01
-    2        6.571897445E-02
-    3        1.662930568E-01
-    4        8.534461432E-02
-    5        1.182322421E-01
-    6        1.876178055E-01
-    7        1.244352196E-01
-    8        6.773916774E-02
-    9        2.889869529E-02
+    1        1.510640755E-01
+    2        6.571893990E-02
+    3        1.662929694E-01
+    4        8.534456945E-02
+    5        1.182321800E-01
+    6        1.876177069E-01
+    7        1.244351542E-01
+    8        6.773913213E-02
+    9        2.889868010E-02
 *END
 *BLOCK: TYPE =    3: SUBTYPE =    0: VERSION =    0
 Rayleigh mass scattering coefficients at STP: unit m**2/kg

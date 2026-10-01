@@ -21,9 +21,9 @@ SUBROUTINE inter_k(n_profile, n_layer, n_band_absorb                    &
   , k_h2oc, fac00, fac01, fac10, fac11                                  &
   , fac00c, fac01c, fac10c, fac11c, facc00, facc01                      &
   , jp, jph2oc, jt, jtt, jto2c, jtswo3                                  &
-  , k_esft, k_mix_gas                                                   &
+  , k_mix_gas                                                           &
   , f_mix, gas_mix_ratio, gas_mix_amt                                   &
-  , k_esft_layer, k_mix_gas_layer, k_contm_layer                        &
+  , k_mix_gas_layer, k_contm_layer                                      &
 ! dimensions
   , nd_profile, nd_layer                                                &
   , nd_band, nd_species, nd_continuum                                   &
@@ -61,16 +61,12 @@ SUBROUTINE inter_k(n_profile, n_layer, n_band_absorb                    &
      , nd_band_mix_gas
 !         Number of bands where mixture gases exist
   REAL (RealK) ::                                                       &
-       k_esft(nd_tmp, nd_pre, nd_esft_term, nd_species)                 &
-!         Absorption coefficients at reference conditions
-     , k_h2oc(nd_pre,nd_tmp,nd_esft_term)                               &
+       k_h2oc(nd_pre, nd_tmp, nd_esft_term, nd_band)                    &
 !         H2O continuum Absorption coefficients at reference conditions
      , k_mix_gas(nd_pre, nd_tmp, nd_mix, nd_esft_term, nd_band_mix_gas) &
 !         Absorption coefficients of minor species at reference conditions
      , f_mix                                                            &
 !         Parameter for determining mixed gas amount
-     , k_esft_layer(nd_profile, nd_layer, nd_esft_term, nd_species)     &
-!         Interpolated absorption coefficients
      , k_mix_gas_layer(nd_profile, nd_esft_term, nd_layer)              &
 !         Interpolated absorption coefficients of mixed species
      , k_contm_layer(nd_profile, nd_esft_term, nd_layer, nd_continuum)  &
@@ -157,7 +153,7 @@ SUBROUTINE inter_k(n_profile, n_layer, n_band_absorb                    &
      , specparm, specmult
 
   INTEGER ::                                                            &
-       i, ig, k, l                                                   &
+       i, k, l                                                          &
 !        Loop index
      , ju(nd_profile, nd_layer)                                         &
 !        Index of amount at level JP and JP1 such that
@@ -184,11 +180,11 @@ SUBROUTINE inter_k(n_profile, n_layer, n_band_absorb                    &
             DO l=1, n_profile
               jp1=jph2oc(l,i)+1
               jt1=jtswo3(l,i)+1
-              k_contm_layer(l,k,i,ic) = MAX(0.0_RealK,              &
-                 fac00c(l,i)*k_h2oc(jph2oc(l,i),jtswo3(l,i),k)      &
-                +fac10c(l,i)*k_h2oc(jp1,jtswo3(l,i),k)              &
-                +fac01c(l,i)*k_h2oc(jph2oc(l,i),jt1,k)              &
-                +fac11c(l,i)*k_h2oc(jp1,jt1,k)                      &
+              k_contm_layer(l,k,i,ic) = MAX(0.0_RealK,                &
+                 fac00c(l,i)*k_h2oc(jph2oc(l,i),jtswo3(l,i),k,i_band) &
+                +fac10c(l,i)*k_h2oc(jp1,jtswo3(l,i),k,i_band)         &
+                +fac01c(l,i)*k_h2oc(jph2oc(l,i),jt1,k,i_band)         &
+                +fac11c(l,i)*k_h2oc(jp1,jt1,k,i_band)                 &
                 )
             END DO
           END DO
@@ -222,25 +218,6 @@ SUBROUTINE inter_k(n_profile, n_layer, n_band_absorb                    &
       END IF
     END DO
   END IF
-
-
-  DO ig=1, n_band_absorb(i_band)
-    DO k=1, i_band_esft
-      DO i=1, n_layer
-        DO l=1, n_profile
-          jp1=jp(l,i)+1
-          jt1=jt(l,i)+1
-          jtt1=jtt(l,i)+1
-          k_esft_layer(l,i,k,ig) = MAX(0.0_RealK,                   &
-             fac00(l,i)*k_esft(jt(l,i),jp(l,i),k,ig)                &
-            +fac10(l,i)*k_esft(jtt(l,i),jp1,k,ig)                   &
-            +fac01(l,i)*k_esft(jt1,jp(l,i),k,ig)                    &
-            +fac11(l,i)*k_esft(jtt1,jp1,k,ig)                       &
-            )
-        END DO
-      END DO
-    END DO
-  END DO
 
 
   IF ( n_mix_gas  /=  0) THEN

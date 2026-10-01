@@ -2,9 +2,9 @@
 # Full list of auxiliary programs
 #
 
-AUX_CDF: l_run_cdf cdf2cdl cdl2cdf dentomix_cdf interp_cdf \
-		cdf2samson samson2cdf calc_horizon_angles \
-		runes_nc
+AUX_CDF: l_run_cdf runes_nc cdf2cdl cdl2cdf dentomix_cdf interp_cdf \
+		cdf2samson samson2cdf calc_horizon_angles lya2sol cmip2sol \
+		merge_solar_spectra
 
 AUX_CDL: l_run_cdl run_mono assign_subcols dentomix dentoq format_size \
 		fval gen_horiz_cdl gen_null gen_surf_cdl \
@@ -12,7 +12,7 @@ AUX_CDL: l_run_cdl run_mono assign_subcols dentomix dentoq format_size \
 		merge mid_point nettohr phgt prep_opt_profile \
 		raw_input scale_field vert_int wadd \
 		samson2cdl cdl2samson runes_driver phoenix2sol \
-		orb_elem
+		whi2sol solar_tail_temperature orb_elem
 
 
 TARGET_AUX: AUX_CDL AUX_CDF
@@ -157,6 +157,25 @@ calc_horizon_angles: calc_horizon_angles.o \
 
 phoenix2sol: phoenix2sol.o radlib.$(LIBSUFFIX)
 	$(LINK) -o phoenix2sol phoenix2sol.o radlib.$(LIBSUFFIX)
+
+lya2sol: lya2sol.o $(CDF_OBJ) radlib.$(LIBSUFFIX)
+	$(LINK) -L$(LIBCDF_PATH) -o lya2sol \
+	   lya2sol.o $(CDF_OBJ) radlib.$(LIBSUFFIX) -l$(LIBCDF_NAME)
+
+cmip2sol: cmip2sol.o $(CDF_OBJ) radlib.$(LIBSUFFIX)
+	$(LINK) -L$(LIBCDF_PATH) -o cmip2sol \
+	   cmip2sol.o $(CDF_OBJ) radlib.$(LIBSUFFIX) -l$(LIBCDF_NAME)
+
+merge_solar_spectra: merge_solar_spectra.o $(CDF_OBJ) radlib.$(LIBSUFFIX)
+	$(LINK) -L$(LIBCDF_PATH) -o merge_solar_spectra \
+	   merge_solar_spectra.o $(CDF_OBJ) radlib.$(LIBSUFFIX) -l$(LIBCDF_NAME)
+
+whi2sol: whi2sol.o radlib.$(LIBSUFFIX)
+	$(LINK) -o whi2sol whi2sol.o radlib.$(LIBSUFFIX)
+
+solar_tail_temperature: solar_tail_temperature.o radlib.$(LIBSUFFIX)
+	$(LINK) -o solar_tail_temperature solar_tail_temperature.o \
+	   radlib.$(LIBSUFFIX)
 
 orb_elem: orb_elem.o radlib.$(LIBSUFFIX)
 	$(LINK) -o orb_elem orb_elem.o radlib.$(LIBSUFFIX)

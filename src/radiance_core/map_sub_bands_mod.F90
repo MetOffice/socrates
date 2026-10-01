@@ -59,7 +59,7 @@ SUBROUTINE map_sub_bands(Sp)
     DO i=2, Sp%Gas%n_band_absorb(i_band)
       i_gas = Sp%Gas%index_absorb(i, i_band)
       ! Loop through the minor gas sub-bands which have different limits
-      IF (Sp%Gas%sub_band_k(1, i_band, i_gas) == 0) THEN
+      IF (Sp%Gas%sub_band(i_band, i_gas)%k(1) == 0) THEN
         ! In this case there is only one gas sub-band for the band
         ! All the gas k-terms will contribute to this sub-band
         Sp%Map%n_k_sub_band(i_gas, i_sub) = Sp%Gas%i_band_k(i_band, i_gas)
@@ -67,9 +67,9 @@ SUBROUTINE map_sub_bands(Sp)
         j_first = 0
         DO j=1, Sp%Gas%n_sub_band_gas(i_band, i_gas)
           ! Find range of gas sub-bands that overlap with major gas sub-band
-          IF (Sp%Gas%wavelength_sub_band(1, j, i_band, i_gas) >= &
+          IF (Sp%Gas%sub_band(i_band, i_gas)%wavelength(1, j) >= &
               Sp%Var%wavelength_sub_band(2, i_sub)) EXIT
-          IF (Sp%Gas%wavelength_sub_band(2, j, i_band, i_gas) > &
+          IF (Sp%Gas%sub_band(i_band, i_gas)%wavelength(2, j) > &
               Sp%Var%wavelength_sub_band(1, i_sub)) THEN
             IF (j_first==0) j_first = j
             j_last = j
@@ -78,14 +78,14 @@ SUBROUTINE map_sub_bands(Sp)
         ! Find the number of unique minor gas k-terms used in this range
         Sp%Map%n_k_sub_band(i_gas, i_sub) = 0
         IF (j_first > 0) THEN
-          i_k_min = MINVAL(Sp%Gas%sub_band_k(j_first:j_last, i_band, i_gas))
-          i_k_max = MAXVAL(Sp%Gas%sub_band_k(j_first:j_last, i_band, i_gas))
+          i_k_min = MINVAL(Sp%Gas%sub_band(i_band, i_gas)%k(j_first:j_last))
+          i_k_max = MAXVAL(Sp%Gas%sub_band(i_band, i_gas)%k(j_first:j_last))
           DO
             Sp%Map%n_k_sub_band(i_gas, i_sub) &
               = Sp%Map%n_k_sub_band(i_gas, i_sub) + 1
             IF (i_k_min >= i_k_max) EXIT
-            i_k_min = MINVAL(Sp%Gas%sub_band_k(j_first:j_last, i_band, i_gas), &
-              MASK=Sp%Gas%sub_band_k(j_first:j_last, i_band, i_gas) > i_k_min)
+            i_k_min = MINVAL(Sp%Gas%sub_band(i_band, i_gas)%k(j_first:j_last), &
+              MASK=Sp%Gas%sub_band(i_band, i_gas)%k(j_first:j_last) > i_k_min)
           END DO
         END IF
       END IF
@@ -173,7 +173,7 @@ SUBROUTINE map_sub_bands(Sp)
         = i_sub
       ! For the major gas the weight is the fractional contribution of
       ! this sub-band to the band
-      IF (Sp%Gas%sub_band_k(1, i_band, i_gas) == 0) THEN
+      IF (Sp%Gas%sub_band(i_band, i_gas)%k(1) == 0) THEN
         ! No sub-band data for this gas
         ! so assume each k-term maps to a single sub-band
         Sp%Map%weight_sub_band_k(Sp%Map%n_sub_band_k(i_k,i_band), i_k, i_band) &
@@ -181,7 +181,7 @@ SUBROUTINE map_sub_bands(Sp)
       ELSE
         ! Otherwise use the gas sub-band weight
         Sp%Map%weight_sub_band_k(Sp%Map%n_sub_band_k(i_k,i_band), i_k, i_band) &
-          = Sp%Gas%sub_band_w(i_sub_band_gas(i_band), i_band, i_gas)
+          = Sp%Gas%sub_band(i_band, i_gas)%w(i_sub_band_gas(i_band))
       END IF
       ! There is only 1 major gas k-term in the list for the sub-band
       Sp%Map%list_k_sub_band(1, i_gas, i_sub) = i_k
@@ -191,7 +191,7 @@ SUBROUTINE map_sub_bands(Sp)
     DO i=2, Sp%Gas%n_band_absorb(i_band)
       i_gas = Sp%Gas%index_absorb(i, i_band)
       ! Loop through the minor gas sub-bands which have different limits
-      IF (Sp%Gas%sub_band_k(1, i_band, i_gas) == 0 .OR. i_k == 0) THEN
+      IF (Sp%Gas%sub_band(i_band, i_gas)%k(1) == 0 .OR. i_k == 0) THEN
         ! In this case there is only one gas sub-band for the band
         ! All the gas k-terms will contribute to this sub-band
         DO n_k=1, Sp%Gas%i_band_k(i_band, i_gas)
@@ -215,9 +215,9 @@ SUBROUTINE map_sub_bands(Sp)
         j_first = 0
         DO j=1, Sp%Gas%n_sub_band_gas(i_band, i_gas)
           ! Find range of gas sub-bands that overlap with major gas sub-band
-          IF (Sp%Gas%wavelength_sub_band(1, j, i_band, i_gas) >= &
+          IF (Sp%Gas%sub_band(i_band, i_gas)%wavelength(1, j) >= &
               Sp%Var%wavelength_sub_band(2, i_sub)) EXIT
-          IF (Sp%Gas%wavelength_sub_band(2, j, i_band, i_gas) > &
+          IF (Sp%Gas%sub_band(i_band, i_gas)%wavelength(2, j) > &
               Sp%Var%wavelength_sub_band(1, i_sub)) THEN
             IF (j_first==0) j_first = j
             j_last = j
@@ -225,8 +225,8 @@ SUBROUTINE map_sub_bands(Sp)
         END DO
         IF (j_first > 0) THEN
           ! Find the number of unique minor gas k-terms used in this range
-          i_k_min = MINVAL(Sp%Gas%sub_band_k(j_first:j_last, i_band, i_gas))
-          i_k_max = MAXVAL(Sp%Gas%sub_band_k(j_first:j_last, i_band, i_gas))
+          i_k_min = MINVAL(Sp%Gas%sub_band(i_band, i_gas)%k(j_first:j_last))
+          i_k_max = MAXVAL(Sp%Gas%sub_band(i_band, i_gas)%k(j_first:j_last))
           n_k = 0
           DO
             n_k = n_k + 1
@@ -234,14 +234,14 @@ SUBROUTINE map_sub_bands(Sp)
             ! Here, the weight is the fraction of the sub-band energy that
             ! is overlapped by the minor gas sub-bands for each k-term.
             DO j=j_first, j_last
-              IF (Sp%Gas%sub_band_k(j, i_band, i_gas) == i_k_min) THEN
+              IF (Sp%Gas%sub_band(i_band, i_gas)%k(j) == i_k_min) THEN
                 Sp%Map%weight_k_sub_band(n_k, i_gas, i_sub) &
                   = Sp%Map%weight_k_sub_band(n_k, i_gas, i_sub) &
                   + ( 1.0_RealK &
-                      / MAX(Sp%Gas%wavelength_sub_band(1, j, i_band, i_gas), &
+                      / MAX(Sp%Gas%sub_band(i_band, i_gas)%wavelength(1, j), &
                             Sp%Var%wavelength_sub_band(1, i_sub)) &
                     - 1.0_RealK &
-                      / MIN(Sp%Gas%wavelength_sub_band(2, j, i_band, i_gas), &
+                      / MIN(Sp%Gas%sub_band(i_band, i_gas)%wavelength(2, j), &
                             Sp%Var%wavelength_sub_band(2, i_sub)) &
                     ) * recip_total_energy
               END IF
@@ -255,8 +255,8 @@ SUBROUTINE map_sub_bands(Sp)
                                          i_k, i_band) &
               / Sp%Gas%w(i_k, i_band, Sp%Gas%index_absorb(1, i_band))
             IF (i_k_min >= i_k_max) EXIT
-            i_k_min = MINVAL(Sp%Gas%sub_band_k(j_first:j_last, i_band, i_gas), &
-              MASK=Sp%Gas%sub_band_k(j_first:j_last, i_band, i_gas) > i_k_min)
+            i_k_min = MINVAL(Sp%Gas%sub_band(i_band, i_gas)%k(j_first:j_last), &
+              MASK=Sp%Gas%sub_band(i_band, i_gas)%k(j_first:j_last) > i_k_min)
           END DO
         END IF
       END IF
@@ -264,10 +264,7 @@ SUBROUTINE map_sub_bands(Sp)
   END DO
 
   ! Reallocate the gas sub-band arrays to zero size
-  Sp%Dim%nd_sub_band_gas = 0
-  DEALLOCATE(Sp%Gas%sub_band_k)
-  DEALLOCATE(Sp%Gas%sub_band_w)
-  DEALLOCATE(Sp%Gas%wavelength_sub_band)
+  DEALLOCATE(Sp%Gas%sub_band)
   CALL allocate_spectrum(Sp)
 
 END SUBROUTINE map_sub_bands

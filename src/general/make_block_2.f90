@@ -42,12 +42,13 @@ SUBROUTINE make_block_2(Spectrum, SolarSpec, ierr)
 !   IO status
   CHARACTER (LEN=1) :: char_yn
 !   Character response variable
-  LOGICAL :: l_enhance
+  LOGICAL :: l_enhance_short, l_enhance_long
 !   Enhance outer bands
   LOGICAL :: l_filter
 !   Flag for filter function
   TYPE (StrFiltResp) :: filter
 !   Instrumental response function
+  REAL (RealK) :: short_fraction
 
   IF (ALLOCATED(Spectrum%Solar%solar_flux_band)) &
       DEALLOCATE(Spectrum%Solar%solar_flux_band)
@@ -84,10 +85,20 @@ SUBROUTINE make_block_2(Spectrum, SolarSpec, ierr)
   DO
     READ(*, '(a)') char_yn
     IF ( (char_yn == 'Y').OR.(char_yn == 'y') ) THEN
-      l_enhance=.TRUE.
+      l_enhance_short=.TRUE.
+      l_enhance_long=.TRUE.
       EXIT
     ELSE IF ( (char_yn == 'N').OR.(char_yn == 'n') ) THEN
-      l_enhance=.FALSE.
+      l_enhance_short=.FALSE.
+      l_enhance_long=.FALSE.
+      EXIT
+    ELSE IF ( (char_yn == 'S').OR.(char_yn == 's') ) THEN
+      l_enhance_short=.TRUE.
+      l_enhance_long=.FALSE.
+      EXIT
+    ELSE IF ( (char_yn == 'L').OR.(char_yn == 'l') ) THEN
+      l_enhance_short=.FALSE.
+      l_enhance_long=.TRUE.
       EXIT
     ELSE
       WRITE(*, '(a)') '+++ Unrecognised response: '
@@ -95,7 +106,8 @@ SUBROUTINE make_block_2(Spectrum, SolarSpec, ierr)
     END IF
   END DO
 
-  CALL make_block_2_1(Spectrum, SolarSpec, filter, &
-    l_filter, l_enhance, .TRUE., ierr)
+  short_fraction = 0.0_RealK
+  CALL make_block_2_1(Spectrum, SolarSpec, filter, l_filter, &
+    l_enhance_short, l_enhance_long, .TRUE., short_fraction, ierr)
 
 END SUBROUTINE make_block_2

@@ -136,8 +136,8 @@ SUBROUTINE make_block_9(Spectrum, ierr)
       l_index_band(i_band, i_index) = .TRUE.
       Spectrum%Cont%n_band_continuum(i_band) =                          &
         Spectrum%Cont%n_band_continuum(i_band)+1
-      Spectrum%Cont%index_continuum(                                    &
-        Spectrum%Cont%n_band_continuum(i_band), i_band) = i_index
+      Spectrum%Cont%index_continuum(i_band, &
+        Spectrum%Cont%n_band_continuum(i_band)) = i_index
     END IF
 
     READ(iu_esft, '(18x, 1pe10.3, 21x, 1pe10.3)')                       &

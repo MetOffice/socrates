@@ -1,5 +1,5 @@
 #
-# Routines that use the netcdf include files
+# Routines that use the netcdf include files or require OpenMP
 #
 
 read_cdf.o: read_cdf.f90
@@ -46,6 +46,18 @@ set_extern_ckd_frn_data.o: set_extern_ckd_frn_data.f90
 
 set_extern_ckd_self_data.o: set_extern_ckd_self_data.f90
 	$(FORTCOMP) -I$(INCCDF_PATH) set_extern_ckd_self_data.f90
+
+lya2sol.o: lya2sol.f90
+	$(FORTCOMP) -I$(INCCDF_PATH) lya2sol.f90
+
+cmip2sol.o: cmip2sol.f90
+	$(FORTCOMP) -I$(INCCDF_PATH) cmip2sol.f90
+
+merge_solar_spectra.o: merge_solar_spectra.f90
+	$(FORTCOMP) -I$(INCCDF_PATH) merge_solar_spectra.f90
+
+solar_intensity_nu.o: solar_intensity_nu.f90
+	$(FORTCOMP) $(OMPARG) solar_intensity_nu.f90
 
 #
 # Object dependencies for programs that use netCDF

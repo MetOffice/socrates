@@ -1,4 +1,4 @@
-SOURCE90_GEN =	d_planck_90.f90 \
+SOURCE90_GEN =	d_planck_nu.f90 \
 		fit_parabola_90.f90 \
 		get_free_unit.f90 \
 		line_search_90.f90 \
@@ -26,18 +26,20 @@ SOURCE90_GEN =	d_planck_90.f90 \
 		map_heap_func.f90 \
 		open_file_out_90.f90 \
 		out_spectrum.f90 \
-		planck_90.f90 \
+		planck_nu.f90 \
+		planck_tail.f90 \
 		rad_weight_90.f90 \
 		rayleigh_jeans_tail.f90 \
 		rayleigh_scatter.f90 \
 		rayleigh_scatter_h2he.f90 \
 		read_instrument_response_90.f90 \
 		read_solar_spectrum.f90 \
+		read_solar_spectrum_data.f90 \
 		remove_negative_gas_90.f90 \
 		remove_negative_cont_90.f90 \
 		set_interactive.f90 \
 		solar_intensity.f90 \
-                solar_intensity_90.f90 \
+                solar_intensity_nu.f90 \
 		sum_unity.f90 \
 		trapezoid_90.f90 \
 		write_solar_spectrum.f90

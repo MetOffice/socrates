@@ -21,9 +21,9 @@ USE realtype_rd, ONLY: RealK
 IMPLICIT NONE
 
 
-INTEGER, PARAMETER :: n_dim = 38
+INTEGER, PARAMETER :: n_dim = 42
 !   Number of dimensions in StrSpecDim
-INTEGER, PARAMETER :: n_int = 18
+INTEGER, PARAMETER :: n_int = 19
 !   Number of (non-allocatable) integers
 INTEGER, PARAMETER :: n_real = 1
 !   Number of (non-allocatable) reals
@@ -87,14 +87,22 @@ TYPE StrSpecDim
 !   Size allocated for spectral sub-bands in each band
   INTEGER :: nd_sub_band = 0
 !   Size allocated for total spectral sub-bands
+  INTEGER :: nd_var_band = 0
+!   Size allocated for varying spectral sub-bands
   INTEGER :: nd_times = 0
 !   Size allocated for times (for spectral variability)
+  INTEGER :: nd_var_band_times = 0
+!   Size allocated for times for specifying varying sub-bands
+  INTEGER :: nd_sub_band_times = 0
+!   Size allocated for times for specifying all sub-bands
   INTEGER :: nd_cont = 0
 !   Size allocated for generalised continua
   INTEGER :: nd_t_lookup_cont = 0
 !   Number of temperatures in generalised continuum look-up tables
   INTEGER :: nd_k_term_cont = 0
 !   Size allocated for continuum k-terms
+  INTEGER :: nd_k_term_cont_ses = 0
+!   Size allocated for Sun-Edwards-Slingo continuum k-terms
   INTEGER :: nd_species_sb = 0
 !   Size allocated for gaseous species with self-broadening
   INTEGER :: nd_gas_frac = 0
@@ -148,6 +156,34 @@ TYPE StrSpecRayleigh
   REAL (RealK), ALLOCATABLE :: rayleigh_coeff_gas(:, :)
 !   Rayleigh scattering coefficients for each gas in each band
 END TYPE StrSpecRayleigh
+
+
+TYPE StrSpecGasLookup
+  INTEGER :: nd_k_term = 0
+!   Size allocated for k-terms in P-T look-up table
+  INTEGER :: nd_k_term_sb = 0
+!   Size allocated for k-terms in self-broadening look-up table
+  INTEGER :: nd_k_term_t = 0
+!   Size allocated for k-terms in temperature look-up tables
+  REAL (RealK), ALLOCATABLE :: k(:, :, :)
+!   Absorption coefficients for P-T look-up table
+  REAL (RealK), ALLOCATABLE :: k_sb(:, :, :, :)
+!   Absorption coefficients for self-broadening look-up table
+  REAL (RealK), ALLOCATABLE :: k_t(:, :)
+!   Absorption coefficients for temperature look-up tables
+END TYPE StrSpecGasLookup
+
+
+TYPE StrSpecGasSubBand
+  INTEGER :: nd_sub_band = 0
+!   Size allocated for spectral sub-bands
+  INTEGER, ALLOCATABLE      :: k(:)
+!   Gas k-term associated with each sub-band
+  REAL (RealK), ALLOCATABLE :: w(:)
+!   Sub-band weights
+  REAL (RealK), ALLOCATABLE :: wavelength(:, :)
+!   Wavelength limits for sub-bands
+END TYPE StrSpecGasSubBand
 
 
 TYPE StrSpecGas
@@ -208,18 +244,18 @@ TYPE StrSpecGas
   REAL (RealK), ALLOCATABLE :: p_lookup(:)
   REAL (RealK), ALLOCATABLE :: t_lookup(:, :)
   REAL (RealK), ALLOCATABLE :: gf_lookup(:)
-  REAL (RealK), ALLOCATABLE :: k_lookup(:, :, :, :, :)
-  REAL (RealK), ALLOCATABLE :: k_lookup_sb(:, :, :, :, :, :)
   REAL (RealK), ALLOCATABLE :: w_ses(:, :)
   REAL (RealK), ALLOCATABLE :: k_mix_gas(:, :, :, :, :)
 !   Absorption coefficients for mixture species
   REAL (RealK), ALLOCATABLE :: f_mix(:)
 !   Mixing ratio of mixed absorber amount
 
+  TYPE (StrSpecGasLookup), ALLOCATABLE :: lookup(:, :)
+!   Absorption coefficients for look-up tables
+
   INTEGER, ALLOCATABLE :: n_t_lookup_gas(:)
   REAL (RealK), ALLOCATABLE :: t_lookup_gas(:, :)
-  REAL (RealK), ALLOCATABLE :: k_t_lookup_gas(:, :, :, :)
-!   Absorption coefficients for temperature lookup tables
+!   Temperature lookup tables
 
   LOGICAL, ALLOCATABLE      :: l_doppler(:)
 !   Flag for Doppler broadening for each species
@@ -228,12 +264,9 @@ TYPE StrSpecGas
 
   INTEGER, ALLOCATABLE      :: n_sub_band_gas(:, :)
 !   Number of sub-bands to map gas k-terms to wavelength
-  INTEGER, ALLOCATABLE      :: sub_band_k(:, :, :)
-!   Gas k-term associated with each sub-band
-  REAL (RealK), ALLOCATABLE :: sub_band_w(:, :, :)
-!   Sub-band weights
-  REAL (RealK), ALLOCATABLE :: wavelength_sub_band(:, :, :, :)
-!   Wavelength limits for sub-bands
+
+  TYPE (StrSpecGasSubBand), ALLOCATABLE :: sub_band(:, :)
+!   Weights and wavelength limits for gas sub-bands
 END TYPE StrSpecGas
 
 
@@ -388,6 +421,8 @@ END TYPE StrSpecIce
 TYPE StrSpecVar
   INTEGER                   :: n_sub_band = 0
 !   Number of sub-bands used
+  INTEGER                   :: n_var_band = 0
+!   Number of varying-bands used
   INTEGER                   :: n_times = 0
 !   Number of times at which the solar spectrum is given
   INTEGER                   :: n_repeat_times = 0
@@ -396,13 +431,21 @@ TYPE StrSpecVar
 !   Number of Rayleigh coefficients that vary
   INTEGER, ALLOCATABLE      :: index_sub_band(:, :)
 !   Index of k-terms associated with each sub-band
+  INTEGER, ALLOCATABLE      :: var_band_map(:)
+!   Index of varying-band associated with each sub-band
+  REAL (RealK), ALLOCATABLE :: var_band_fraction(:)
+!   Fraction of varying-band associated with each sub-band
   REAL (RealK), ALLOCATABLE :: wavelength_sub_band(:, :)
 !   Wavelength limits for the sub-band
+  REAL (RealK), ALLOCATABLE :: weight_uv_index(:)
+!   Weight of contribution to UV-index for each sub-band
 
   INTEGER, ALLOCATABLE      :: time(:, :)
 !   Times: year, month, day of month, seconds in day
   REAL (RealK), ALLOCATABLE :: total_solar_flux(:)
 !   Total solar flux in Wm-2 at 1 AU for each time
+  REAL (RealK), ALLOCATABLE :: solar_flux_var_band(:, :)
+!   Fraction of the solar spectrum in each varying-band for each time
   REAL (RealK), ALLOCATABLE :: solar_flux_sub_band(:, :)
 !   Fraction of the solar spectrum in each sub-band for each time
   REAL (RealK), ALLOCATABLE :: rayleigh_coeff(:, :)
@@ -481,6 +524,8 @@ USE missing_data_mod, ONLY: rmdi
 IMPLICIT NONE
 
 TYPE (StrSpecData), INTENT(INOUT) :: Sp
+INTEGER :: i, j
+LOGICAL :: l_debug = .FALSE.
 
 ! Initialise count for integers, reals and logicals
 Sp%Dim%nd_alloc_int  = n_int
@@ -516,6 +561,7 @@ IF (.NOT. ALLOCATED(Sp%Basic%index_exclude)) &
 Sp%Dim%nd_alloc_int = &
 Sp%Dim%nd_alloc_int + SIZE(Sp%Basic%index_exclude)
 
+IF (l_debug) WRITE(*,'(a,i0)') 'Size after Basic:',Sp%Dim%nd_alloc_real
 
 ! Solar
 IF (.NOT. ALLOCATED(Sp%Solar%solar_flux_band)) &
@@ -535,6 +581,7 @@ END IF
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Solar%weight_blue)
 
+IF (l_debug) WRITE(*,'(a,i0)') 'Size after Solar:',Sp%Dim%nd_alloc_real
 
 ! Rayleigh
 IF (.NOT. ALLOCATED(Sp%Rayleigh%rayleigh_coeff)) &
@@ -552,6 +599,7 @@ IF (.NOT. ALLOCATED(Sp%Rayleigh%rayleigh_coeff_gas)) &
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Rayleigh%rayleigh_coeff_gas)
 
+IF (l_debug) WRITE(*,'(a,i0)') 'Size after Rayleigh:',Sp%Dim%nd_alloc_real
 
 ! Gas
 IF (.NOT. ALLOCATED(Sp%Gas%n_band_absorb)) &
@@ -662,6 +710,7 @@ IF (.NOT. ALLOCATED(Sp%Gas%scale)) &
                          Sp%Dim%nd_band, Sp%Dim%nd_species ))
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%scale)
+IF (l_debug) WRITE(*,'(a,i0)') 'Sp%Gas%scale:',SIZE(Sp%Gas%scale)
 
 IF (.NOT. ALLOCATED(Sp%Gas%p_ref)) &
   ALLOCATE(Sp%Gas%p_ref( Sp%Dim%nd_species, Sp%Dim%nd_band ))
@@ -688,29 +737,48 @@ IF (.NOT. ALLOCATED(Sp%Gas%gf_lookup)) &
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%gf_lookup)
 
-IF (.NOT. ALLOCATED(Sp%Gas%k_lookup)) &
-  ALLOCATE(Sp%Gas%k_lookup( Sp%Dim%nd_tmp, Sp%Dim%nd_pre, Sp%Dim%nd_k_term, &
-                            Sp%Dim%nd_species, Sp%Dim%nd_band ))
-Sp%Dim%nd_alloc_real = &
-Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%k_lookup)
+IF (.NOT. ALLOCATED(Sp%Gas%lookup)) &
+  ALLOCATE(Sp%Gas%lookup( Sp%Dim%nd_species, Sp%Dim%nd_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%lookup)*3
 
-IF (.NOT. ALLOCATED(Sp%Gas%k_lookup_sb)) &
-  ALLOCATE(Sp%Gas%k_lookup_sb( Sp%Dim%nd_tmp, Sp%Dim%nd_pre, &
-                               Sp%Dim%nd_gas_frac, Sp%Dim%nd_k_term, &
-                               Sp%Dim%nd_species_sb, Sp%Dim%nd_band ))
-Sp%Dim%nd_alloc_real = &
-Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%k_lookup_sb)
+IF (l_debug) WRITE(*,'(a,i0)') 'Size before lookup:',Sp%Dim%nd_alloc_real
+DO i=1, Sp%Dim%nd_band
+  DO j=1, Sp%Dim%nd_species
+    IF (.NOT. ALLOCATED(Sp%Gas%lookup(j, i)%k)) &
+      ALLOCATE(Sp%Gas%lookup(j, i)%k( Sp%Dim%nd_tmp, Sp%Dim%nd_pre, &
+                                      Sp%Gas%lookup(j, i)%nd_k_term ))
+    Sp%Dim%nd_alloc_real = &
+    Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%lookup(j, i)%k)
+
+    IF (.NOT. ALLOCATED(Sp%Gas%lookup(j, i)%k_sb)) &
+      ALLOCATE(Sp%Gas%lookup(j, i)%k_sb( Sp%Dim%nd_tmp, Sp%Dim%nd_pre, &
+                                         Sp%Dim%nd_gas_frac, &
+                                         Sp%Gas%lookup(j, i)%nd_k_term_sb ))
+    Sp%Dim%nd_alloc_real = &
+    Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%lookup(j, i)%k_sb)
+
+    IF (.NOT. ALLOCATED(Sp%Gas%lookup(j, i)%k_t)) &
+      ALLOCATE(Sp%Gas%lookup(j, i)%k_t( Sp%Dim%nd_t_lookup_gas, &
+                                        Sp%Gas%lookup(j, i)%nd_k_term_t ))
+    Sp%Dim%nd_alloc_real = &
+    Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%lookup(j, i)%k_t)
+  END DO
+END DO
+IF (l_debug) WRITE(*,'(a,i0)') 'Size after lookup:',Sp%Dim%nd_alloc_real
 
 IF (.NOT. ALLOCATED(Sp%Gas%w_ses)) &
   ALLOCATE(Sp%Gas%w_ses( Sp%Dim%nd_k_term, Sp%Dim%nd_band ))
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%w_ses)
+IF (l_debug) WRITE(*,'(a,i0)') 'Sp%Gas%w_ses:',SIZE(Sp%Gas%w_ses)
 
 IF (.NOT. ALLOCATED(Sp%Gas%k_mix_gas)) &
   ALLOCATE(Sp%Gas%k_mix_gas( Sp%Dim%nd_pre, Sp%Dim%nd_tmp, Sp%Dim%nd_mix, &
                              Sp%Dim%nd_k_term, Sp%Dim%nd_band_mix_gas ))
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%k_mix_gas)
+IF (l_debug) WRITE(*,'(a,i0)') 'Sp%Gas%k_mix_gas:',SIZE(Sp%Gas%k_mix_gas)
 
 IF (.NOT. ALLOCATED(Sp%Gas%f_mix)) &
   ALLOCATE(Sp%Gas%f_mix( Sp%Dim%nd_band ))
@@ -728,12 +796,6 @@ IF (.NOT. ALLOCATED(Sp%Gas%t_lookup_gas)) &
   ALLOCATE(Sp%Gas%t_lookup_gas( Sp%Dim%nd_t_lookup_gas, Sp%Dim%nd_species ))
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%t_lookup_gas)
-
-IF (.NOT. ALLOCATED(Sp%Gas%k_t_lookup_gas)) &
-  ALLOCATE(Sp%Gas%k_t_lookup_gas( Sp%Dim%nd_t_lookup_gas, Sp%Dim%nd_k_term, &
-                                  Sp%Dim%nd_species, Sp%Dim%nd_band ))
-Sp%Dim%nd_alloc_real = &
-Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%k_t_lookup_gas)
 
 IF (.NOT. ALLOCATED(Sp%Gas%l_doppler)) THEN
   ALLOCATE(Sp%Gas%l_doppler( Sp%Dim%nd_species ))
@@ -754,26 +816,36 @@ END IF
 Sp%Dim%nd_alloc_int = &
 Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%n_sub_band_gas)
 
-IF (.NOT. ALLOCATED(Sp%Gas%sub_band_k)) THEN
-  ALLOCATE(Sp%Gas%sub_band_k( Sp%Dim%nd_sub_band_gas, &
-                              Sp%Dim%nd_band, Sp%Dim%nd_species ))
-  Sp%Gas%sub_band_k = 0
-END IF
+IF (.NOT. ALLOCATED(Sp%Gas%sub_band)) &
+  ALLOCATE(Sp%Gas%sub_band( Sp%Dim%nd_band, Sp%Dim%nd_species ))
 Sp%Dim%nd_alloc_int = &
-Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%sub_band_k)
+Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%sub_band)
 
-IF (.NOT. ALLOCATED(Sp%Gas%sub_band_w)) &
-  ALLOCATE(Sp%Gas%sub_band_w( Sp%Dim%nd_sub_band_gas, &
-                              Sp%Dim%nd_band, Sp%Dim%nd_species ))
-Sp%Dim%nd_alloc_real = &
-Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%sub_band_w)
+IF (l_debug) WRITE(*,'(a,i0)') 'Size before sub-band:',Sp%Dim%nd_alloc_real
+DO j=1, Sp%Dim%nd_species
+  DO i=1, Sp%Dim%nd_band
+    IF (.NOT. ALLOCATED(Sp%Gas%sub_band(i, j)%k)) THEN
+      ALLOCATE(Sp%Gas%sub_band(i, j)%k( Sp%Gas%sub_band(i, j)%nd_sub_band ))
+      Sp%Gas%sub_band(i, j)%k = 0
+    END IF
+    Sp%Dim%nd_alloc_int = &
+    Sp%Dim%nd_alloc_int + SIZE(Sp%Gas%sub_band(i, j)%k)
 
-IF (.NOT. ALLOCATED(Sp%Gas%wavelength_sub_band)) &
-  ALLOCATE(Sp%Gas%wavelength_sub_band( 2, Sp%Dim%nd_sub_band_gas, &
-                                       Sp%Dim%nd_band, Sp%Dim%nd_species ))
-Sp%Dim%nd_alloc_real = &
-Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%wavelength_sub_band)
+    IF (.NOT. ALLOCATED(Sp%Gas%sub_band(i, j)%w)) &
+      ALLOCATE(Sp%Gas%sub_band(i, j)%w( Sp%Gas%sub_band(i, j)%nd_sub_band ))
+    Sp%Dim%nd_alloc_real = &
+    Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%sub_band(i, j)%w)
 
+    IF (.NOT. ALLOCATED(Sp%Gas%sub_band(i, j)%wavelength)) &
+      ALLOCATE(Sp%Gas%sub_band(i, j)%wavelength( 2, &
+                                        Sp%Gas%sub_band(i, j)%nd_sub_band ))
+    Sp%Dim%nd_alloc_real = &
+    Sp%Dim%nd_alloc_real + SIZE(Sp%Gas%sub_band(i, j)%wavelength)
+  END DO
+END DO
+IF (l_debug) WRITE(*,'(a,i0)') 'Size after sub-band:',Sp%Dim%nd_alloc_real
+
+IF (l_debug) WRITE(*,'(a,i0)') 'Size after Gas:',Sp%Dim%nd_alloc_real
 
 ! Planck
 IF (.NOT. ALLOCATED(Sp%Planck%thermal_coeff)) &
@@ -787,6 +859,7 @@ IF (.NOT. ALLOCATED(Sp%Planck%theta_planck_tbl)) &
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Planck%theta_planck_tbl)
 
+IF (l_debug) WRITE(*,'(a,i0)') 'Size after Planck:',Sp%Dim%nd_alloc_real
 
 ! Cont
 IF (.NOT. ALLOCATED(Sp%Cont%n_band_continuum)) &
@@ -826,17 +899,18 @@ Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Cont%t_ref_cont)
 
 IF (.NOT. ALLOCATED(Sp%Cont%k_cont_ses)) &
-  ALLOCATE(Sp%Cont%k_cont_ses( Sp%Dim%nd_k_term, Sp%Dim%nd_tmp, &
+  ALLOCATE(Sp%Cont%k_cont_ses( Sp%Dim%nd_k_term_cont_ses, Sp%Dim%nd_tmp, &
                                Sp%Dim%nd_band, Sp%Dim%nd_continuum ))
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Cont%k_cont_ses)
 
 IF (.NOT. ALLOCATED(Sp%Cont%k_h2oc)) &
   ALLOCATE(Sp%Cont%k_h2oc( Sp%Dim%nd_pre, Sp%Dim%nd_tmp, &
-                           Sp%Dim%nd_k_term, Sp%Dim%nd_band ))
+                           Sp%Dim%nd_k_term_cont_ses, Sp%Dim%nd_band ))
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Cont%k_h2oc)
 
+IF (l_debug) WRITE(*,'(a,i0)') 'Size after Cont:',Sp%Dim%nd_alloc_real
 
 ! Generalised continuum
 IF (.NOT. ALLOCATED(Sp%ContGen%n_band_cont)) THEN
@@ -912,6 +986,7 @@ IF (.NOT. ALLOCATED(Sp%ContGen%k_lookup_cont)) &
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%ContGen%k_lookup_cont)
 
+IF (l_debug) WRITE(*,'(a,i0)') 'Size after ContGen:',Sp%Dim%nd_alloc_real
 
 ! Drop
 IF (.NOT. ALLOCATED(Sp%Drop%l_drop_type)) THEN
@@ -947,6 +1022,7 @@ IF (.NOT. ALLOCATED(Sp%Drop%parm_max_dim)) &
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Drop%parm_max_dim)
 
+IF (l_debug) WRITE(*,'(a,i0)') 'Size after Drop:',Sp%Dim%nd_alloc_real
 
 ! Aerosol
 IF (.NOT. ALLOCATED(Sp%Aerosol%l_aero_spec)) THEN
@@ -1022,6 +1098,7 @@ IF (.NOT. ALLOCATED(Sp%Aerosol%aod_scat)) &
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Aerosol%aod_scat)
 
+IF (l_debug) WRITE(*,'(a,i0)') 'Size after Aerosol:',Sp%Dim%nd_alloc_real
 
 ! Ice
 IF (.NOT. ALLOCATED(Sp%Ice%l_ice_type)) THEN
@@ -1057,6 +1134,7 @@ IF (.NOT. ALLOCATED(Sp%Ice%parm_max_dim)) &
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Ice%parm_max_dim)
 
+IF (l_debug) WRITE(*,'(a,i0)') 'Size after Ice:',Sp%Dim%nd_alloc_real
 
 ! Spectral variability
 IF (.NOT. ALLOCATED(Sp%Var%index_sub_band)) &
@@ -1064,10 +1142,25 @@ IF (.NOT. ALLOCATED(Sp%Var%index_sub_band)) &
 Sp%Dim%nd_alloc_int = &
 Sp%Dim%nd_alloc_int + SIZE(Sp%Var%index_sub_band)
 
+IF (.NOT. ALLOCATED(Sp%Var%var_band_map)) &
+  ALLOCATE(Sp%Var%var_band_map( Sp%Dim%nd_sub_band ))
+Sp%Dim%nd_alloc_int = &
+Sp%Dim%nd_alloc_int + SIZE(Sp%Var%var_band_map)
+
+IF (.NOT. ALLOCATED(Sp%Var%var_band_fraction)) &
+  ALLOCATE(Sp%Var%var_band_fraction( Sp%Dim%nd_sub_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Var%var_band_fraction)
+
 IF (.NOT. ALLOCATED(Sp%Var%wavelength_sub_band)) &
   ALLOCATE(Sp%Var%wavelength_sub_band( 0:2, Sp%Dim%nd_sub_band ))
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Var%wavelength_sub_band)
+
+IF (.NOT. ALLOCATED(Sp%Var%weight_uv_index)) &
+  ALLOCATE(Sp%Var%weight_uv_index( Sp%Dim%nd_sub_band ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Var%weight_uv_index)
 
 IF (.NOT. ALLOCATED(Sp%Var%time)) &
   ALLOCATE(Sp%Var%time( 4, Sp%Dim%nd_times ))
@@ -1079,16 +1172,25 @@ IF (.NOT. ALLOCATED(Sp%Var%total_solar_flux)) &
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Var%total_solar_flux)
 
+IF (.NOT. ALLOCATED(Sp%Var%solar_flux_var_band)) &
+  ALLOCATE(Sp%Var%solar_flux_var_band( Sp%Dim%nd_var_band, &
+                                       Sp%Dim%nd_var_band_times ))
+Sp%Dim%nd_alloc_real = &
+Sp%Dim%nd_alloc_real + SIZE(Sp%Var%solar_flux_var_band)
+
 IF (.NOT. ALLOCATED(Sp%Var%solar_flux_sub_band)) &
-  ALLOCATE(Sp%Var%solar_flux_sub_band( Sp%Dim%nd_sub_band, Sp%Dim%nd_times ))
+  ALLOCATE(Sp%Var%solar_flux_sub_band( Sp%Dim%nd_sub_band, &
+                                     0:Sp%Dim%nd_sub_band_times ))
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Var%solar_flux_sub_band)
 
 IF (.NOT. ALLOCATED(Sp%Var%rayleigh_coeff)) &
-  ALLOCATE(Sp%Var%rayleigh_coeff( Sp%Dim%nd_sub_band, 0:Sp%Dim%nd_times ))
+  ALLOCATE(Sp%Var%rayleigh_coeff( Sp%Dim%nd_sub_band, &
+                                0:Sp%Dim%nd_sub_band_times ))
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Var%rayleigh_coeff)
 
+IF (l_debug) WRITE(*,'(a,i0)') 'Size after Var:',Sp%Dim%nd_alloc_real
 
 ! Photolysis
 IF (.NOT. ALLOCATED(Sp%Photol%l_thermalise)) THEN
@@ -1148,6 +1250,7 @@ IF (.NOT. ALLOCATED(Sp%Photol%threshold_wavelength)) &
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Photol%threshold_wavelength)
 
+IF (l_debug) WRITE(*,'(a,i0)') 'Size after Photol:',Sp%Dim%nd_alloc_real
 
 ! Sub-band mapping
 IF (.NOT. ALLOCATED(Sp%Map%n_sub_band_k)) THEN
@@ -1192,6 +1295,7 @@ IF (.NOT. ALLOCATED(Sp%Map%weight_k_major)) &
 Sp%Dim%nd_alloc_real = &
 Sp%Dim%nd_alloc_real + SIZE(Sp%Map%weight_k_major)
 
+IF (l_debug) WRITE(*,'(a,i0)') 'Size after Map:',Sp%Dim%nd_alloc_real
 END SUBROUTINE allocate_spectrum
 !------------------------------------------------------------------------------
 SUBROUTINE deallocate_spectrum(Sp)
@@ -1243,12 +1347,20 @@ IF (ALLOCATED(Sp%Var%rayleigh_coeff)) &
    DEALLOCATE(Sp%Var%rayleigh_coeff)
 IF (ALLOCATED(Sp%Var%solar_flux_sub_band)) &
    DEALLOCATE(Sp%Var%solar_flux_sub_band)
+IF (ALLOCATED(Sp%Var%solar_flux_var_band)) &
+   DEALLOCATE(Sp%Var%solar_flux_var_band)
 IF (ALLOCATED(Sp%Var%total_solar_flux)) &
    DEALLOCATE(Sp%Var%total_solar_flux)
 IF (ALLOCATED(Sp%Var%time)) &
    DEALLOCATE(Sp%Var%time)
+IF (ALLOCATED(Sp%Var%weight_uv_index)) &
+   DEALLOCATE(Sp%Var%weight_uv_index)
 IF (ALLOCATED(Sp%Var%wavelength_sub_band)) &
    DEALLOCATE(Sp%Var%wavelength_sub_band)
+IF (ALLOCATED(Sp%Var%var_band_fraction)) &
+   DEALLOCATE(Sp%Var%var_band_fraction)
+IF (ALLOCATED(Sp%Var%var_band_map)) &
+   DEALLOCATE(Sp%Var%var_band_map)
 IF (ALLOCATED(Sp%Var%index_sub_band)) &
    DEALLOCATE(Sp%Var%index_sub_band)
 
@@ -1361,20 +1473,14 @@ IF (ALLOCATED(Sp%Planck%thermal_coeff)) &
    DEALLOCATE(Sp%Planck%thermal_coeff)
 
 ! Gas
-IF (ALLOCATED(Sp%Gas%wavelength_sub_band)) &
-   DEALLOCATE(Sp%Gas%wavelength_sub_band)
-IF (ALLOCATED(Sp%Gas%sub_band_w)) &
-   DEALLOCATE(Sp%Gas%sub_band_w)
-IF (ALLOCATED(Sp%Gas%sub_band_k)) &
-   DEALLOCATE(Sp%Gas%sub_band_k)
+IF (ALLOCATED(Sp%Gas%sub_band)) &
+   DEALLOCATE(Sp%Gas%sub_band)
 IF (ALLOCATED(Sp%Gas%n_sub_band_gas)) &
    DEALLOCATE(Sp%Gas%n_sub_band_gas)
 IF (ALLOCATED(Sp%Gas%doppler_cor)) &
    DEALLOCATE(Sp%Gas%doppler_cor)
 IF (ALLOCATED(Sp%Gas%l_doppler)) &
    DEALLOCATE(Sp%Gas%l_doppler)
-IF (ALLOCATED(Sp%Gas%k_t_lookup_gas)) &
-   DEALLOCATE(Sp%Gas%k_t_lookup_gas)
 IF (ALLOCATED(Sp%Gas%t_lookup_gas)) &
    DEALLOCATE(Sp%Gas%t_lookup_gas)
 IF (ALLOCATED(Sp%Gas%n_t_lookup_gas)) &
@@ -1385,10 +1491,8 @@ IF (ALLOCATED(Sp%Gas%k_mix_gas)) &
    DEALLOCATE(Sp%Gas%k_mix_gas)
 IF (ALLOCATED(Sp%Gas%w_ses)) &
    DEALLOCATE(Sp%Gas%w_ses)
-IF (ALLOCATED(Sp%Gas%k_lookup_sb)) &
-   DEALLOCATE(Sp%Gas%k_lookup_sb)
-IF (ALLOCATED(Sp%Gas%k_lookup)) &
-   DEALLOCATE(Sp%Gas%k_lookup)
+IF (ALLOCATED(Sp%Gas%lookup)) &
+   DEALLOCATE(Sp%Gas%lookup)
 IF (ALLOCATED(Sp%Gas%gf_lookup)) &
    DEALLOCATE(Sp%Gas%gf_lookup)
 IF (ALLOCATED(Sp%Gas%t_lookup)) &

@@ -30,11 +30,11 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
   INTEGER, INTENT(INOUT) :: ierr
 !   Error flag
 
-  TYPE(StrSpecData) :: SubSp
+  TYPE(StrSpecData) :: SubSp, VarSp
 !   Temporary spectral file data for sub-bands
   TYPE(StrSpecVar) :: SpVarTmp
 !   Temporary spectral variability data
-  TYPE (StrSolarSpec) :: VSol, VSolMean
+  TYPE (StrSolarSpec) :: VSol
 !   Varying Solar spectrum
   TYPE (StrRefract) :: Refract
 !   Refractive index of atmosphere
@@ -43,7 +43,9 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
 
   INTEGER :: ios
 !   Reading error flag
-  INTEGER :: i, j, k, jj
+  INTEGER :: i, j, k, jj, i_iter
+  INTEGER :: i_sub, i_var, i_sol, i_sub_first, i_sub_last
+  INTEGER :: i_band, i_gas, i_sub_band_gas(Sp%Dim%nd_band)
 !   Loop variables
   INTEGER :: i_format
 !   Format of solar spectrum data file
@@ -60,16 +62,34 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
   CHARACTER (LEN=4) :: dim_name
   CHARACTER (LEN=3) :: frequency
   INTEGER :: ncid, varid, dimid_time, dimid_wlen, time_len, wlen_len
-  INTEGER :: band, sub_band, number_term, index_absorb
+  INTEGER :: band, sub_band, number_term, index_absorb, max_band
   INTEGER :: sub_bands(Sp%Dim%nd_band), band_sort(Sp%Dim%nd_band)
   INTEGER :: n_times, yearstart=imdi, monthstart, daystart
   INTEGER, ALLOCATABLE :: calyear(:), calmonth(:), calday(:), seconds(:)
   LOGICAL :: l_monthly
   REAL (RealK), ALLOCATABLE :: tsi(:), ssi(:,:), wbinsize(:), wbinbnds(:,:)
+  REAL (RealK), ALLOCATABLE :: wavelength_var_band(:, :)
+  REAL (RealK), ALLOCATABLE :: total_var_band_fraction(:)
   REAL (RealK) :: wavelength(2, &
                              MAX(Sp%Dim%nd_k_term, Sp%Dim%nd_sub_band_gas), &
                              Sp%Dim%nd_band)
   REAL (RealK) :: wave_inc
+  REAL (RealK) :: short_fraction
+  LOGICAL :: l_enhance_short, l_enhance_long
+
+! Parameters for determining the effective tail temperature
+  REAL(RealK) :: tail_irradiance, sol_irradiance
+  INTEGER :: n_start, n_end
+  INTEGER, PARAMETER :: n_tail_bins = 3
+!   Number of spectrum bins in the tail over which to fit the Planck function
+  INTEGER, PARAMETER :: n_iter = 10000
+!   Max number of iterations to converge on effective tail temperature
+  REAL(RealK), PARAMETER :: tol = 1.0e-5_RealK
+!   Tolerance on flux error
+  REAL(RealK), PARAMETER :: wl_tol = 1.0e-9_RealK
+!   Tolerance on wavelength limits due to use of format e16.9 in spectral file
+  REAL(RealK), EXTERNAL :: planck_tail
+
 
   INTERFACE
     SUBROUTINE map_heap_func(a, map)
@@ -87,15 +107,29 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
         'Enter band to be sub-divided (0 to finish, -1 to use gas sub-bands): '
       READ(*, *, IOSTAT=ios) band
       IF (band == 0) EXIT
-      IF (band == -1) THEN
-        DO band=1, Sp%Basic%n_band
+      IF (band < 0) THEN
+        IF (band == -1) THEN
+          max_band = Sp%Basic%n_band
+        ELSE
+          max_band = -band
+        END IF
+        DO band=1, max_band
           IF (Sp%Gas%n_band_absorb(band) > 0) THEN
             index_absorb = Sp%Gas%index_absorb(1, band)
             IF (Sp%Gas%n_sub_band_gas(band, index_absorb) > 1) THEN
               sub_bands(band) = Sp%Gas%n_sub_band_gas(band, index_absorb)
-              wavelength(:, 1:sub_bands(band), band) = &
-                Sp%Gas%wavelength_sub_band(:, 1:sub_bands(band), &
-                                           band, index_absorb)
+              wavelength(:, 1:sub_bands(band), band) = Sp%Gas% &
+                sub_band(band, index_absorb)%wavelength(:, 1:sub_bands(band))
+            END IF
+          END IF
+        END DO
+        DO band=max_band+1, Sp%Basic%n_band
+          IF (Sp%Gas%n_band_absorb(band) > 0) THEN
+            index_absorb = Sp%Gas%index_absorb(1, band)
+            IF (Sp%Gas%n_sub_band_gas(band, index_absorb) > 1) THEN
+              ! Remove gas sub-band data for undivided bands to save space
+              Sp%Gas%n_sub_band_gas(band, index_absorb) = 1
+              Sp%Gas%sub_band(band, index_absorb)%k(1) = 0
             END IF
           END IF
         END DO
@@ -105,7 +139,7 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
       IF (Sp%Gas%n_sub_band_gas(band, index_absorb) > 1) THEN
         sub_bands(band) = Sp%Gas%n_sub_band_gas(band, index_absorb)
         wavelength(:, 1:sub_bands(band), band) = &
-          Sp%Gas%wavelength_sub_band(:, 1:sub_bands(band), band, index_absorb)
+          Sp%Gas%sub_band(band, index_absorb)%wavelength(:, 1:sub_bands(band))
       ELSE
         number_term = Sp%Gas%i_band_k(band, index_absorb)
         sub_bands(band)=number_term
@@ -141,10 +175,24 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
     
     IF (ALLOCATED(Sp%Var%index_sub_band)) &
        DEALLOCATE(Sp%Var%index_sub_band)
+    IF (ALLOCATED(Sp%Var%var_band_map)) &
+       DEALLOCATE(Sp%Var%var_band_map)
+    IF (ALLOCATED(Sp%Var%var_band_fraction)) &
+       DEALLOCATE(Sp%Var%var_band_fraction)
     IF (ALLOCATED(Sp%Var%wavelength_sub_band)) &
        DEALLOCATE(Sp%Var%wavelength_sub_band)
     ALLOCATE(Sp%Var%index_sub_band( 2, Sp%Dim%nd_sub_band ))
+    ALLOCATE(Sp%Var%var_band_map( Sp%Dim%nd_sub_band ))
+    ALLOCATE(Sp%Var%var_band_fraction( Sp%Dim%nd_sub_band ))
     ALLOCATE(Sp%Var%wavelength_sub_band( 0:2, Sp%Dim%nd_sub_band ))
+
+    ! By default, var-bands are equal to sub-bands
+    Sp%Var%n_var_band = Sp%Var%n_sub_band
+    Sp%Dim%nd_var_band = Sp%Dim%nd_sub_band
+    DO i=1, Sp%Var%n_sub_band
+      Sp%Var%var_band_map(i) = i
+      Sp%Var%var_band_fraction(i) = 1.0_RealK
+    END DO
 
     CALL map_heap_func(Sp%Basic%wavelength_short(1:Sp%Basic%n_band), &
       band_sort(1:Sp%Basic%n_band))
@@ -165,7 +213,7 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
           index_absorb = Sp%Gas%index_absorb(1, band)
           IF (Sp%Gas%n_sub_band_gas(band, index_absorb) > 1) THEN
             Sp%Var%index_sub_band(2, sub_band) = &
-              Sp%Gas%sub_band_k(i, band, index_absorb)
+              Sp%Gas%sub_band(band, index_absorb)%k(i)
           ELSE
             Sp%Var%index_sub_band(2, sub_band) = i
           END IF
@@ -178,19 +226,27 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
 
     Sp%Var%n_times  = 0
     Sp%Dim%nd_times = 0
+    Sp%Dim%nd_var_band_times = 0
+    Sp%Dim%nd_sub_band_times = 0
     Sp%Var%n_repeat_times  = 0
     IF (ALLOCATED(Sp%Var%time)) &
        DEALLOCATE(Sp%Var%time)
     IF (ALLOCATED(Sp%Var%total_solar_flux)) &
        DEALLOCATE(Sp%Var%total_solar_flux)
+    IF (ALLOCATED(Sp%Var%solar_flux_var_band)) &
+       DEALLOCATE(Sp%Var%solar_flux_var_band)
     IF (ALLOCATED(Sp%Var%solar_flux_sub_band)) &
        DEALLOCATE(Sp%Var%solar_flux_sub_band)
     IF (ALLOCATED(Sp%Var%rayleigh_coeff)) &
        DEALLOCATE(Sp%Var%rayleigh_coeff)
     ALLOCATE(Sp%Var%time( 4, Sp%Dim%nd_times ))
     ALLOCATE(Sp%Var%total_solar_flux( Sp%Dim%nd_times ))
-    ALLOCATE(Sp%Var%solar_flux_sub_band( Sp%Dim%nd_sub_band, Sp%Dim%nd_times ))
-    ALLOCATE(Sp%Var%rayleigh_coeff( Sp%Dim%nd_sub_band, 0:Sp%Dim%nd_times ))
+    ALLOCATE(Sp%Var%solar_flux_var_band( Sp%Dim%nd_var_band, &
+                                         Sp%Dim%nd_var_band_times ))
+    ALLOCATE(Sp%Var%solar_flux_sub_band( Sp%Dim%nd_sub_band, &
+                                       0:Sp%Dim%nd_sub_band_times ))
+    ALLOCATE(Sp%Var%rayleigh_coeff( Sp%Dim%nd_sub_band, &
+                                  0:Sp%Dim%nd_sub_band_times ))
   END IF
 
 ! Fill temporary spectral type to hold sub-bands as full bands
@@ -212,9 +268,26 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
     CALL make_block_3(SubSp, Sol, ierr)
     Sp%Var%rayleigh_coeff(:,0) = SubSp%Rayleigh%rayleigh_coeff
   ELSE
-    ! Currently only Rayleigh coefficients for air are supported here
+    ! Currently only total gas Rayleigh coefficients are supported
+    ! for sub-bands
     SubSp%Rayleigh%i_rayleigh_scheme = ip_rayleigh_total
   END IF
+
+  ! Determine fraction of mean solar spectrum in each sub-band
+  i_sub_band_gas = 0
+  DO i_sub=1, Sp%Var%n_sub_band
+    i_band = Sp%Var%index_sub_band(1, i_sub)
+    IF (Sp%Var%index_sub_band(2, i_sub) == 0) THEN
+      Sp%Var%solar_flux_sub_band(i_sub, 0) &
+        = Sp%Solar%solar_flux_band(i_band)
+    ELSE
+      i_gas = Sp%Gas%index_absorb(1, i_band)
+      i_sub_band_gas(i_band) = i_sub_band_gas(i_band) + 1
+      Sp%Var%solar_flux_sub_band(i_sub, 0) &
+        = Sp%Solar%solar_flux_band(i_band) &
+        * Sp%Gas%sub_band(i_band, i_gas)%w(i_sub_band_gas(i_band))
+    END IF
+  END DO
 
   DO
     IF (Sp%Var%n_times == 0) THEN
@@ -238,8 +311,12 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
     END IF
 
     WRITE(*, '(a)') 'Enter format of data file:'
-    WRITE(*, '(a)') '  5 : CMIP5 (see http://solarisheppa.geomar.de/cmip5)'
-    WRITE(*, '(a)') '  6 : CMIP6 (see http://solarisheppa.geomar.de/cmip6)'
+    WRITE(*, '(a)') &
+      '  5 : CMIP5 (see https://www.solarisheppa.kit.edu/85.php#CMIP5)'
+    WRITE(*, '(a)') &
+      '  6 : CMIP6, CMIP7 (see https://www.solarisheppa.kit.edu/75.php)'
+    WRITE(*, '(a)') &
+      '  7 : CMIP6, CMIP7 with fit to tail effective temperature'
     READ(*, *, IOSTAT=ios) i_format
     SELECT CASE (i_format)
     CASE (5)
@@ -247,7 +324,7 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
         WRITE(*, '(a)') 'Number of times must be specified for CMIP5 data'
         CYCLE
       END IF
-    CASE (6)
+    CASE (6, 7)
       WRITE(*, '(a)') 'Enter location of data file:'
       READ(*, '(a)', IOSTAT=ios) cmip6_file
       ! Open the file for reading
@@ -277,20 +354,12 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
 !   Reallocate arrays to extend times
     DEALLOCATE(Sp%Var%time)
     DEALLOCATE(Sp%Var%total_solar_flux)
-    DEALLOCATE(Sp%Var%solar_flux_sub_band)
-    DEALLOCATE(Sp%Var%rayleigh_coeff)
     ALLOCATE(Sp%Var%time( 4, Sp%Dim%nd_times ))
     ALLOCATE(Sp%Var%total_solar_flux( Sp%Dim%nd_times ))
-    ALLOCATE(Sp%Var%solar_flux_sub_band( Sp%Dim%nd_sub_band, Sp%Dim%nd_times ))
-    ALLOCATE(Sp%Var%rayleigh_coeff( Sp%Dim%nd_sub_band, 0:Sp%Dim%nd_times ))
     Sp%Var%time(:, 1:Sp%Var%n_times) = &
       SpVarTmp%time(:, 1:Sp%Var%n_times)
     Sp%Var%total_solar_flux(1:Sp%Var%n_times) = &
       SpVarTmp%total_solar_flux(1:Sp%Var%n_times)
-    Sp%Var%solar_flux_sub_band(:, 1:Sp%Var%n_times) = &
-      SpVarTmp%solar_flux_sub_band(:, 1:Sp%Var%n_times)
-    Sp%Var%rayleigh_coeff(:, 0:Sp%Var%n_times) = &
-      SpVarTmp%rayleigh_coeff(:, 0:Sp%Var%n_times)
 
     SELECT CASE (i_format)
     CASE (5)
@@ -347,6 +416,19 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
       ! Scale the values to the correct units:
       VSol%wavelength = VSol%wavelength * scale_wv
       
+      ! Reallocate arrays to extend times
+      Sp%Dim%nd_sub_band_times = Sp%Dim%nd_times
+      DEALLOCATE(Sp%Var%solar_flux_sub_band)
+      DEALLOCATE(Sp%Var%rayleigh_coeff)
+      ALLOCATE(Sp%Var%solar_flux_sub_band( Sp%Dim%nd_sub_band, &
+                                         0:Sp%Dim%nd_sub_band_times ))
+      ALLOCATE(Sp%Var%rayleigh_coeff( Sp%Dim%nd_sub_band, &
+                                    0:Sp%Dim%nd_sub_band_times ))
+      Sp%Var%solar_flux_sub_band(:, 0:Sp%Var%n_times) = &
+        SpVarTmp%solar_flux_sub_band(:, 0:Sp%Var%n_times)
+      Sp%Var%rayleigh_coeff(:, 0:Sp%Var%n_times) = &
+        SpVarTmp%rayleigh_coeff(:, 0:Sp%Var%n_times)
+
       ! Read in each time / date and calculate normalised spectrum
       DO i = Sp%Var%n_times + 1, Sp%Var%n_times + n_times
         IF (l_monthly) THEN
@@ -368,7 +450,11 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
         VSol%irrad = VSol%irrad * scale_irr
       
         ! Calculate the normalised solar flux in each sub-band
-        CALL make_block_2_1(SubSp, VSol, filter,.FALSE.,.TRUE.,.FALSE.,ierr)
+        short_fraction = 0.0_RealK
+        l_enhance_short = .TRUE.
+        l_enhance_long = .TRUE.
+        CALL make_block_2_1(SubSp, VSol, filter, .FALSE., &
+          l_enhance_short, l_enhance_long, .FALSE., short_fraction, ierr)
         Sp%Var%solar_flux_sub_band(:,i) = SubSp%Solar%solar_flux_band
       
         ! Calculate Rayleigh scattering coefficients in each sub-band
@@ -381,7 +467,7 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
       DEALLOCATE(VSol%wavelength)
       CLOSE(iu_solar)
 
-    CASE (6)
+    CASE (6, 7)
       VSol%l_binned = .TRUE.
       ! Find the number of points in the spectrum.
       dim_name = 'wlen'
@@ -421,7 +507,7 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
       ios = nf90_inq_varid(ncid, 'seconds', varid)
       IF (ios == NF90_NOERR) ios = nf90_get_var(ncid, varid, seconds)
       IF (ios /= NF90_NOERR) seconds(:) = 0 ! Defaults to 0 if it fails
-      
+
       ! Read the tsi
       ALLOCATE(tsi(time_len))
       CALL nf(nf90_inq_varid(ncid, 'tsi', varid))
@@ -438,7 +524,127 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
       CALL nf(nf90_inq_varid(ncid, 'wlen_bnds', varid))
       CALL nf(nf90_get_var(ncid, varid, wbinbnds))
       VSol%bandbnds = wbinbnds * scale_wv
-      
+
+      ! Find the first and last sub-band entirely within the varying spectrum
+      i_sub_first = 1
+      DO i_sub = 1, Sp%Var%n_sub_band
+        IF (Sp%Var%wavelength_sub_band(1,i_sub) &
+          < VSol%bandbnds(1,1) - &
+            VSol%bandbnds(1,1)*wl_tol) &
+          i_sub_first = i_sub_first + 1
+      END DO
+      i_sub_last = Sp%Var%n_sub_band
+      DO i_sub = Sp%Var%n_sub_band, 1, -1
+        IF (Sp%Var%wavelength_sub_band(2,i_sub) &
+          > VSol%bandbnds(2,wlen_len) + &
+            VSol%bandbnds(2,wlen_len)*wl_tol) &
+          i_sub_last = i_sub_last - 1
+      END DO
+
+      ! Determine fraction of solar spectrum in sub-bands up to i_sub_first
+      short_fraction = 0.0_RealK
+      DO i_sub=1, i_sub_first-1
+        short_fraction = short_fraction + Sp%Var%solar_flux_sub_band(i_sub, 0)
+        Sp%Var%var_band_map(i_sub) = 0
+        Sp%Var%var_band_fraction(i_sub) = 1.0_RealK
+      END DO
+
+      ! Calculate bounds of varying bands and their mapping to sub-bands
+      ALLOCATE(wavelength_var_band(2, Sp%Var%n_sub_band))
+      wavelength_var_band(1,1) = Sp%Var%wavelength_sub_band(1,i_sub_first)
+      i_var = 1
+      i_sol = 1
+      DO i_sub=i_sub_first, i_sub_last-1
+        Sp%Var%var_band_map(i_sub) = i_var
+        DO
+          IF (VSol%bandbnds(2,i_sol) &
+            < Sp%Var%wavelength_sub_band(1,i_sub) + &
+              Sp%Var%wavelength_sub_band(1,i_sub)*wl_tol) THEN
+            i_sol = i_sol + 1
+          ELSE
+            EXIT
+          END IF
+        END DO
+        IF (Sp%Var%wavelength_sub_band(2,i_sub+1) &
+            > VSol%bandbnds(2,i_sol) + VSol%bandbnds(2,i_sol)*wl_tol) THEN
+          wavelength_var_band(2, i_var) = Sp%Var%wavelength_sub_band(2, i_sub)
+          i_var = i_var + 1
+          wavelength_var_band(1, i_var) = wavelength_var_band(2, i_var-1)
+        END IF
+      END DO
+      Sp%Var%var_band_map(i_sub_last) = i_var
+      wavelength_var_band(2, i_var) = Sp%Var%wavelength_sub_band(2, i_sub_last)
+
+      ! Extend the var bands to include all long-wavelength bands
+      ! to be filled using a fit to VSol%t_effective
+      DO i_sub=i_sub_last+1, Sp%Var%n_sub_band
+        i_var = i_var + 1
+        Sp%Var%var_band_map(i_sub) = i_var
+        wavelength_var_band(1, i_var) = Sp%Var%wavelength_sub_band(1, i_sub)
+        wavelength_var_band(2, i_var) = Sp%Var%wavelength_sub_band(2, i_sub)
+      END DO
+      Sp%Var%n_var_band = i_var
+
+      ! Calculate fraction of var band for each sub band
+      ALLOCATE(total_var_band_fraction(Sp%Var%n_var_band))
+      total_var_band_fraction = 0.0_RealK
+      DO i_sub=i_sub_first, Sp%Var%n_sub_band
+        i_var = Sp%Var%var_band_map(i_sub)
+        total_var_band_fraction(i_var) = total_var_band_fraction(i_var) &
+          + Sp%Var%solar_flux_sub_band(i_sub, 0)
+      END DO
+      DO i_sub=i_sub_first, Sp%Var%n_sub_band
+        i_var = Sp%Var%var_band_map(i_sub)
+        Sp%Var%var_band_fraction(i_sub) = Sp%Var%solar_flux_sub_band(i_sub, 0) &
+          / total_var_band_fraction(i_var)
+      END DO
+      DEALLOCATE(total_var_band_fraction)
+
+      IF (Sp%Var%n_var_band < Sp%Var%n_sub_band) THEN
+        ! A reduced set of sub-bands is being used to hold variability data
+        ! No varying Rayleigh coefficients are used in this mode
+        Sp%Var%n_rayleigh_coeff = 0
+        Sp%Dim%nd_sub_band_times = 0
+        Sp%Dim%nd_var_band = Sp%Var%n_var_band
+        Sp%Dim%nd_var_band_times = Sp%Dim%nd_times
+
+        ! Reallocate arrays to extend times
+        DEALLOCATE(Sp%Var%solar_flux_var_band)
+        ALLOCATE(Sp%Var%solar_flux_var_band( Sp%Dim%nd_var_band, &
+                                             Sp%Dim%nd_var_band_times ))
+        IF (Sp%Var%n_times > 0) THEN
+          Sp%Var%solar_flux_var_band(:, 1:Sp%Var%n_times) = &
+            SpVarTmp%solar_flux_var_band(:, 1:Sp%Var%n_times)
+        END IF
+
+        ! Fill temporary spectral type to hold var-bands as full bands
+        VarSp%Basic%n_band = Sp%Var%n_var_band
+        VarSp%Dim%nd_band  = Sp%Var%n_var_band
+        ALLOCATE(VarSp%Basic%wavelength_short(VarSp%Basic%n_band))
+        VarSp%Basic%wavelength_short &
+          = wavelength_var_band(1, 1:Sp%Var%n_var_band)
+        ALLOCATE(VarSp%Basic%wavelength_long(VarSp%Basic%n_band))
+        VarSp%Basic%wavelength_long &
+          = wavelength_var_band(2, 1:Sp%Var%n_var_band)
+        ALLOCATE(VarSp%Basic%l_present(0:14))
+        VarSp%Basic%l_present(14) = .FALSE.
+        ALLOCATE(VarSp%Solar%solar_flux_band(VarSp%Basic%n_band))
+      ELSE
+        ! All sub-bands are being used to hold variability data
+        Sp%Dim%nd_sub_band_times = Sp%Dim%nd_times
+        ! Reallocate arrays to extend times
+        DEALLOCATE(Sp%Var%solar_flux_sub_band)
+        DEALLOCATE(Sp%Var%rayleigh_coeff)
+        ALLOCATE(Sp%Var%solar_flux_sub_band( Sp%Dim%nd_sub_band, &
+                                           0:Sp%Dim%nd_sub_band_times ))
+        ALLOCATE(Sp%Var%rayleigh_coeff( Sp%Dim%nd_sub_band, &
+                                      0:Sp%Dim%nd_sub_band_times ))
+        Sp%Var%solar_flux_sub_band(:, 0:Sp%Var%n_times) = &
+          SpVarTmp%solar_flux_sub_band(:, 0:Sp%Var%n_times)
+        Sp%Var%rayleigh_coeff(:, 0:Sp%Var%n_times) = &
+          SpVarTmp%rayleigh_coeff(:, 0:Sp%Var%n_times)
+      END IF
+      DEALLOCATE(wavelength_var_band)
 
       ! Find the ssi variable id
       ALLOCATE(ssi(1, wlen_len))
@@ -491,38 +697,49 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
         ! Scale the values to the correct units:
         VSol%irrad = ssi(1,:) * scale_irr
 
-        ! Uncomment to output a mean solar spectrum file
-        ! IF (k==1) THEN
-        !   VSolMean%n_points    = VSol%n_points
-        !   VSolMean%t_effective = VSol%t_effective
-        !   VSolMean%radius      = VSol%radius
-        !   VSolMean%l_binned    = VSol%l_binned
-        !   ALLOCATE(VSolMean%wavelength( VSolMean%n_points))
-        !   ALLOCATE(VSolMean%irrad(      VSolMean%n_points))
-        !   ALLOCATE(VSolMean%bandsize(   VSolMean%n_points))
-        !   ALLOCATE(VSolMean%bandbnds(2, VSolMean%n_points))
-        !   VSolMean%wavelength = VSol%wavelength
-        !   VSolMean%irrad = 0.0_RealK
-        !   VSolMean%bandsize = VSol%bandsize
-        !   VSolMean%bandbnds = VSol%bandbnds
-        ! END IF
-        ! VSolMean%irrad = VSolMean%irrad + VSol%irrad
-        ! IF (k==n_times) THEN
-        !   VSolMean%irrad = VSolMean%irrad/REAL(n_times, RealK)
-        !   CALL write_solar_spectrum('cmip6_solar_spectrum', VSolMean, ierr)
-        !   DEALLOCATE(VSolMean%bandbnds)
-        !   DEALLOCATE(VSolMean%bandsize)
-        !   DEALLOCATE(VSolMean%irrad)
-        !   DEALLOCATE(VSolMean%wavelength)
-        ! END IF
+        ! Determine the effective tail temperature by fitting to the tail flux
+        IF (i_format == 7) THEN
+          DO i_iter=1, n_iter
+            n_start = VSol%n_points - n_tail_bins + 1
+            n_end = VSol%n_points
+            tail_irradiance = planck_tail(VSol,VSol%bandbnds(1, n_start))&
+                            - planck_tail(VSol,VSol%bandbnds(2, n_end))
+            sol_irradiance = SUM(VSol%irrad(n_start:n_end) &
+                           * VSol%bandsize(n_start:n_end))
+            IF (ABS(tail_irradiance - sol_irradiance) < sol_irradiance*tol) EXIT
+            IF (i_iter == n_iter) THEN
+              WRITE(*,*) 'Could not determine tail temperature.'
+              WRITE(*,'(a,i0,a)') ' Failed to converge after ', &
+                i_iter, ' iterations'
+              WRITE(*,'(a,1pe12.5,a)') ' Flux diff: ', &
+                tail_irradiance-sol_irradiance, ' Wm-2'    
+              STOP
+            END IF
+            VSol%t_effective = VSol%t_effective &
+                             * SQRT(sol_irradiance / tail_irradiance)
+          END DO
+        END IF
 
-        ! Calculate the normalised solar flux in each sub-band
-        CALL make_block_2_1(SubSp, VSol, filter,.FALSE.,.TRUE.,.FALSE.,ierr)
-        Sp%Var%solar_flux_sub_band(:,i) = SubSp%Solar%solar_flux_band
-      
-        ! Calculate Rayleigh scattering coefficients in each sub-band
-        CALL make_block_3_1(SubSp, VSol, Refract, .FALSE.)
-        Sp%Var%rayleigh_coeff(:,i) = SubSp%Rayleigh%rayleigh_coeff
+        IF (Sp%Var%n_var_band < Sp%Var%n_sub_band) THEN
+          ! Calculate the normalised solar flux in each var-band
+          ! not including fraction of flux shorter than the first var-band
+          l_enhance_short = .FALSE.
+          l_enhance_long = .TRUE.
+          CALL make_block_2_1(VarSp, VSol, filter, .FALSE., &
+            l_enhance_short, l_enhance_long, .FALSE., short_fraction, ierr)
+          Sp%Var%solar_flux_var_band(:,i) = VarSp%Solar%solar_flux_band
+        ELSE
+          ! Calculate the normalised solar flux in each sub-band
+          l_enhance_short = .TRUE.
+          l_enhance_long = .TRUE.
+          CALL make_block_2_1(SubSp, VSol, filter, .FALSE., &
+            l_enhance_short, l_enhance_long, .FALSE., short_fraction, ierr)
+          Sp%Var%solar_flux_sub_band(:,i) = SubSp%Solar%solar_flux_band
+
+          ! Calculate Rayleigh scattering coefficients in each sub-band
+          CALL make_block_3_1(SubSp, VSol, Refract, .FALSE.)
+          Sp%Var%rayleigh_coeff(:,i) = SubSp%Rayleigh%rayleigh_coeff
+        END IF
       END DO
       Sp%Var%n_times = Sp%Var%n_times + n_times
       

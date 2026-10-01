@@ -1057,13 +1057,13 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
         , spectrum%gas%i_band_k_ses(i_band), i_band                            &
         , n_continuum, spectrum%cont%k_cont_ses, control%l_continuum           &
         , spectrum%cont%index_continuum                                        &
-        , spectrum%cont%k_h2oc(1,1,1,i_band)                                   &
+        , spectrum%cont%k_h2oc                                                 &
         , fac00, fac01, fac10, fac11                                           &
         , fac00c, fac01c, fac10c, fac11c, facc00, facc01                       &
         , jp, jph2oc, jt, jtt, jto2c, jtswo3                                   &
-        , spectrum%gas%k_lookup(1,1,1,1,i_band), spectrum%gas%k_mix_gas        &
+        , spectrum%gas%k_mix_gas                                               &
         , spectrum%gas%f_mix(i_band), atm%gas_mix_ratio, gas_mix_amt           &
-        , k_esft_layer, k_mix_gas_layer, k_contm_layer                         &
+        , k_mix_gas_layer, k_contm_layer                                       &
 !       Dimensions
         , dimen%nd_profile, dimen%nd_layer                                     &
         , spectrum%dim%nd_band, spectrum%dim%nd_species                        &
@@ -1071,6 +1071,27 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
         , spectrum%dim%nd_k_term, spectrum%dim%nd_mix                          &
         , spectrum%dim%nd_tmp, spectrum%dim%nd_pre                             &
         , spectrum%dim%nd_band_mix_gas)
+
+      DO j=1, spectrum%gas%n_band_absorb(i_band)
+        DO k=1, spectrum%gas%i_band_k_ses(i_band)
+          DO i=1, atm%n_layer
+            DO l=1, atm%n_profile
+              jp1=jp(l,i)+1
+              jt1=jt(l,i)+1
+              jtt1=jtt(l,i)+1
+              k_esft_layer(l,i,k,j) = MAX(0.0_RealK,                           &
+                  fac00(l,i)*spectrum%gas%lookup(j, i_band)                    &
+                    %k( jt(l,i),  jp(l,i), k )                                 &
+                + fac10(l,i)*spectrum%gas%lookup(j, i_band)                    &
+                    %k( jtt(l,i), jp1,     k )                                 &
+                + fac01(l,i)*spectrum%gas%lookup(j, i_band)                    &
+                    %k( jt1,      jp(l,i), k )                                 &
+                + fac11(l,i)*spectrum%gas%lookup(j, i_band)                    &
+                    %k( jtt1,     jp1,     k ) )
+            END DO
+          END DO
+        END DO
+      END DO
 
       IF ((control%isolir == ip_solar) .OR. control%l_solar_tail_flux) THEN
 !       Convert normalized band fluxes to actual energy fluxes.
@@ -1111,23 +1132,23 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
                   jgf1=jgfp1(l,i,i_gas_band_sb)
                   k_esft_layer(l,i,k,i_gas_band) = MAX(0.0_RealK,              &
                       fgf(l,i,i_gas_band_sb)                                   &
-                    *(fac00(l,i)*spectrum%gas%k_lookup_sb(                     &
-                      jt(l,i),  jp(l,i), jgf0, k, i_gas_band_sb, i_band )      &
-                    + fac10(l,i)*spectrum%gas%k_lookup_sb(                     &
-                      jtt(l,i), jp1,     jgf0, k, i_gas_band_sb, i_band )      &
-                    + fac01(l,i)*spectrum%gas%k_lookup_sb(                     &
-                      jt1,      jp(l,i), jgf0, k, i_gas_band_sb, i_band )      &
-                    + fac11(l,i)*spectrum%gas%k_lookup_sb(                     &
-                      jtt1,     jp1,     jgf0, k, i_gas_band_sb, i_band ) )    &
+                    *(fac00(l,i)*spectrum%gas%lookup(i_gas_band_sb, i_band)    &
+                        %k_sb( jt(l,i),  jp(l,i), jgf0, k )                    &
+                    + fac10(l,i)*spectrum%gas%lookup(i_gas_band_sb, i_band)    &
+                        %k_sb( jtt(l,i), jp1,     jgf0, k )                    &
+                    + fac01(l,i)*spectrum%gas%lookup(i_gas_band_sb, i_band)    &
+                        %k_sb( jt1,      jp(l,i), jgf0, k )                    &
+                    + fac11(l,i)*spectrum%gas%lookup(i_gas_band_sb, i_band)    &
+                        %k_sb( jtt1,     jp1,     jgf0, k ) )                  &
                     +(1.0_RealK - fgf(l,i,i_gas_band_sb))                      &
-                    *(fac00(l,i)*spectrum%gas%k_lookup_sb(                     &
-                      jt(l,i),  jp(l,i), jgf1, k, i_gas_band_sb, i_band )      &
-                    + fac10(l,i)*spectrum%gas%k_lookup_sb(                     &
-                      jtt(l,i), jp1,     jgf1, k, i_gas_band_sb, i_band )      &
-                    + fac01(l,i)*spectrum%gas%k_lookup_sb(                     &
-                      jt1,      jp(l,i), jgf1, k, i_gas_band_sb, i_band )      &
-                    + fac11(l,i)*spectrum%gas%k_lookup_sb(                     &
-                      jtt1,     jp1,     jgf1, k, i_gas_band_sb, i_band ) ) )
+                    *(fac00(l,i)*spectrum%gas%lookup(i_gas_band_sb, i_band)    &
+                        %k_sb( jt(l,i),  jp(l,i), jgf1, k )                    &
+                    + fac10(l,i)*spectrum%gas%lookup(i_gas_band_sb, i_band)    &
+                        %k_sb( jtt(l,i), jp1,     jgf1, k )                    &
+                    + fac01(l,i)*spectrum%gas%lookup(i_gas_band_sb, i_band)    &
+                        %k_sb( jt1,      jp(l,i), jgf1, k )                    &
+                    + fac11(l,i)*spectrum%gas%lookup(i_gas_band_sb, i_band)    &
+                        %k_sb( jtt1,     jp1,     jgf1, k ) ) )
                 END DO
               END DO
             END DO
@@ -1139,29 +1160,29 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
                   jt1=jt(l,i)+1
                   jtt1=jtt(l,i)+1
                   k_esft_layer(l,i,k,i_gas_band) = MAX(0.0_RealK,              &
-                      fac00(l,i)*spectrum%gas%k_lookup(                        &
-                      jt(l,i),  jp(l,i), k, i_gas_band, i_band )               &
-                    + fac10(l,i)*spectrum%gas%k_lookup(                        &
-                      jtt(l,i), jp1,     k, i_gas_band, i_band )               &
-                    + fac01(l,i)*spectrum%gas%k_lookup(                        &
-                      jt1,      jp(l,i), k, i_gas_band, i_band )               &
-                    + fac11(l,i)*spectrum%gas%k_lookup(                        &
-                      jtt1,     jp1,     k, i_gas_band, i_band ) )
+                      fac00(l,i)*spectrum%gas%lookup(i_gas_band, i_band)       &
+                        %k( jt(l,i),  jp(l,i), k )                             &
+                    + fac10(l,i)*spectrum%gas%lookup(i_gas_band, i_band)       &
+                        %k( jtt(l,i), jp1,     k )                             &
+                    + fac01(l,i)*spectrum%gas%lookup(i_gas_band, i_band)       &
+                        %k( jt1,      jp(l,i), k )                             &
+                    + fac11(l,i)*spectrum%gas%lookup(i_gas_band, i_band)       &
+                        %k( jtt1,     jp1,     k ) )
                 END DO
               END DO
             END DO
           END IF
-        ELSE IF (spectrum%gas%i_scale_fnc(i_band, i_gas_band) &
+        ELSE IF (spectrum%gas%i_scale_fnc(i_band, i_gas_band)                  &
           == ip_scale_t_lookup) THEN
           ii = i_gas_lk(i_gas_band)
           DO k=1, spectrum%gas%i_band_k(i_band, i_gas_band)
             DO i=1, atm%n_layer
               DO l=1, atm%n_profile
-                k_esft_layer(l,i,k,i_gas_band) = MAX(0.0_RealK, &
-                  wt_gas(l,i,ii)*Spectrum%Gas%k_t_lookup_gas( &
-                    jt_gas(l,i,ii), k, i_gas_band, i_band ) &
-                  + (1.0_RealK - wt_gas(l,i,ii))*Spectrum%Gas%k_t_lookup_gas( &
-                    jt_gas(l,i,ii)+1, k, i_gas_band, i_band) )
+                k_esft_layer(l,i,k,i_gas_band) = MAX(0.0_RealK,                &
+                    wt_gas(l,i,ii) * spectrum%gas                              &
+                      %lookup(i_gas_band, i_band)%k_t( jt_gas(l,i,ii),   k )   &
+                  + (1.0_RealK - wt_gas(l,i,ii)) * spectrum%gas                &
+                      %lookup(i_gas_band, i_band)%k_t( jt_gas(l,i,ii)+1, k ) )
               END DO
             END DO
           END DO
