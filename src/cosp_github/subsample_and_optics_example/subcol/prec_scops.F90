@@ -52,11 +52,11 @@ contains
                               ! indexed by column then row, rather than
                               ! by row then column
                               !TOA to SURFACE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      REAL(WP) prec_frac(npoints,ncol,nlev) ! 0 -> clear sky
-                                        ! 1 -> LS precipitation
-                                        ! 2 -> CONV precipitation
-                    ! 3 -> both
-                                        !TOA to SURFACE!!!!!!!!!!!!!!!!!!
+      INTEGER prec_frac(npoints,ncol,nlev) ! 0 -> clear sky
+                                           ! 1 -> LS precipitation
+                                           ! 2 -> CONV precipitation
+                                           ! 3 -> both
+                                           !TOA to SURFACE!!!!!!!!!!!!!!!!!!
                     
       INTEGER flag_ls, flag_cv
       INTEGER frac_out_ls(npoints,ncol),frac_out_cv(npoints,ncol) !flag variables for 

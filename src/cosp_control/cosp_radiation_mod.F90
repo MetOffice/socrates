@@ -46,9 +46,9 @@ type(cosp_inputs_host_model), intent(in) :: cosp_hmodel
 ! cosp column inputs
 type(cosp_column_inputs), intent(in) :: cosp_column_in
 ! cosp optical inputs
-type(cosp_optical_inputs), intent(in out) :: cosp_optical_in
+type(cosp_optical_inputs), intent(inout) :: cosp_optical_in
 ! quickbeam size distribution
-type(size_distribution), intent(in out) :: quickbeam_size_dist
+type(size_distribution), intent(inout) :: quickbeam_size_dist
 !----Local variables
 integer :: i, j
 integer :: npoints, ncolumns, nlevels

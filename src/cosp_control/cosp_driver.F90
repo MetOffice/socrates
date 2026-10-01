@@ -7,7 +7,7 @@
 ! This main program is used to drive the COSP2 code calling the same
 ! interface that is called within LFRic for offline tests.
 !
-!------------------------------------------------------------------------------
+!----------------------------------------------------------------------
 
 program cosp_driver
 
@@ -20,6 +20,7 @@ use mod_cosp, only: cosp_outputs
 use cosp_mod, only: &
     cosp, &
     n_backscatter_bins, &
+    n_dbze_bins, &
     n_isccp_tau_bins, &
     n_isccp_pressure_bins, &
     n_cloudsat_levels
@@ -32,7 +33,7 @@ implicit none
   character(len=600) :: filein
   character(len=256) :: foutput
 
-! variables as used in github test code
+  ! Variables as used in github test code
   integer :: &
        nlon,nlat,geomode
   real(wp) :: &
@@ -93,6 +94,7 @@ real(RealExt), pointer :: q_n(:,:)
 real(RealExt), pointer :: w_cloud(:,:)
 real(RealExt), pointer :: condensed_mix_ratio_water(:,:)
 real(RealExt), pointer :: condensed_mix_ratio_ice(:,:)
+real(RealExt), pointer :: cosp_lsrain(:,:)
 real(RealExt), pointer :: cosp_crain(:,:)
 real(RealExt), pointer :: cosp_csnow(:,:)
 real(RealExt), pointer :: condensed_re_water(:,:)
@@ -115,6 +117,7 @@ real(RealExt), pointer :: d_q_n(:,:)
 real(RealExt), pointer :: d_w_cloud(:,:)
 real(RealExt), pointer :: d_condensed_mix_ratio_water(:,:)
 real(RealExt), pointer :: d_condensed_mix_ratio_ice(:,:)
+real(RealExt), pointer :: d_cosp_lsrain(:,:)
 real(RealExt), pointer :: d_cosp_crain(:,:)
 real(RealExt), pointer :: d_cosp_csnow(:,:)
 real(RealExt), pointer :: d_condensed_re_water(:,:)
@@ -139,6 +142,8 @@ type(cospdiag) :: cosp_diag
 integer :: i, j, k, l, rep
 integer :: ierr
 
+! Primary diagnostics
+
 real(RealExt), pointer :: cosp_calipso_low_level_cl_mask(:) ! 2321
 real(RealExt), pointer :: cosp_calipso_mid_level_cl_mask(:) ! 2322
 real(RealExt), pointer :: cosp_calipso_high_level_cl_mask(:) ! 2323
@@ -160,6 +165,32 @@ real(RealExt), pointer :: cosp_calipso_cf_40_liq(:) ! 2473
 real(RealExt), pointer :: cosp_calipso_cf_40_ice(:) ! 2474
 real(RealExt), pointer :: cosp_calipso_cf_40_undet(:) ! 2475
 
+! Secondary diagnostics
+
+real(RealExt), pointer :: cosp_calipso_cloudsat_mdl_cl_mask(:) ! 2326
+real(RealExt), pointer :: cosp_calipso_cloudsat_40_cl_mask(:) ! 2327
+
+real(RealExt), pointer :: cosp_weighted_cloud_albedo(:) ! 2331
+real(RealExt), pointer :: cosp_weighted_ctp(:) ! 2333
+real(RealExt), pointer :: cosp_tot_cloud_area(:) ! 2334
+
+real(RealExt), pointer :: cosp_calipso_mol_atb_mdl(:) ! 2340
+
+real(RealExt), pointer :: cosp_cloudsat_gbxmean_ze_mdl(:) ! 2353
+real(RealExt), pointer :: cosp_cloudsat_gbxmean_ze_40(:) ! 2354
+
+real(RealExt), pointer :: cosp_calipso_gbxmean_atb_mdl(:) ! 2355
+real(RealExt), pointer :: cosp_calipso_gbxmean_atb_40(:) ! 2356
+
+real(RealExt), pointer :: cosp_calipso_mol_atb_40(:) ! 2357
+
+real(RealExt), pointer :: cosp_calipso_cloudsat_mdl_cl(:) ! 2358
+real(RealExt), pointer :: cosp_calipso_cloudsat_40_cl(:) ! 2359
+
+real(RealExt), pointer :: cosp_calipso_cloud_area_40(:) ! 2371
+
+real(RealExt), pointer :: cosp_cloudsat_cfad_ze_40(:) ! 2372
+
 real(wp), allocatable :: cosp_lon(:)
 real(wp), allocatable :: cosp_lat(:)
 
@@ -176,24 +207,33 @@ filein=trim(filein)
 n_profile_full = 153
 nlevels = 38
 
-allocate(lon(n_profile_full),lat(n_profile_full),p(n_profile_full,nlevels),ph(n_profile_full,nlevels),             &
-         zlev(n_profile_full,nlevels),zlev_half(n_profile_full,nlevels),t(n_profile_full,nlevels),          &
-         sh(n_profile_full,nlevels),rh(n_profile_full,nlevels),tca(n_profile_full,nlevels),                 &
-         cca(n_profile_full,nlevels),mr_lsliq(n_profile_full,nlevels),mr_lsice(n_profile_full,nlevels),     &
-         mr_ccliq(n_profile_full,nlevels),mr_ccice(n_profile_full,nlevels),                          &
-         fl_lsrain(n_profile_full,nlevels),fl_lssnow(n_profile_full,nlevels),                        &
-         fl_lsgrpl(n_profile_full,nlevels),fl_ccrain(n_profile_full,nlevels),                        &
-         fl_ccsnow(n_profile_full,nlevels),reff(n_profile_full,nlevels,n_hydro),                     &
-         dtau_s(n_profile_full,nlevels),dtau_c(n_profile_full,nlevels),dem_s(n_profile_full,nlevels),       &
-         dem_c(n_profile_full,nlevels),skt(n_profile_full),landmask(n_profile_full),                        &
-         mr_ozone(n_profile_full,nlevels),u_wind(n_profile_full),v_wind(n_profile_full),sunlit(n_profile_full),    &
-         surfelev(n_profile_full))
+allocate(lon(n_profile_full), lat(n_profile_full), &
+  p(n_profile_full,nlevels), ph(n_profile_full,nlevels), &
+  zlev(n_profile_full,nlevels), zlev_half(n_profile_full,nlevels), &
+  t(n_profile_full,nlevels), &
+  sh(n_profile_full,nlevels), rh(n_profile_full,nlevels), &
+  tca(n_profile_full,nlevels), cca(n_profile_full,nlevels), &
+  mr_lsliq(n_profile_full,nlevels), mr_lsice(n_profile_full,nlevels), &
+  mr_ccliq(n_profile_full,nlevels), mr_ccice(n_profile_full,nlevels), &
+  fl_lsrain(n_profile_full,nlevels), &
+  fl_lssnow(n_profile_full,nlevels), &
+  fl_lsgrpl(n_profile_full,nlevels), &
+  fl_ccrain(n_profile_full,nlevels), &
+  fl_ccsnow(n_profile_full,nlevels), &
+  reff(n_profile_full,nlevels,n_hydro), &
+  dtau_s(n_profile_full,nlevels), dtau_c(n_profile_full,nlevels), &
+  dem_s(n_profile_full,nlevels), dem_c(n_profile_full,nlevels), &
+  skt(n_profile_full), landmask(n_profile_full), &
+  mr_ozone(n_profile_full,nlevels), &
+  u_wind(n_profile_full), v_wind(n_profile_full), &
+  sunlit(n_profile_full), surfelev(n_profile_full))
 
-call nc_read_input_file(filein,n_profile_full,nlevels,n_hydro,lon,lat,p,ph,zlev,zlev_half,    &
-                        t,sh,rh,tca,cca,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain, &
-                        fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,reff,dtau_s,dtau_c,    &
-                        dem_s,dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
-                        emsfc_lw,geomode,nlon,nlat,surfelev)
+call nc_read_input_file(filein, n_profile_full, nlevels, n_hydro, &
+  lon, lat, p, ph, zlev, zlev_half, t, sh, rh, tca, cca, mr_lsliq, &
+  mr_lsice, mr_ccliq, mr_ccice, fl_lsrain, &
+  fl_lssnow, fl_lsgrpl, fl_ccrain, fl_ccsnow, reff, dtau_s, dtau_c, &
+  dem_s, dem_c, skt, landmask, mr_ozone, u_wind, v_wind, sunlit, &
+  emsfc_lw, geomode, nlon, nlat, surfelev)
 
 
 allocate(ncldy(n_profile_full))
@@ -219,6 +259,7 @@ if (l_profile_last) then
   allocate(w_cloud(nlevels,n_profile_full))
   allocate(condensed_mix_ratio_water(nlevels,n_profile_full))
   allocate(condensed_mix_ratio_ice(nlevels,n_profile_full))
+  allocate(cosp_lsrain(nlevels,n_profile_full))
   allocate(cosp_crain(nlevels,n_profile_full))
   allocate(cosp_csnow(nlevels,n_profile_full))
   allocate(condensed_re_water(nlevels,n_profile_full))
@@ -239,6 +280,7 @@ else
   allocate(w_cloud(n_profile_full,nlevels))
   allocate(condensed_mix_ratio_water(n_profile_full,nlevels))
   allocate(condensed_mix_ratio_ice(n_profile_full,nlevels))
+  allocate(cosp_lsrain(n_profile_full,nlevels))
   allocate(cosp_crain(n_profile_full,nlevels))
   allocate(cosp_csnow(n_profile_full,nlevels))
   allocate(condensed_re_water(n_profile_full,nlevels))
@@ -253,21 +295,22 @@ end if ! l_profile_last
 nclds = nlevels
 ncldy = ncolumns
 
-p_full_levels = 0.0
-p_half_levels = 0.0
-hgt_full_levels = 0.0
-hgt_half_levels = 0.0
-t_n = 0.0
-q_n = 0.0
-w_cloud = 0.0
-condensed_mix_ratio_water = 0.0
-condensed_mix_ratio_ice = 0.0
-cosp_crain = 0.0
-cosp_csnow = 0.0
-condensed_re_water = 0.0
-condensed_re_ice = 0.0
-cloud_extinction = 0.0
-cloud_absorptivity = 0.0
+p_full_levels = 0.0_RealExt
+p_half_levels = 0.0_RealExt
+hgt_full_levels = 0.0_RealExt
+hgt_half_levels = 0.0_RealExt
+t_n = 0.0_RealExt
+q_n = 0.0_RealExt
+w_cloud = 0.0_RealExt
+condensed_mix_ratio_water = 0.0_RealExt
+condensed_mix_ratio_ice = 0.0_RealExt
+cosp_lsrain = 0.0_RealExt
+cosp_crain = 0.0_RealExt
+cosp_csnow = 0.0_RealExt
+condensed_re_water = 0.0_RealExt
+condensed_re_ice = 0.0_RealExt
+cloud_extinction = 0.0_RealExt
+cloud_absorptivity = 0.0_RealExt
 
 if (l_profile_last) then
   do i=1, nlevels
@@ -281,7 +324,8 @@ if (l_profile_last) then
       w_cloud(i,j) = tca(j,i)
       condensed_mix_ratio_water(i,j) = mr_lsliq(j,i) + mr_ccliq(j,i)
       condensed_mix_ratio_ice(i,j) = mr_lsice(j,i) + mr_ccice(j,i)
-      cosp_crain(i,j) = fl_lsrain(j,i) + fl_ccrain(j,i)
+      cosp_lsrain(i,j) = fl_lsrain(j,i)
+      cosp_crain(i,j) = fl_ccrain(j,i)
       cosp_csnow(i,j) = fl_lssnow(j,i) + fl_ccsnow(j,i)
       condensed_re_water(i,j) = reff(j,i,1)
       condensed_re_ice(i,j) = reff(j,i,1)
@@ -301,7 +345,8 @@ else
       w_cloud(j,i) = tca(j,i)
       condensed_mix_ratio_water(j,i) = mr_lsliq(j,i) + mr_ccliq(j,i)
       condensed_mix_ratio_ice(j,i) = mr_lsice(j,i) + mr_ccice(j,i)
-      cosp_crain(j,i) = fl_lsrain(j,i) + fl_ccrain(j,i)
+      cosp_lsrain(j,i) = fl_lsrain(j,i)
+      cosp_crain(j,i) = fl_ccrain(j,i)
       cosp_csnow(j,i) = fl_lssnow(j,i) + fl_ccsnow(j,i)
       condensed_re_water(j,i) = reff(j,i,1)
       condensed_re_ice(j,i) = reff(j,i,1)
@@ -343,7 +388,7 @@ allocate(cosp_lat(n_profile_full))
 do j=1, n_profile_full
   t_surf(j) = skt(j)
   p_surf(j) = ph(j,1)
-  hgt_surf(j) = 0.0
+  hgt_surf(j) = 0.0_RealExt
   cosp_sunlit(j) = sunlit(j)
   cosp_lon(j) = lon(j)
   cosp_lat(j) = lat(j)
@@ -351,10 +396,10 @@ end do
 
 deallocate(ph)
 
-d_mass=1.0
-frac_cloud_water=1.0
-frac_cloud_ice=1.0
-clw_sub_full=0.1
+d_mass=1.0_RealExt
+frac_cloud_water=1.0_RealExt
+frac_cloud_ice=1.0_RealExt
+clw_sub_full=0.1_RealExt
 
 ! For rain taken from [namelist:run_precip]
 x1r = 2.2000e-1
@@ -374,6 +419,7 @@ d_q_n => q_n
 d_w_cloud => w_cloud
 d_condensed_mix_ratio_water => condensed_mix_ratio_water
 d_condensed_mix_ratio_ice => condensed_mix_ratio_ice
+d_cosp_lsrain => cosp_lsrain
 d_cosp_crain => cosp_crain
 d_cosp_csnow => cosp_csnow
 d_condensed_re_water => condensed_re_water
@@ -384,6 +430,7 @@ d_frac_cloud_water => frac_cloud_water
 d_frac_cloud_ice => frac_cloud_ice
 d_clw_sub_full => clw_sub_full
 
+! Primary diagnostics
 
 allocate(cosp_calipso_low_level_cl_mask(n_profile_full)) ! 2321
 allocate(cosp_calipso_mid_level_cl_mask(n_profile_full)) ! 2322
@@ -404,6 +451,35 @@ allocate(cosp_calipso_cf_40_mask(n_profile_full*n_cloudsat_levels)) ! 2325
 allocate(cosp_calipso_cf_40_liq(n_profile_full*n_cloudsat_levels)) ! 2473
 allocate(cosp_calipso_cf_40_ice(n_profile_full*n_cloudsat_levels)) ! 2474
 allocate(cosp_calipso_cf_40_undet(n_profile_full*n_cloudsat_levels)) ! 2475
+
+! Secondary diagnostics
+
+allocate(cosp_calipso_cloudsat_mdl_cl_mask(n_profile_full*nlevels)) ! 2326
+allocate(cosp_calipso_cloudsat_40_cl_mask(n_profile_full*n_cloudsat_levels)) ! 2327
+
+allocate(cosp_weighted_cloud_albedo(n_profile_full)) ! 2331
+allocate(cosp_weighted_ctp(n_profile_full)) ! 2333
+allocate(cosp_tot_cloud_area(n_profile_full)) ! 2334
+
+allocate(cosp_calipso_mol_atb_mdl(n_profile_full*nlevels)) ! 2340
+
+allocate(cosp_cloudsat_gbxmean_ze_mdl(n_profile_full*nlevels)) ! 2353
+allocate(cosp_cloudsat_gbxmean_ze_40(n_profile_full*n_cloudsat_levels)) ! 2354
+
+allocate(cosp_calipso_gbxmean_atb_mdl(n_profile_full*nlevels)) ! 2355
+allocate(cosp_calipso_gbxmean_atb_40(n_profile_full*n_cloudsat_levels)) ! 2356
+
+allocate(cosp_calipso_mol_atb_40(n_profile_full*n_cloudsat_levels)) ! 2357
+
+allocate(cosp_calipso_cloudsat_mdl_cl(n_profile_full*nlevels)) ! 2358
+allocate(cosp_calipso_cloudsat_40_cl(n_profile_full*n_cloudsat_levels)) ! 2359
+
+allocate(cosp_calipso_cloud_area_40(n_profile_full*n_cloudsat_levels)) ! 2371
+
+allocate(cosp_cloudsat_cfad_ze_40(n_profile_full*n_backscatter_bins*n_cloudsat_levels)) ! 2372
+
+
+! Primary diagnostics
 
 ! 2321
 cosp_diag%cosp_calipso_low_level_cl_mask(1:n_profile_full) &
@@ -496,6 +572,129 @@ cosp_diag%cosp_calipso_cf_40_undet(1:n_profile_full,1:n_cloudsat_levels) &
 => cosp_calipso_cf_40_undet(1:n_profile_full*n_cloudsat_levels)
 end if ! l_profile_last
 
+! Secondary diagnostics
+
+! 2326
+if (l_profile_last) then
+cosp_diag%cosp_calipso_cloudsat_mdl_cl_mask(1:nlevels,1:n_profile_full) &
+=> cosp_calipso_cloudsat_mdl_cl_mask(1:n_profile_full*nlevels)
+else
+cosp_diag%cosp_calipso_cloudsat_mdl_cl_mask(1:n_profile_full,1:nlevels) &
+=> cosp_calipso_cloudsat_mdl_cl_mask(1:n_profile_full*nlevels)
+end if ! l_profile_last
+
+! 2327
+if (l_profile_last) then
+cosp_diag%cosp_calipso_cloudsat_40_cl_mask(1:n_cloudsat_levels,1:n_profile_full) &
+=> cosp_calipso_cloudsat_40_cl_mask(1:n_profile_full*n_cloudsat_levels)
+else
+cosp_diag%cosp_calipso_cloudsat_40_cl_mask(1:n_profile_full,1:n_cloudsat_levels) &
+=> cosp_calipso_cloudsat_40_cl_mask(1:n_profile_full*n_cloudsat_levels)
+end if ! l_profile_last
+
+! 2331
+cosp_diag%cosp_weighted_cloud_albedo(1:n_profile_full) &
+=> cosp_weighted_cloud_albedo(1:n_profile_full)
+
+! 2333
+cosp_diag%cosp_weighted_ctp(1:n_profile_full) &
+=> cosp_weighted_ctp(1:n_profile_full)
+
+! 2334
+cosp_diag%cosp_tot_cloud_area(1:n_profile_full) &
+=> cosp_tot_cloud_area(1:n_profile_full)
+
+! 2340
+if (l_profile_last) then
+cosp_diag%cosp_calipso_mol_atb_mdl(1:nlevels,1:n_profile_full) &
+=> cosp_calipso_mol_atb_mdl(1:n_profile_full*nlevels)
+else
+cosp_diag%cosp_calipso_mol_atb_mdl(1:n_profile_full,1:nlevels) &
+=> cosp_calipso_mol_atb_mdl(1:n_profile_full*nlevels)
+end if ! l_profile_last
+
+! 2353
+if (l_profile_last) then
+cosp_diag%cosp_cloudsat_gbxmean_ze_mdl(1:nlevels,1:n_profile_full) &
+=> cosp_cloudsat_gbxmean_ze_mdl(1:n_profile_full*nlevels)
+else
+cosp_diag%cosp_cloudsat_gbxmean_ze_mdl(1:n_profile_full,1:nlevels) &
+=> cosp_cloudsat_gbxmean_ze_mdl(1:n_profile_full*nlevels)
+end if ! l_profile_last
+
+! 2354
+if (l_profile_last) then
+cosp_diag%cosp_cloudsat_gbxmean_ze_40(1:n_cloudsat_levels,1:n_profile_full) &
+=> cosp_cloudsat_gbxmean_ze_40(1:n_profile_full*n_cloudsat_levels)
+else
+cosp_diag%cosp_cloudsat_gbxmean_ze_40(1:n_profile_full,1:n_cloudsat_levels) &
+=> cosp_cloudsat_gbxmean_ze_40(1:n_profile_full*n_cloudsat_levels)
+end if ! l_profile_last
+
+! 2355
+if (l_profile_last) then
+cosp_diag%cosp_calipso_gbxmean_atb_mdl(1:nlevels,1:n_profile_full) &
+=> cosp_calipso_gbxmean_atb_mdl(1:n_profile_full*nlevels)
+else
+cosp_diag%cosp_calipso_gbxmean_atb_mdl(1:n_profile_full,1:nlevels) &
+=> cosp_calipso_gbxmean_atb_mdl(1:n_profile_full*nlevels)
+end if ! l_profile_last
+
+! 2356
+if (l_profile_last) then
+cosp_diag%cosp_calipso_gbxmean_atb_40(1:n_cloudsat_levels,1:n_profile_full) &
+=> cosp_calipso_gbxmean_atb_40(1:n_profile_full*n_cloudsat_levels)
+else
+cosp_diag%cosp_calipso_gbxmean_atb_40(1:n_profile_full,1:n_cloudsat_levels) &
+=> cosp_calipso_gbxmean_atb_40(1:n_profile_full*n_cloudsat_levels)
+end if ! l_profile_last
+
+! 2357
+if (l_profile_last) then
+cosp_diag%cosp_calipso_mol_atb_40(1:n_cloudsat_levels,1:n_profile_full) &
+=> cosp_calipso_mol_atb_40(1:n_profile_full*n_cloudsat_levels)
+else
+cosp_diag%cosp_calipso_mol_atb_40(1:n_profile_full,1:n_cloudsat_levels) &
+=> cosp_calipso_mol_atb_40(1:n_profile_full*n_cloudsat_levels)
+end if ! l_profile_last
+
+! 2358
+if (l_profile_last) then
+cosp_diag%cosp_calipso_cloudsat_mdl_cl(1:nlevels,1:n_profile_full) &
+=> cosp_calipso_cloudsat_mdl_cl(1:n_profile_full*nlevels)
+else
+cosp_diag%cosp_calipso_cloudsat_mdl_cl(1:n_profile_full,1:nlevels) &
+=> cosp_calipso_cloudsat_mdl_cl(1:n_profile_full*nlevels)
+end if ! l_profile_last
+
+! 2359
+if (l_profile_last) then
+cosp_diag%cosp_calipso_cloudsat_40_cl(1:n_cloudsat_levels,1:n_profile_full) &
+=> cosp_calipso_cloudsat_40_cl(1:n_profile_full*n_cloudsat_levels)
+else
+cosp_diag%cosp_calipso_cloudsat_40_cl(1:n_profile_full,1:n_cloudsat_levels) &
+=> cosp_calipso_cloudsat_40_cl(1:n_profile_full*n_cloudsat_levels)
+end if ! l_profile_last
+
+! 2371
+if (l_profile_last) then
+cosp_diag%cosp_calipso_cloud_area_40(1:n_cloudsat_levels,1:n_profile_full) &
+=> cosp_calipso_cloud_area_40(1:n_profile_full*n_cloudsat_levels)
+else
+cosp_diag%cosp_calipso_cloud_area_40(1:n_profile_full,1:n_cloudsat_levels) &
+=> cosp_calipso_cloud_area_40(1:n_profile_full*n_cloudsat_levels)
+end if ! l_profile_last
+
+! 2372
+if (l_profile_last) then
+cosp_diag%cosp_cloudsat_cfad_ze_40(1:n_backscatter_bins,1:n_cloudsat_levels,1:n_profile_full) &
+=> cosp_cloudsat_cfad_ze_40(1:n_profile_full*n_backscatter_bins*n_cloudsat_levels)
+else
+cosp_diag%cosp_cloudsat_cfad_ze_40(1:n_profile_full,1:n_backscatter_bins,1:n_cloudsat_levels) &
+=> cosp_cloudsat_cfad_ze_40(1:n_profile_full*n_backscatter_bins*n_cloudsat_levels)
+end if ! l_profile_last
+
+
 call cosp( nlevels, &
            n_profile_list, &
            ncolumns, &
@@ -511,6 +710,7 @@ call cosp( nlevels, &
            d_w_cloud, &
            d_condensed_mix_ratio_water, &
            d_condensed_mix_ratio_ice, &
+           d_cosp_lsrain, &
            d_cosp_crain, &
            d_cosp_csnow, &
            d_condensed_re_water, &
@@ -534,6 +734,7 @@ call cosp( nlevels, &
            l_profile_last = l_profile_last, &
            cosp_out_ext = cosp_out_ext )
 
+
 deallocate(ncldy)
 deallocate(p_full_levels)
 deallocate(p_half_levels)
@@ -545,6 +746,7 @@ deallocate(q_n)
 deallocate(w_cloud)
 deallocate(condensed_mix_ratio_water)
 deallocate(condensed_mix_ratio_ice)
+deallocate(cosp_lsrain)
 deallocate(cosp_crain)
 deallocate(cosp_csnow)
 deallocate(condensed_re_water)
@@ -598,24 +800,163 @@ do l=1,n_profile_full
 
     ! 2321-2323 and 2344-2346
     write(lun,*) 'low/mid/high-level cloud mask/value (2321-2323, 2344-2346)'
-    write(lun,'(10f5.1)') cosp_diag%cosp_calipso_low_level_cl_mask(l),cosp_diag%cosp_calipso_low_level_cl(l), &
-                          cosp_diag%cosp_calipso_mid_level_cl_mask(l),cosp_diag%cosp_calipso_mid_level_cl(l), &
-                          cosp_diag%cosp_calipso_high_level_cl_mask(l),cosp_diag%cosp_calipso_high_level_cl(l)
+    write(lun,'(10f5.1)') cosp_diag%cosp_calipso_low_level_cl_mask(l),  &
+                        cosp_diag%cosp_calipso_low_level_cl(l),       &
+                        cosp_diag%cosp_calipso_mid_level_cl_mask(l),  &
+                        cosp_diag%cosp_calipso_mid_level_cl(l),       &
+                        cosp_diag%cosp_calipso_high_level_cl_mask(l), &
+                        cosp_diag%cosp_calipso_high_level_cl(l)
 
     ! 2325, 2473-2475 and 2370
+    write(lun,*) 'on 40 levels: '
+    write(lun,*) 'cf mask/liq/ice/undet and cfad_sr_backscatter_bins (2325, 2473-2475 and 2370)'
     if (l_profile_last) then
-      write(lun,*) 'on 40 levels: '
-      write(lun,*) 'cf mask/liq/ice/undet and cfad_sr_backscatter_bins (2325, 2473-2475 and 2370)'
       do i=1,n_cloudsat_levels
-        write(lun,'(i4,100f5.1)') i,cosp_diag%cosp_calipso_cf_40_mask(i,l),cosp_diag%cosp_calipso_cf_40_liq(i,l), &
-                                  cosp_diag%cosp_calipso_cf_40_ice(i,l),cosp_diag%cosp_calipso_cf_40_undet(i,l), &
-                                  cosp_diag%cosp_calipso_cfad_sr_40(1:n_backscatter_bins, i, l)
+        write(lun,'(i4,100f5.1)') i,cosp_diag%cosp_calipso_cf_40_mask(i,l), &
+                                  cosp_diag%cosp_calipso_cf_40_liq(i,l), &
+                                  cosp_diag%cosp_calipso_cf_40_ice(i,l), &
+                                  cosp_diag%cosp_calipso_cf_40_undet(i,l), &
+                                    cosp_diag%cosp_calipso_cfad_sr_40(1:n_backscatter_bins, i, l)
       end do
     else
       do i=1,n_cloudsat_levels
-        write(lun,'(i4,100f5.1)') i,cosp_diag%cosp_calipso_cf_40_mask(l,i),cosp_diag%cosp_calipso_cf_40_liq(l,i), &
-                                  cosp_diag%cosp_calipso_cf_40_ice(l,i),cosp_diag%cosp_calipso_cf_40_undet(l,i), &
+        write(lun,'(i4,100f5.1)') i,cosp_diag%cosp_calipso_cf_40_mask(l,i), &
+                                  cosp_diag%cosp_calipso_cf_40_liq(l,i), &
+                                  cosp_diag%cosp_calipso_cf_40_ice(l,i), &
+                                  cosp_diag%cosp_calipso_cf_40_undet(l,i), &
                                   cosp_diag%cosp_calipso_cfad_sr_40(l, 1:n_backscatter_bins, i)
+    end do
+    end if ! l_profile_last
+
+    ! 2331
+    write(lun,*) 'weighted cloud_albedo (2331)'
+    write(lun,*) cosp_diag%cosp_weighted_cloud_albedo(l)
+
+    ! 2333
+    write(lun,*) 'weighted ctp (2333)'
+    write(lun,*) cosp_diag%cosp_weighted_ctp(l)
+    
+    ! 2334
+    write(lun,*) 'weighted total cloud area (2334)'
+    write(lun,*) cosp_diag%cosp_tot_cloud_area(l)
+
+    ! 2340
+    write(lun,*) 'on model levels: calipso_mol_backscatter (2340)'
+    if (l_profile_last) then
+      do i=1, nlevels
+        write(lun,'(i4,1e16.6)') i, cosp_diag%cosp_calipso_mol_atb_mdl(i,l)
+      end do
+    else
+      do i=1, nlevels
+        write(lun,'(i4,1e16.6)') i, cosp_diag%cosp_calipso_mol_atb_mdl(l,i)
+      end do
+    end if ! l_profile_last
+
+    ! 2353
+    write(lun,*) 'on model levels: gbx mean cloudsat ze (2353)'
+    if (l_profile_last) then
+      do i=1, nlevels
+        write(lun,'(i4,2e16.6)') i, cosp_diag%cosp_cloudsat_gbxmean_ze_mdl(i,l)
+      end do
+    else
+      do i=1, nlevels
+        write(lun,'(i4,2e16.6)') i, cosp_diag%cosp_cloudsat_gbxmean_ze_mdl(l,i)
+      end do
+    end if ! l_profile_last
+
+    ! 2354
+    write(lun,*) 'on 40 levels: gbx mean cloudsat ze (2354)'
+    if (l_profile_last) then
+      do i=1, n_cloudsat_levels
+        write(lun,'(i4,2e16.6)') i, cosp_diag%cosp_cloudsat_gbxmean_ze_40(i,l)
+      end do
+    else
+      do i=1, n_cloudsat_levels
+        write(lun,'(i4,2e16.6)') i, cosp_diag%cosp_cloudsat_gbxmean_ze_40(l,i)
+      end do
+    end if ! l_profile_last
+
+    ! 2355
+    write(lun,*) 'on model levels: gbx mean calipso atb (2355)'
+    if (l_profile_last) then
+      do i=1, nlevels
+        write(lun,'(i4,2e16.6)') i, cosp_diag%cosp_calipso_gbxmean_atb_mdl(i,l)
+      end do
+    else
+      do i=1, nlevels
+        write(lun,'(i4,2e16.6)') i, cosp_diag%cosp_calipso_gbxmean_atb_mdl(l,i)
+      end do
+    end if ! l_profile_last
+
+    ! 2356
+    write(lun,*) 'on 40 levels: gbx mean calipso atb (2356)'
+    if (l_profile_last) then
+      do i=1, n_cloudsat_levels
+        write(lun,'(i4,2e16.6)') i, cosp_diag%cosp_calipso_gbxmean_atb_40(i,l)
+      end do
+    else
+      do i=1, n_cloudsat_levels
+        write(lun,'(i4,2e16.6)') i, cosp_diag%cosp_calipso_gbxmean_atb_40(l,i)
+      end do
+    end if ! l_profile_last
+
+    ! 2357
+    write(lun,*) 'on 40 levels: calipso_mol_backscatter (2357)'
+    if (l_profile_last) then
+      do i=1, n_cloudsat_levels
+        write(lun,'(i4,1e16.6)') i, cosp_diag%cosp_calipso_mol_atb_40(i,l)
+      end do
+    else
+      do i=1, n_cloudsat_levels
+        write(lun,'(i4,1e16.6)') i, cosp_diag%cosp_calipso_mol_atb_40(l,i)
+      end do
+    end if ! l_profile_last
+
+    ! 2358
+    write(lun,*) 'on model levels: calipso+cloudsat cloud (2358)'
+    if (l_profile_last) then
+      do i=1, nlevels
+        write(lun,'(i4,1e16.6)') i, cosp_diag%cosp_calipso_cloudsat_mdl_cl(i,l)
+      end do
+    else
+      do i=1, nlevels
+        write(lun,'(i4,1e16.6)') i, cosp_diag%cosp_calipso_cloudsat_mdl_cl(l,i)
+      end do
+    end if ! l_profile_last
+
+    ! 2359
+    write(lun,*) 'on 40 levels: calipso+cloudsat cloud (2359)'
+    if (l_profile_last) then
+      do i=1, n_cloudsat_levels
+        write(lun,'(i4,1e16.6)') i, cosp_diag%cosp_calipso_cloudsat_40_cl(i,l)
+      end do
+    else
+      do i=1, n_cloudsat_levels
+        write(lun,'(i4,1e16.6)') i, cosp_diag%cosp_calipso_cloudsat_40_cl(l,i)
+      end do
+    end if ! l_profile_last
+
+    ! 2371
+    write(lun,*) 'on 40 levels: calipso cloud area (2371)'
+    if (l_profile_last) then
+      do i=1,n_cloudsat_levels
+        write(lun,*) i,cosp_diag%cosp_calipso_cloud_area_40(i,l)
+      end do
+    else
+      do i=1,n_cloudsat_levels
+        write(lun,*) i,cosp_diag%cosp_calipso_cloud_area_40(l,i)
+    end do
+    end if ! l_profile_last
+
+    ! 2372
+    write(lun,*) 'on 40 levels: cloudsat cfad ze (2372)'
+    if (l_profile_last) then
+      do i=1,n_cloudsat_levels
+        write(lun,'(i4,100f5.1)') i,cosp_diag%cosp_cloudsat_cfad_ze_40(1:n_dbze_bins, i, l)
+      end do
+    else
+      do i=1,n_cloudsat_levels
+        write(lun,'(i4,100f5.1)') i,cosp_diag%cosp_cloudsat_cfad_ze_40(l, 1:n_dbze_bins, i)
     end do
     end if ! l_profile_last
 
@@ -626,30 +967,122 @@ end do
 close(lun)
 
 
-foutput='cosp_out.nc'
-call write_cosp2_output(n_profile_full, ncolumns, nlevels, &
-                        zlev(1,nlevels:1:-1), &
-                        cosp_lon, cosp_lat, cosp_out_ext, foutput)
+!foutput='cosp_out.nc'
+!call write_cosp2_output(n_profile_full, ncolumns, nlevels, &
+!                        zlev(1,nlevels:1:-1), &
+!                        cosp_lon, cosp_lat, cosp_out_ext, foutput)
 
 deallocate(zlev)
 
 deallocate(cosp_lon)
 deallocate(cosp_lat)
 
+! Primary diagnostics
+
+if (associated(cosp_calipso_low_level_cl_mask)) then
 deallocate(cosp_calipso_low_level_cl_mask) ! 2321
+end if
+
+if (associated(cosp_calipso_mid_level_cl_mask)) then
 deallocate(cosp_calipso_mid_level_cl_mask) ! 2322
+end if
+
+if (associated(cosp_calipso_high_level_cl_mask)) then
 deallocate(cosp_calipso_high_level_cl_mask) ! 2323
+end if
 
+if (associated(cosp_calipso_low_level_cl)) then
 deallocate(cosp_calipso_low_level_cl) ! 2344
+end if
+
+if (associated(cosp_calipso_mid_level_cl)) then
 deallocate(cosp_calipso_mid_level_cl) ! 2345
+end if
+
+if (associated(cosp_calipso_high_level_cl)) then
 deallocate(cosp_calipso_high_level_cl) ! 2346
+end if
 
+if (associated(cosp_calipso_cf_40_mask)) then
 deallocate(cosp_calipso_cf_40_mask) ! 2325
+end if
 
+if (associated(cosp_calipso_cfad_sr_40)) then
 deallocate(cosp_calipso_cfad_sr_40) ! 2370
+end if
 
+if (associated(cosp_calipso_cf_40_liq)) then
 deallocate(cosp_calipso_cf_40_liq) ! 2473
+end if
+
+if (associated(cosp_calipso_cf_40_ice)) then
 deallocate(cosp_calipso_cf_40_ice) ! 2474
+end if
+
+if (associated(cosp_calipso_cf_40_undet)) then
 deallocate(cosp_calipso_cf_40_undet) ! 2475
+end if
+
+! Secondary diagnostics
+
+if (associated(cosp_calipso_cloudsat_mdl_cl_mask)) then
+deallocate(cosp_calipso_cloudsat_mdl_cl_mask) ! 2326
+end if
+
+if (associated(cosp_calipso_cloudsat_40_cl_mask)) then
+deallocate(cosp_calipso_cloudsat_40_cl_mask) ! 2327
+end if
+
+if (associated(cosp_weighted_cloud_albedo)) then
+deallocate(cosp_weighted_cloud_albedo) ! 2331
+end if
+
+if (associated(cosp_weighted_ctp)) then
+deallocate(cosp_weighted_ctp) ! 2333
+end if
+
+if (associated(cosp_tot_cloud_area)) then
+deallocate(cosp_tot_cloud_area) ! 2334
+end if
+
+if (associated(cosp_calipso_mol_atb_mdl)) then
+deallocate(cosp_calipso_mol_atb_mdl) ! 2340
+end if
+
+if (associated(cosp_cloudsat_gbxmean_ze_mdl)) then
+deallocate(cosp_cloudsat_gbxmean_ze_mdl) ! 2353
+end if
+
+if (associated(cosp_cloudsat_gbxmean_ze_40)) then
+deallocate(cosp_cloudsat_gbxmean_ze_40) ! 2354
+end if
+
+if (associated(cosp_calipso_gbxmean_atb_mdl)) then
+deallocate(cosp_calipso_gbxmean_atb_mdl) ! 2355
+end if
+
+if (associated(cosp_calipso_gbxmean_atb_40)) then
+deallocate(cosp_calipso_gbxmean_atb_40) ! 2356
+end if
+
+if (associated(cosp_calipso_mol_atb_40)) then
+deallocate(cosp_calipso_mol_atb_40) ! 2357
+end if
+
+if (associated(cosp_calipso_cloudsat_mdl_cl)) then
+deallocate(cosp_calipso_cloudsat_mdl_cl) ! 2358
+end if
+
+if (associated(cosp_calipso_cloudsat_40_cl)) then
+deallocate(cosp_calipso_cloudsat_40_cl) ! 2359
+end if
+
+if (associated(cosp_calipso_cloud_area_40)) then
+deallocate(cosp_calipso_cloud_area_40) ! 2371
+end if
+
+if (associated(cosp_cloudsat_cfad_ze_40)) then
+deallocate(cosp_cloudsat_cfad_ze_40) ! 2372
+end if
 
 end program cosp_driver

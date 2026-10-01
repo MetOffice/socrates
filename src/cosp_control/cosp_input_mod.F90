@@ -27,7 +27,7 @@ logical :: cosp_use_vgrid    = .false.
 
 !- Defaults for vertical grid if cosp_use_vgrid is set to true
 integer, parameter :: n_cloudsat_levels = 40
-integer :: cosp_nlr        = n_cloudsat_levels
+integer :: cosp_nlr = n_cloudsat_levels
 logical :: cosp_csat_vgrid = .true.
 
 !- Other control variables
@@ -35,7 +35,7 @@ integer,parameter :: cosp_ncolumns_max = 64
 integer,parameter :: n_hydro = 9
 
 !- Inputs related to radar simulations
-real(wp)    :: cosp_radar_freq     = 94.0
+real(wp) :: cosp_radar_freq    = 94.0
 integer :: cosp_surface_radar  = 0
 integer :: cosp_use_mie_tables = 0
 integer :: cosp_use_gas_abs    = 1
@@ -50,6 +50,7 @@ real(wp) :: cosp_qb_dmin(n_hydro),cosp_qb_dmax(n_hydro), cosp_qb_apm(n_hydro), &
         cosp_qb_bpm(n_hydro),cosp_qb_rho(n_hydro), cosp_qb_p1(n_hydro), &
         cosp_qb_p2(n_hydro),cosp_qb_p3(n_hydro)
 !- Inputs related to lidar simulations
+real(wp) :: cosp_sr_cloud        = 3.0
 integer :: cosp_nprmts_max_hydro = 12
 integer :: cosp_naero            = 1
 integer :: cosp_nprmts_max_aero  = 1
