@@ -30,7 +30,7 @@ SUBROUTINE augment_channel( &
 ! Channel to be incremented and array sizes for looping
   i_channel, n_profile, n_layer, n_viewing_level, n_direction, &
 ! Weight for summing increments
-  weight_channel_incr, &
+  weight_channel_incr, weight_uv_index_incr, &
 ! Increments to radiances and fluxes
   flux_direct_incr, flux_total_incr, actinic_flux_incr, &
   photolysis_div_incr, photolysis_rate_incr, radiance_incr, photolysis_incr, &
@@ -124,6 +124,8 @@ SUBROUTINE augment_channel( &
 
   REAL (RealK), INTENT(IN) :: weight_channel_incr
 !       Weight to apply to channel increments
+  REAL (RealK), INTENT(IN) :: weight_uv_index_incr
+!       Weight to apply to channel flux increments for UV-index calculation
   REAL (RealK), INTENT(IN) ::                                           &
       flux_total_incr(nd_flux_profile, 2*nd_layer+2)
 !       Increment to total flux
@@ -234,6 +236,40 @@ SUBROUTINE augment_channel( &
             = weight_channel_incr*flux_total_incr(l, 2*i+2)
         END DO
       END DO
+      IF (control%l_uv_index) THEN
+        ! UV-index is a weighting of the total downward flux
+        IF (control%isolir == ip_solar .AND. control%l_spherical_solar) THEN
+          DO i=0, n_layer-1
+            DO l=1, n_profile
+              IF (bound%cos_zen(l, i+1) > 0.0) THEN
+                ! In the layers the direct flux output is along the beam
+                ! direction so we take the vertical component.
+                radout%uv_index(l, i, i_channel) &
+                  = weight_uv_index_incr * ( flux_total_incr(l, 2*i+2) &
+                  + sph%allsky%flux_direct(l, i+1) * bound%cos_zen(l, i+1) )
+              ELSE
+                radout%uv_index(l, i, i_channel) &
+                  = weight_uv_index_incr * flux_total_incr(l, 2*i+2)
+              END IF
+            END DO
+          END DO
+          ! At the surface the direct flux output is already the
+          ! vertical component.
+          i=n_layer
+          DO l=1, n_profile
+            radout%uv_index(l, i, i_channel) &
+              = weight_uv_index_incr * ( flux_total_incr(l, 2*i+2) &
+              + sph%allsky%flux_direct(l, i+1) )
+          END DO
+        ELSE
+          DO i=0, n_layer
+            DO l=1, n_profile
+              radout%uv_index(l, i, i_channel) &
+                = weight_uv_index_incr*flux_total_incr(l, 2*i+2)
+            END DO
+          END DO
+        END IF
+      END IF
       IF (control%l_actinic_flux) THEN
         DO i=1, n_layer
           DO l=1, n_profile
@@ -339,6 +375,40 @@ SUBROUTINE augment_channel( &
               = weight_channel_incr*flux_total_incr_clear(l, 2*i+2)
           END DO
         END DO
+        IF (control%l_uv_index_clear) THEN
+          ! UV-index is a weighting of the total downward flux
+          IF (control%isolir == ip_solar .AND. control%l_spherical_solar) THEN
+            DO i=0, n_layer-1
+              DO l=1, n_profile
+                IF (bound%cos_zen(l, i+1) > 0.0) THEN
+                  ! In the layers the direct flux output is along the beam
+                  ! direction so we take the vertical component.
+                  radout%uv_index_clear(l, i, i_channel) &
+                    = weight_uv_index_incr * ( flux_total_incr_clear(l, 2*i+2) &
+                    + sph%clear%flux_direct(l, i+1) * bound%cos_zen(l, i+1) )
+                ELSE
+                  radout%uv_index_clear(l, i, i_channel) &
+                    = weight_uv_index_incr * flux_total_incr_clear(l, 2*i+2)
+                END IF
+              END DO
+            END DO
+            ! At the surface the direct flux output is already the
+            ! vertical component.
+            i=n_layer
+            DO l=1, n_profile
+              radout%uv_index_clear(l, i, i_channel) &
+                = weight_uv_index_incr * ( flux_total_incr_clear(l, 2*i+2) &
+                + sph%clear%flux_direct(l, i+1) )
+            END DO
+          ELSE
+            DO i=0, n_layer
+              DO l=1, n_profile
+                radout%uv_index_clear(l, i, i_channel) &
+                  = weight_uv_index_incr*flux_total_incr_clear(l, 2*i+2)
+              END DO
+            END DO
+          END IF
+        END IF
         IF (control%l_actinic_flux_clear) THEN
           DO i=1, n_layer
             DO l=1, n_profile
@@ -381,6 +451,13 @@ SUBROUTINE augment_channel( &
             radout%flux_down_clear(l, i, i_channel) = 0.0_RealK
           END DO
         END DO
+        IF (control%l_uv_index_clear) THEN
+          DO i=0, n_layer
+            DO l=1, n_profile
+              radout%uv_index_clear(l, i, i_channel) = 0.0_RealK
+            END DO
+          END DO
+        END IF
         IF (control%l_actinic_flux_clear) THEN
           DO i=1, n_layer
             DO l=1, n_profile
@@ -510,6 +587,44 @@ SUBROUTINE augment_channel( &
             + weight_channel_incr*flux_total_incr(l, 2*i+2)
         END DO
       END DO
+      IF (control%l_uv_index) THEN
+        ! UV-index is a weighting of the total downward flux
+        IF (control%isolir == ip_solar .AND. control%l_spherical_solar) THEN
+          DO i=0, n_layer-1
+            DO l=1, n_profile
+              IF (bound%cos_zen(l, i+1) > 0.0) THEN
+                ! In the layers the direct flux output is along the beam
+                ! direction so we take the vertical component.
+                radout%uv_index(l, i, i_channel) &
+                  = radout%uv_index(l, i, i_channel) &
+                  + weight_uv_index_incr * ( flux_total_incr(l, 2*i+2) &
+                  + sph%allsky%flux_direct(l, i+1) * bound%cos_zen(l, i+1) )
+              ELSE
+                radout%uv_index(l, i, i_channel) &
+                  = radout%uv_index(l, i, i_channel) &
+                  + weight_uv_index_incr * flux_total_incr(l, 2*i+2)
+              END IF
+            END DO
+          END DO
+          ! At the surface the direct flux output is already the
+          ! vertical component.
+          i=n_layer
+          DO l=1, n_profile
+            radout%uv_index(l, i, i_channel) &
+              = radout%uv_index(l, i, i_channel) &
+              + weight_uv_index_incr * ( flux_total_incr(l, 2*i+2) &
+              + sph%allsky%flux_direct(l, i+1) )
+          END DO
+        ELSE
+          DO i=0, n_layer
+            DO l=1, n_profile
+              radout%uv_index(l, i, i_channel) &
+                = radout%uv_index(l, i, i_channel) &
+                + weight_uv_index_incr*flux_total_incr(l, 2*i+2)
+            END DO
+          END DO
+        END IF
+      END IF
       IF (control%l_actinic_flux) THEN
         DO i=1, n_layer
           DO l=1, n_profile
@@ -625,6 +740,44 @@ SUBROUTINE augment_channel( &
               + weight_channel_incr*flux_total_incr_clear(l, 2*i+2)
           END DO
         END DO
+        IF (control%l_uv_index_clear) THEN
+          ! UV-index is a weighting of the total downward flux
+          IF (control%isolir == ip_solar .AND. control%l_spherical_solar) THEN
+            DO i=0, n_layer-1
+              DO l=1, n_profile
+                IF (bound%cos_zen(l, i+1) > 0.0) THEN
+                  ! In the layers the direct flux output is along the beam
+                  ! direction so we take the vertical component.
+                  radout%uv_index_clear(l, i, i_channel) &
+                    = radout%uv_index_clear(l, i, i_channel) &
+                    + weight_uv_index_incr * ( flux_total_incr_clear(l, 2*i+2) &
+                    + sph%clear%flux_direct(l, i+1) * bound%cos_zen(l, i+1) )
+                ELSE
+                  radout%uv_index_clear(l, i, i_channel) &
+                    = radout%uv_index_clear(l, i, i_channel) &
+                    + weight_uv_index_incr * flux_total_incr_clear(l, 2*i+2)
+                END IF
+              END DO
+            END DO
+            ! At the surface the direct flux output is already the
+            ! vertical component.
+            i=n_layer
+            DO l=1, n_profile
+              radout%uv_index_clear(l, i, i_channel) &
+                = radout%uv_index_clear(l, i, i_channel) &
+                + weight_uv_index_incr * ( flux_total_incr_clear(l, 2*i+2) &
+                + sph%clear%flux_direct(l, i+1) )
+            END DO
+          ELSE
+            DO i=0, n_layer
+              DO l=1, n_profile
+                radout%uv_index_clear(l, i, i_channel) &
+                  = radout%uv_index_clear(l, i, i_channel) &
+                  + weight_uv_index_incr*flux_total_incr_clear(l, 2*i+2)
+              END DO
+            END DO
+          END IF
+        END IF
         IF (control%l_actinic_flux_clear) THEN
           DO i=1, n_layer
             DO l=1, n_profile
