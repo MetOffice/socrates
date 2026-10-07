@@ -399,8 +399,10 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
 !       Ground source function
     , k_null(nd_profile, nd_layer)                                      &
 !       Null vector for call to subroutine
-    , dummy_ke(nd_profile, nd_layer)
+    , dummy_ke(nd_profile, nd_layer)                                    &
 !       Dummy array (not used)
+    , rayleigh_adjust(nd_k_term_inner_dummy)
+!       Adjustment to Rayleigh scattering (zero here)
 
 ! Monochromatic incrementing radiances:
   REAL (RealK) ::                                                       &
@@ -510,6 +512,7 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
       k_null(l, i)=0.0e+00_RealK
     END DO
   END DO
+  rayleigh_adjust = 0.0_RealK
 
   IF (i_scatter_method_band == ip_scatter_hybrid) THEN
     i_scatter_method = ip_scatter_full
@@ -552,7 +555,7 @@ SUBROUTINE solve_band_without_gas(ierr                                  &
 !                 Spherical geometry
     , sph                                                               &
 !                 Optical properties
-    , ss_prop                                                           &
+    , ss_prop, rayleigh_adjust                                          &
 !                 Cloudy properties
     , l_cloud, i_cloud                                                  &
 !                 Cloud geometry

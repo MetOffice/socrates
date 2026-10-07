@@ -47,7 +47,7 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !                 Tiling of the surface
     , l_tile, n_point_tile, n_tile, list_tile, rho_alb_tile             &
 !                 Optical Properties
-    , ss_prop, photol, l_photol_only                                    &
+    , ss_prop, rayleigh_coeff_term, photol, l_photol_only               &
 !                 Cloudy Properties
     , l_cloud, i_cloud                                                  &
 !                 Cloud Geometry
@@ -97,7 +97,7 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
   USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf, ONLY: ip_solar, ip_infra_red, ip_two_stream, ip_ir_gauss,&
                      ip_overlap_exact_major, ip_spherical_harmonic,     &
-                     ip_cloud_mcica
+                     ip_cloud_mcica, ip_rayleigh_sub_band
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
   USE augment_radiance_mod, ONLY: augment_radiance
@@ -322,6 +322,10 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
   TYPE(STR_ss_prop), INTENT(INOUT) :: ss_prop
 !       Single scattering properties of the atmosphere
 
+  REAL (RealK), INTENT(IN) :: rayleigh_coeff_term(spectrum%dim%nd_k_term, &
+                                                  spectrum%dim%nd_band)
+!   Rayleigh coefficient for each major gas k-term
+
   TYPE(StrQy), INTENT(IN) :: photol(spectrum%photol%n_pathway)
 !   Photolysis quantum yields interpolated to model grid temperatures
 
@@ -446,6 +450,9 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !       Number of monochromatic calculations required
     , n_k_term_inner
 !       Number of monochromatic calculations in inner loop
+  INTEGER, PARAMETER :: &
+      nd_k_term_inner_dummy = 1
+!       Number of k-terms in inner loops (dummy for mcica_sample)
   INTEGER, ALLOCATABLE :: i_esft_pointer(:, :)
 !       Pointer to ESFT for gas
   INTEGER, ALLOCATABLE :: i_term_reduced(:)
@@ -464,7 +471,11 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !       Incident direct flux
     , flux_inc_down(nd_profile)                                         &
 !       Incident downward flux
-    , dummy_ke(nd_profile, nd_layer)
+    , dummy_ke(nd_profile, nd_layer)                                    &
+!       Dummy adjustment used for equivalent extinction
+    , rayleigh_adjust(nd_k_term_inner)
+!       Adjustment to retrieve Rayleigh coefficient for k-term
+!       from band value
 
 ! Monochromatic incrementing radiances:
   REAL (RealK) ::                                                       &
@@ -653,6 +664,15 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
             k_abs_layer(1:n_profile, 1:n_layer, iex, i_abs)
         END IF
       END DO
+
+      ! Set the Rayleigh scattering for this k-term
+      IF (spectrum%rayleigh%i_rayleigh_scheme == ip_rayleigh_sub_band) THEN
+        rayleigh_adjust(k_inner) &
+          = rayleigh_coeff_term(iex_major(k_inner), i_band) &
+          - spectrum%rayleigh%rayleigh_coeff(i_band)
+      ELSE
+        rayleigh_adjust(k_inner) = 0.0_RealK
+      END IF
     END DO ! k_inner
 
     CALL gas_optical_properties(n_profile, n_layer                      &
@@ -699,7 +719,7 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !                   Spherical geometry
           , sph                                                           &
 !                   Optical properties
-          , ss_prop                                                       &
+          , ss_prop, rayleigh_adjust(k_inner)                             &
 !                   Cloudy properties
           , l_cloud, i_cloud                                              &
 !                   Cloud geometry
@@ -734,7 +754,7 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
           , nd_cloud_type, nd_region, nd_overlap_coeff                    &
           , nd_max_order, nd_sph_coeff                                    &
           , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level            &
-          , nd_direction, nd_source_coeff                                 &
+          , nd_direction, nd_source_coeff, nd_k_term_inner_dummy          &
           )
       END DO
 
@@ -774,7 +794,7 @@ SUBROUTINE solve_band_random_overlap(ierr                               &
 !                   Spherical geometry
         , sph                                                           &
 !                   Optical properties
-        , ss_prop                                                       &
+        , ss_prop, rayleigh_adjust                                      &
 !                   Cloudy properties
         , l_cloud, i_cloud                                              &
 !                   Cloud geometry

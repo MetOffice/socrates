@@ -72,6 +72,7 @@ SUBROUTINE grey_opt_prop(ierr, control, radout, i_band                  &
   USE def_out,     ONLY: StrOut
   USE def_ss_prop, ONLY: str_ss_prop
   USE rad_pcf, ONLY: i_err_fatal, ip_rayleigh_total, ip_rayleigh_custom,&
+                     ip_rayleigh_sub_band,                              &
                      ip_cairns, ip_cloud_mcica, ip_cloud_type_si,       &
                      ip_cloud_type_sw, ip_direct_csr_scaling,           &
                      ip_phase_ice, ip_phase_water
@@ -478,7 +479,7 @@ SUBROUTINE grey_opt_prop(ierr, control, radout, i_band                  &
 !   Calculate Rayleigh scattering coefficient for current band
     SELECT CASE (i_rayleigh_scheme)
 
-    CASE (ip_rayleigh_total)
+    CASE (ip_rayleigh_total, ip_rayleigh_sub_band)
 !     Rayleigh scattering coefficients are tabulated for total gas
       rayleigh_coeff(1:n_profile, 1:n_layer) = rayleigh_coeff_tot
     

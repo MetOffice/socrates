@@ -47,7 +47,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
 !                   Tiling of the surface
     , l_tile, n_point_tile, n_tile, list_tile, rho_alb_tile &
 !                   Optical properties
-    , ss_prop, photol, l_photol_only &
+    , ss_prop, rayleigh_coeff_term, photol, l_photol_only &
 !                   Cloudy properties
     , l_cloud, i_cloud &
 !                   Cloud geometry
@@ -94,9 +94,10 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
   USE def_ss_prop,  ONLY: str_ss_prop
   USE def_qy,       ONLY: StrQy
   USE def_spherical_geometry, ONLY: StrSphGeo
-  USE rad_pcf, ONLY: ip_solar, ip_infra_red, ip_spherical_harmonic,     &
-                     ip_two_stream, ip_surf_alb_diff, ip_ir_gauss,      &
-                     ip_cloud_mcica, ip_scatter_hybrid, ip_scatter_full
+  USE rad_pcf, ONLY: ip_solar, ip_infra_red, ip_spherical_harmonic, &
+                     ip_two_stream, ip_surf_alb_diff, ip_ir_gauss, &
+                     ip_cloud_mcica, ip_scatter_hybrid, ip_scatter_full, &
+                     ip_rayleigh_sub_band
   USE diffusivity_factor, ONLY: diffusivity_factor_minor
   USE vectlib_mod, ONLY: exp_v
   USE yomhook, ONLY: lhook, dr_hook
@@ -324,6 +325,10 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
   TYPE(str_ss_prop), INTENT(INOUT) :: ss_prop
 !   Single scattering properties of the atmosphere
 
+  REAL (RealK), INTENT(IN) :: rayleigh_coeff_term(spectrum%dim%nd_k_term, &
+                                                  spectrum%dim%nd_band)
+!   Rayleigh coefficient for each major gas k-term
+
   TYPE(StrQy), INTENT(IN) :: photol(spectrum%photol%n_pathway)
 !   Photolysis quantum yields interpolated to model grid temperatures
 
@@ -475,8 +480,11 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
 !       Optical depth of absorber
     , k_gas_abs(nd_profile, nd_layer) &
 !       Gaseous extinction
-    , diffuse_albedo(nd_profile)
+    , diffuse_albedo(nd_profile) &
 !       Diffuse albedo of the surface
+    , rayleigh_adjust(nd_k_term_inner_dummy)
+!       Adjustment to retrieve Rayleigh coefficient for k-term
+!       from band value
   REAL (RealK) :: &
       flux_direct_part(nd_flux_profile, 0: nd_layer) &
 !       Partial direct flux
@@ -1129,6 +1137,14 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
       END DO
     END IF
 
+!   Set the Rayleigh scattering for this k-term
+    IF (spectrum%rayleigh%i_rayleigh_scheme == ip_rayleigh_sub_band) THEN
+      rayleigh_adjust = rayleigh_coeff_term(iex, i_band) &
+        - spectrum%rayleigh%rayleigh_coeff(i_band)
+    ELSE
+      rayleigh_adjust = 0.0_RealK
+    END IF
+
     IF (i_cloud == ip_cloud_mcica) THEN
 
       CALL mcica_sample(ierr &
@@ -1165,7 +1181,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
 !                   Spherical geometry
         , sph &
 !                   Optical properties
-        , ss_prop &
+        , ss_prop, rayleigh_adjust &
 !                   Cloudy properties
         , l_cloud, i_cloud &
 !                   Cloud geometry
@@ -1198,7 +1214,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
         , nd_cloud_type, nd_region, nd_overlap_coeff &
         , nd_max_order, nd_sph_coeff &
         , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level &
-        , nd_direction, nd_source_coeff &
+        , nd_direction, nd_source_coeff, nd_k_term_inner_dummy &
         )
 
     ELSE
@@ -1238,7 +1254,7 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
 !                   Spherical geometry
         , sph &
 !                   Optical properties
-        , ss_prop &
+        , ss_prop, rayleigh_adjust &
 !                   Cloudy properties
         , l_cloud, i_cloud &
 !                   Cloud geometry

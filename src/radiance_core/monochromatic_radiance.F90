@@ -51,7 +51,7 @@ SUBROUTINE monochromatic_radiance(ierr                                  &
 !                 Spherical geometry
     , sph                                                               &
 !                 Optical Properties
-    , ss_prop                                                           &
+    , ss_prop, rayleigh_adjust                                          &
 !                 Cloudy Properties
     , l_cloud, i_cloud                                                  &
 !                 Cloud Geometry
@@ -237,6 +237,10 @@ SUBROUTINE monochromatic_radiance(ierr                                  &
   REAL (RealK), INTENT(IN) ::                                           &
       k_gas_abs(nd_profile, nd_layer, nd_k_term_inner)
 !       Gaseous absorptive extinctions
+  REAL (RealK), INTENT(IN) ::                                           &
+      rayleigh_adjust(nd_k_term_inner)
+!       Adjustment to retrieve Rayleigh coefficient for k-term
+!       from band value
 
 !                 Variables for equivalent extinction
   LOGICAL, INTENT(IN) ::                                                &
@@ -441,6 +445,7 @@ SUBROUTINE monochromatic_radiance(ierr                                  &
       , l_cloud, n_cloud_top, cld%n_cloud_type                            &
 !                 Optical properties
       , ss_prop, k_gas_abs(:,:,i_n_term_inner)                            &
+      , rayleigh_adjust(i_n_term_inner)                                   &
 !                 Dimensions of arrays
       , nd_profile, nd_layer, nd_layer_clr, id_ct                         &
       )

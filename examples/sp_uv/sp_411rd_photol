@@ -6547,6 +6547,7 @@ Indexing numbers of gases for continua:
 *BLOCK: TYPE =   17: SUBTYPE =    0: VERSION =    0
 Specification of sub-bands for spectral variability data.
 Wavelength limits (m) and Rayleigh coefficients at STP (m2/kg).
+Adjust Rayleigh scattering for each k-term
 Number of spectral sub-bands = 6966
 Sub-band  Band  k-term    Lower limit         Upper limit       Rayleigh coeff
       1      1      1   5.000000000E-10     5.050000051E-10     0.000000000E+00

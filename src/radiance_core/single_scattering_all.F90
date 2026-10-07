@@ -6,9 +6,6 @@
 !
 ! Subroutine to find single scattering properties of all regions.
 !
-! Method:
-!   Straightforward.
-!
 !- ---------------------------------------------------------------------
 MODULE single_scattering_all_mod
 IMPLICIT NONE
@@ -20,7 +17,7 @@ SUBROUTINE single_scattering_all(i_scatter_method_band                  &
 !                 Cloudy Properties
     , l_cloud, n_cloud_top, n_cloud_type                                &
 !                 Optical Properties
-    , ss_prop, k_gas_abs                                                &
+    , ss_prop, k_gas_abs, rayleigh_adjust                               &
 !                 Dimensions of Arrays
     , nd_profile, nd_layer, nd_layer_clr, id_ct                         &
     )
@@ -76,8 +73,10 @@ SUBROUTINE single_scattering_all(i_scatter_method_band                  &
   TYPE(STR_ss_prop), INTENT(INOUT) :: ss_prop
 !       Single scattering properties of the atmosphere
   REAL (RealK), INTENT(IN) ::                                           &
-      k_gas_abs(nd_profile, nd_layer)
+      k_gas_abs(nd_profile, nd_layer)                                   &
 !       Gaseous extinction
+    , rayleigh_adjust
+!       Adjustment to Rayleigh scattering coefficient
 
 
 ! Local variables.
@@ -103,6 +102,7 @@ SUBROUTINE single_scattering_all(i_scatter_method_band                  &
     , n_profile, 1, n_cloud_top-1                                       &
     , d_mass                                                            &
     , ss_prop%k_grey_tot_clr, ss_prop%k_ext_scat_clr, k_gas_abs         &
+    , rayleigh_adjust                                                   &
     , ss_prop%tau_clr, ss_prop%omega_clr                                &
     , nd_profile, nd_layer, 1, nd_layer_clr                             &
     )
@@ -112,6 +112,7 @@ SUBROUTINE single_scattering_all(i_scatter_method_band                  &
     , ss_prop%k_grey_tot(:, :, 0)                                       &
     , ss_prop%k_ext_scat(:, :, 0)                                       &
     , k_gas_abs                                                         &
+    , rayleigh_adjust                                                   &
     , ss_prop%tau(:, :, 0), ss_prop%omega(:, :, 0)                      &
     , nd_profile, nd_layer, id_ct, nd_layer                             &
     )
@@ -124,6 +125,7 @@ SUBROUTINE single_scattering_all(i_scatter_method_band                  &
         , ss_prop%k_grey_tot(:, :, k)                                   &
         , ss_prop%k_ext_scat(:, :, k)                                   &
         , k_gas_abs                                                     &
+        , rayleigh_adjust                                               &
         , ss_prop%tau(:, :, k), ss_prop%omega(:, :, k)                  &
         , nd_profile, nd_layer, id_ct, nd_layer                         &
         )

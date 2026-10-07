@@ -730,6 +730,8 @@ INTEGER, PARAMETER :: ip_rayleigh_total  = 1
 !   Rayleigh scattering coefficients tabulated for total gas
 INTEGER, PARAMETER :: ip_rayleigh_custom = 2
 !   Rayleigh scattering coefficients tabulated for gases separately
+INTEGER, PARAMETER :: ip_rayleigh_sub_band = 3
+!   Rayleigh scattering coefficients tabulated for total gas in sub-bands
 
 ! ------------------------------------------------------------------
 
