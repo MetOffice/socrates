@@ -97,6 +97,9 @@ allocate(sol_hr%bandsize(sol_hr%n_points))
 allocate(sol_hr%irrad(sol_hr%n_points))
 j=0
 do jj=1, sol_hr_in%n_points
+  ! Here jj is the loop index for the input sol_hr_in bins.
+  ! The output sol_hr bins are indexed with j. These are identical except
+  ! where we wish to insert an extra bin to match the sol_lr array. 
   j=j+1
   ii=0
   do i=1, sol_lr%n_points
@@ -104,11 +107,13 @@ do jj=1, sol_hr_in%n_points
          sol_hr_in%bandbnds(1, jj) + tol*sol_hr_in%bandsize(jj) .and. &
          sol_lr%bandbnds(1, i) < &
          sol_hr_in%bandbnds(2, jj) - tol*sol_hr_in%bandsize(jj) ) then
+      ! Index the sol_lr bin we wish to insert as ii
       ii=i
       exit
     end if
   end do
   if (ii > 0) then
+    ! Insert the extra bin into the sol_hr array and increment j
     sol_hr%bandbnds(1, j) = sol_hr_in%bandbnds(1, jj)
     sol_hr%bandbnds(2, j) = sol_lr%bandbnds(1, ii)
     sol_hr%bandsize(j) = sol_hr%bandbnds(2, j) - sol_hr%bandbnds(1, j)
@@ -123,6 +128,7 @@ do jj=1, sol_hr_in%n_points
                          + sol_hr%bandsize(j) / 2.0_RealK
     sol_hr%irrad(j) = sol_hr_in%irrad(jj)
   else
+    ! Copy across the bins from sol_hr_in to sol_hr
     sol_hr%wavelength(j) = sol_hr_in%wavelength(jj)
     sol_hr%bandbnds(:, j) = sol_hr_in%bandbnds(:, jj)
     sol_hr%bandsize(j) = sol_hr_in%bandsize(jj)

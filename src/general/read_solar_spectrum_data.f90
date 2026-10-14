@@ -21,11 +21,11 @@ SUBROUTINE read_solar_spectrum_data(iu_solar, SolarSpec, ierr)
 
 
 ! Dummy arguments.
-  INTEGER, Intent(IN) :: iu_solar
+  INTEGER, INTENT(IN) :: iu_solar
 !   Unit number for the solar spectrum
-  INTEGER, Intent(INOUT) :: ierr
+  INTEGER, INTENT(INOUT) :: ierr
 !   Error flag
-  TYPE (StrSolarSpec), Intent(OUT) :: SolarSpec
+  TYPE (StrSolarSpec), INTENT(OUT) :: SolarSpec
 !   Solar spectrum
 
 ! Local variables.

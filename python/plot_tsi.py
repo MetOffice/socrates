@@ -505,11 +505,6 @@ if __name__ == '__main__':
         1366.3199, 1366.3439, 1366.3674, 1366.3905, 1366.4130, 1366.4350, \
         1366.4564, 1366.4772, 1366.4972, 1366.5164, 1366.5349, 1366.5525 ])
     scvary_date = np.arange(2892.0)/12.0 + 1860.0
-    scvary_new = np.copy(scvary)
-    repeat_year = 1965
-    n = (repeat_year - 1860)*12
-    for i in np.arange(2892-1788):
-        scvary_new[i+1788] = scvary[i+n]
 
     cmip_data = Dataset(filename1)
     n_time = len(cmip_data.dimensions['time'])
@@ -524,24 +519,22 @@ if __name__ == '__main__':
     tsi = cmip_data.variables['tsi'][:]
     date = calyear + (calmonth-1.0)/12.0
 
-    cmip6_data = Dataset(filename2)
-    calyear_cmip6 = cmip6_data.variables['calyear'][:]
-    calmonth_cmip6 = cmip6_data.variables['calmonth'][:]
-    tsi_cmip6 = cmip6_data.variables['tsi'][:]
-    date_cmip6 = calyear_cmip6 + (calmonth_cmip6-1.0)/12.0
+    if (len(sys.argv) > 2):
+        cmip6_data = Dataset(filename2)
+        calyear_cmip6 = cmip6_data.variables['calyear'][:]
+        calmonth_cmip6 = cmip6_data.variables['calmonth'][:]
+        tsi_cmip6 = cmip6_data.variables['tsi'][:]
+        date_cmip6 = calyear_cmip6 + (calmonth_cmip6-1.0)/12.0
 
     fig=plt.figure(figsize=(12,6))
     ax1 = fig.add_subplot(111)
-    ax1.plot(scvary_date, scvary-4.6, color='blue', label='Decadal Model / CMIP5 (-4.6 W m$^{-2}$)')
-#    ax1.plot(scvary_date, scvary_new-4.6, color='red', label='Proposed 2009=1965 (-4.6 W m$^{-2}$)')
-    ax1.plot(date_cmip6, tsi_cmip6+0.26, color='red', label='CMIP6 (+0.26 W m$^{-2}$)')
+    ax1.plot(scvary_date, scvary-4.6, color='blue', label='CMIP5 (-4.6 W m$^{-2}$)')
+    if (len(sys.argv) > 2):
+        ax1.plot(date_cmip6, tsi_cmip6+0.26, color='red', label='CMIP6 (+0.26 W m$^{-2}$)')
     ax1.plot(date, tsi, color='green', label='CMIP7')
     ax1.set_xlabel('Year')
     ax1.set_ylabel('TSI (W m$^{-2}$)')
     ax1.set_xlim([1980, 2040])
-
-#    ax2 = ax1.twinx()
-#    ax2.plot(date, ssn)
 
     leg=plt.legend()
     leg.set_draggable(True)

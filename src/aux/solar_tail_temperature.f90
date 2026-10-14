@@ -39,6 +39,9 @@ open(iu_solar, file=trim(input_file), iostat=ios, status='old')
 call read_solar_spectrum_data(iu_solar, sol, ierr)
 
 do i=1, n_iter
+  ! Find the Planck irradiance over the tail of the solar spectrum for the
+  ! given effective photospheric temperature, along with the solar irradiance
+  ! integrated over the tail of the solar spectrum.
   if (sol%l_binned) then
     n_start = sol%n_points - n_tail_bins + 1
     n_end = sol%n_points
@@ -53,6 +56,8 @@ do i=1, n_iter
     sol_irradiance = trapezoid(n_tail_bins+1, sol%wavelength(n_start:n_end), &
                                               sol%irrad(n_start:n_end))
   end if
+  ! If the difference between them is within tolerance then the effective
+  ! temperature is a good fit and we can exit the loop.
   if (abs(tail_irradiance - sol_irradiance) < sol_irradiance*tol) then
     write(*,'(a,i0,a)') ' Reached tolerance after ', i, ' iterations'
     write(*,'(a,1pe12.5,a)') ' Flux diff: ', &
@@ -65,6 +70,7 @@ do i=1, n_iter
       tail_irradiance-sol_irradiance, ' Wm-2'    
     exit
   end if
+  ! Increment the effective temperature until a good fit is achieved.
   sol%t_effective = sol%t_effective * sqrt(sol_irradiance / tail_irradiance)
 end do
 
