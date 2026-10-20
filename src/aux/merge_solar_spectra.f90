@@ -11,6 +11,8 @@ program merge_solar_spectra
 
 use realtype_rd, only: RealK
 use def_solarspec, only: StrSolarSpec
+use socrates_ereport, only: ereport, errormessagelength, &
+  i_err_usage, i_err_fatal
 
 implicit none
 
@@ -30,6 +32,9 @@ integer, allocatable :: i_short(:), i_long(:)
 real(RealK) :: sol_lr_binned, sol_hr_binned, scale_hr
 real(RealK) :: hr_min, hr_max
 real(RealK) :: tol=1.0e-6_RealK
+
+character (len=errormessagelength) :: cmessage
+character (len=*), parameter :: RoutineName = 'MERGE_SOLAR_SPECTRA'
 
 
 i = 0
@@ -69,23 +74,25 @@ do
   end select
 end do
 if (.not.l_outfile) then
-  write(*, '(a)') 'Usage: merge_solar_spectra sol_low_res sol_high_res outfile'
-  write(*, '(27x,a)') '[--single_scaling]'
-  write(*, '(27x,a)') '[--min_wavelength] <high_res min wavelength cutoff (m)>'
-  write(*, '(27x,a)') '[--max_wavelength] <high_res max wavelength cutoff (m)>'
-  stop
+  write(cmessage, '(a,3(9x,a))') &
+    'merge_solar_spectra sol_low_res sol_high_res outfile'//new_line('a'), &
+    '[--single_scaling]'//new_line('a'), &
+    '[--min_wavelength] <high_res min wavelength cutoff (m)>'//new_line('a'), &
+    '[--max_wavelength] <high_res max wavelength cutoff (m)>'//new_line('a')
+  ierr = i_err_usage
+  call ereport(RoutineName, ierr, cmessage)
 end if
 
-call get_free_unit(ierr, iu_sol_lr)
-open(iu_sol_lr, file=trim(sol_lr_file), iostat=ios, status='old')
+open(newunit=iu_sol_lr, file=trim(sol_lr_file), iostat=ios, status='old')
 call read_solar_spectrum_data(iu_sol_lr, sol_lr, ierr)
 
-call get_free_unit(ierr, iu_sol_hr)
-open(iu_sol_hr, file=trim(sol_hr_file), iostat=ios, status='old')
+open(newunit=iu_sol_hr, file=trim(sol_hr_file), iostat=ios, status='old')
 call read_solar_spectrum_data(iu_sol_hr, sol_hr_in, ierr)
 
 if (.not.sol_lr%l_binned .or. .not.sol_hr_in%l_binned) then
-  stop 'Requires input solar spectra to be in binned format'
+  cmessage = 'Requires input solar spectra to be in binned format'
+  ierr = i_err_fatal
+  call ereport(RoutineName, ierr, cmessage)
 end if
 
 ! Split high-res bins at the edges of low-res bins

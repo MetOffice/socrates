@@ -19,5 +19,6 @@ MODULES_GENCORE = def_aer.f90 \
 		rad_ccf.f90 \
 		rad_pcf.f90 \
 		realtype_rd.f90 \
+		socrates_ereport.f90 \
 		vectlib_mod.f90 \
 		yomhook.f90

@@ -20,6 +20,7 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
   USE def_inst_flt, ONLY: StrFiltResp
   USE missing_data_mod, ONLY: imdi
   USE rad_pcf, ONLY: ip_rayleigh_total
+  USE socrates_ereport, ONLY: ereport, errormessagelength, i_err_fatal
 
   IMPLICIT NONE
 
@@ -89,6 +90,9 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
   REAL(RealK), PARAMETER :: wl_tol = 1.0e-9_RealK
 !   Tolerance on wavelength limits due to use of format e16.9 in spectral file
   REAL(RealK), EXTERNAL :: planck_tail
+
+  CHARACTER (LEN=errormessagelength) :: cmessage
+  CHARACTER (LEN=*), PARAMETER :: RoutineName = 'MAKE_BLOCK_17'
 
 
   INTERFACE
@@ -394,8 +398,9 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
       DO
         READ(iu_solar, '(a)', IOSTAT=ios) line
         IF (ios /= 0) THEN
-          print*, 'end of file'
-          STOP
+          cmessage = 'no wavelength grid found in CMIP5 format file'
+          ierr = i_err_fatal
+          CALL ereport(RoutineName, ierr, cmessage)
         END IF
         IF (INDEX(line, 'wavelength (nm) grid') > 1) THEN
           DO i = 1, VSol%n_points/5
@@ -408,7 +413,11 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
               l_monthly = .TRUE.
             END IF
             IF (INDEX(line, 'TSI') > 1) EXIT
-            IF (ios /= 0) STOP
+            IF (ios /= 0) THEN
+              cmessage = 'no irradiance data found in CMIP5 format file'
+              ierr = i_err_fatal
+              CALL ereport(RoutineName, ierr, cmessage)
+            END IF
           END DO
           EXIT
         ENDIF
@@ -708,12 +717,13 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
                            * VSol%bandsize(n_start:n_end))
             IF (ABS(tail_irradiance - sol_irradiance) < sol_irradiance*tol) EXIT
             IF (i_iter == n_iter) THEN
-              WRITE(*,*) 'Could not determine tail temperature.'
               WRITE(*,'(a,i0,a)') ' Failed to converge after ', &
                 i_iter, ' iterations'
               WRITE(*,'(a,1pe12.5,a)') ' Flux diff: ', &
                 tail_irradiance-sol_irradiance, ' Wm-2'    
-              STOP
+              cmessage = 'could not determine tail temperature'
+              ierr = i_err_fatal
+              CALL ereport(RoutineName, ierr, cmessage)
             END IF
             VSol%t_effective = VSol%t_effective &
                              * SQRT(sol_irradiance / tail_irradiance)
@@ -772,8 +782,9 @@ CONTAINS
     USE netcdf
     INTEGER, INTENT(IN):: status
     IF (status /= NF90_NOERR) THEN
-       WRITE(*,*) 'netCDF-ERROR: ',nf90_strerror(status)
-       STOP 'STOPPED!'
+       cmessage = nf90_strerror(status)
+       ierr = i_err_fatal
+       CALL ereport(RoutineName//':netCDF-ERROR', ierr, cmessage)
     END IF
   END SUBROUTINE nf
 
