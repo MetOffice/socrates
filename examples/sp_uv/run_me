@@ -45,6 +45,11 @@ fmove tropical trop_320_sg_ch
 Cl_run_cdf -B tropical -s sp_uv_photol -S -R 1 320 -g 4 -r -C 5
 fmove tropical trop_320
 
+Cl_run_cdf -B tropical -s sp_411rd_photol -S -R 1 411 -g 4 -r -C 5 -sg -ch 411
+fmove tropical trop_411rd_sg_ch
+Cl_run_cdf -B tropical -s sp_411rd_photol -S -R 1 411 -g 4 -r -C 5
+fmove tropical trop_411rd
+
 cp tropical.surflw tropical.surf
 Cl_run_cdf -B tropical -s $RAD_DATA/spectra/ga7/sp_lw_ga7 -I -R 1 9 -g 4 -C 5 -c
 fmove tropical trop_lw_ga7
@@ -72,6 +77,8 @@ Ccdf2cdl -o cdl_trop_xsw_photol_nlte.hrts          trop_xsw_photol_nlte.hrts > /
 Ccdf2cdl -o cdl_trop_sw_ga7.hrts                   trop_sw_ga7.hrts > /dev/null
 Ccdf2cdl -o cdl_trop_320_sg_ch.ph_rate_2           trop_320_sg_ch.ph_rate_2 > /dev/null
 Ccdf2cdl -o cdl_trop_320.hrts                      trop_320.hrts > /dev/null
+Ccdf2cdl -o cdl_trop_411rd_sg_ch.uvindex           trop_411rd_sg_ch.uvindex > /dev/null
+Ccdf2cdl -o cdl_trop_411rd.uvindex                 trop_411rd.uvindex > /dev/null
 Ccdf2cdl -o cdl_trop_lw_ga7.hrts                   trop_lw_ga7.hrts > /dev/null
 Ccdf2cdl -o cdl_trop_lw_ga7_nlte.hrts              trop_lw_ga7_nlte.hrts > /dev/null
 
@@ -108,6 +115,10 @@ diff -q cdl_trop_sw_ga7.hrts              ref_trop_sw_ga7.hrts                  
   echo 'Matched ifort output')                                                   || \
     ierr=1
 diff -q cdl_trop_320.hrts                 ref_trop_320.hrts                      || ierr=1
+diff -q cdl_trop_411rd_sg_ch.uvindex      gfortran_trop_411rd_sg_ch.uvindex      || \
+diff -q cdl_trop_411rd_sg_ch.uvindex      ref_trop_411rd_sg_ch.uvindex           || \
+    ierr=1
+diff -q cdl_trop_411rd.uvindex            ref_trop_411rd.uvindex                 || ierr=1
 diff -q cdl_trop_lw_ga7.hrts              ref_trop_lw_ga7.hrts                   || ierr=1
 diff -q cdl_trop_lw_ga7_nlte.hrts         ref_trop_lw_ga7_nlte.hrts              || ierr=1
 
