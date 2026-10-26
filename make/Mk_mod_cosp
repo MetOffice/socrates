@@ -35,6 +35,11 @@ MODULES_COSP =	cosp_kinds.f90 \
 		cosp_constants_mod.f90 \
 		cosp_types_mod.f90 \
 		cosp_radiation_mod.f90 \
+		cosp_precip_mod.f90 \
+		cosp_mxratio_mod.f90 \
+		cosp_reff_mod.f90 \
+		cosp_subgrid_mod.f90 \
+		cosp_stats_extra.f90 \
 		cosp_def_diag.f90 \
 		cosp_diagnostics_mod.f90 \
 		realtype_rd.f90 \
