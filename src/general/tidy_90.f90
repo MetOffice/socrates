@@ -447,7 +447,7 @@ CONTAINS
 !     Pressure at current level
     REAL (RealK) :: p_column(3)
 !     Pressure for different gas cumulative column amounts
-    REAL (RealK), PARAMETER :: p_toa = 1.0_RealK
+    REAL (RealK), PARAMETER :: p_toa = 0.001_RealK
 !     Pressure at TOA
     REAL (RealK), PARAMETER :: p_inc = 10.0**(0.1_RealK)
 !     Factor to increment pressure across a layer

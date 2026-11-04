@@ -51,7 +51,8 @@ e_factor=2.718
 
 if ('ph_rate' in name):
     e_factor=1.0e2
-    xlim = 0.25
+    xmin = 0.1
+    xmax = 0.25
 
 if (len(sys.argv) > 2):
     var = var - var2
@@ -101,7 +102,7 @@ else:
     ax2.plot(wl, toa_spec, color='blue', label='TOA')
     ax2.set_xlabel('Wavelength (micron)')
     if ('ph_rate' in name):
-        ax2.set_ylabel('J rate (s$^{-1}$ m$^{-1}$)')
+        ax2.set_ylabel('J (s$^{-1}$ m$^{-1}$)')
         ax2.set_yscale('symlog')
         e_height = -np.log(p[e_layer]/max(p))*CONST
         ax1.plot([min(vmean),max(vmean)], [e_height,e_height], color='green')
@@ -111,7 +112,7 @@ else:
             mid_spec[ch]  = np.sum(var[ch,e_layer, :,:])/(width[ch]*n_lon*n_lat)
         ax2.plot(wl, mid_spec, color='green', label='Mid atmos')
         ax2.set_title('Top & Mid atmosphere spectra')
-        ax2.set_xlim(right=xlim)
+        ax2.set_xlim(left=xmin,right=xmax)
     elif (name == 'aflx'):
         ax2.set_ylabel('Actinic Flux (W m$^{-2}$ m$^{-1}$)')
         ax2.set_yscale('symlog')
@@ -134,8 +135,15 @@ else:
         ax2.plot(wl, mid_spec, color='green', label='Mid atmos')
         ax2.set_title('Top & Mid atmosphere spectra')
     else:
+        e_layer = int(layers/3)
+        e_height = -np.log(p[e_layer]/max(p))*CONST
+        ax1.plot([min(vmean),max(vmean)], [e_height,e_height], color='cyan')
+        mid_spec = np.zeros(n_channel)
+        for ch in range(0, n_channel):
+            mid_spec[ch]  = np.sum(var[ch,e_layer, :,:])/(width[ch]*n_lon*n_lat)
+        ax2.plot(wl, mid_spec, color='cyan', label='Mid atmos')
         ax2.plot(wl, surf_spec, color='green', label='Surface')
-        ax2.set_title('TOA & surface spectrum')
+        ax2.set_title('Spectra')
         ax2.set_ylabel('Flux (Wm-2m-1)')
         ax2.set_xscale('symlog')
     plt.legend()
