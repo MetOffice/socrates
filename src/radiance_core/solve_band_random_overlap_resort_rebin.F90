@@ -462,6 +462,8 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
 !       Incident downward flux
     , dummy_ke(nd_profile, nd_layer)                                           &
 !       Dummy array (not used)
+    , rayleigh_adjust(nd_k_term_inner_dummy)                                   &
+!       Adjustment to Rayleigh scattering (zero here)
     , k_esft_layer_mix(nd_profile, nd_layer,                                   &
         nd_esft_max*nd_esft_max)                                               &
 !       ESFT monochromatic exponents for the mixture of two absorbers
@@ -708,6 +710,7 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
 !   Set the absorption for the gas mixture
     k_gas_abs(1:n_profile,1:n_layer) =                                         &
       k_esft_layer_mix_red(1:n_profile,1:n_layer,iex)
+    rayleigh_adjust = 0.0_RealK
   
     CALL monochromatic_radiance(ierr                                           &
       , control, atm, cld, bound                                               &
@@ -743,7 +746,7 @@ SUBROUTINE solve_band_random_overlap_resort_rebin(ierr                         &
 !                 Spherical geometry
       , sph                                                                    &
 !                 Optical properties
-      , ss_prop                                                                &
+      , ss_prop, rayleigh_adjust                                               &
 !                 Cloudy properties
       , l_cloud, i_cloud                                                       &
 !                 Cloud geometry

@@ -29,7 +29,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
     ip_overlap_hybrid, ip_overlap_k_eqv_mod, &
     ip_region_clear, ip_region_strat, ip_region_conv, &
     ip_scale_ses2, ip_scale_band, ip_scale_term, &
-    ip_scale_lookup, ip_scale_t_lookup, ip_scale_null
+    ip_scale_lookup, ip_scale_t_lookup, ip_scale_null, &
+    ip_rayleigh_sub_band
   USE def_spectrum, ONLY: StrSpecData
   USE def_dimen,    ONLY: StrDim
   USE def_control,  ONLY: StrCtrl
@@ -116,6 +117,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
   INTEGER                                                                      &
       i_band                                                                   &
 !       Spectral band
+    , i_term                                                                   &
+!       k-term
     , i_gas                                                                    &
 !       Local index of gas
     , n_gas                                                                    &
@@ -204,15 +207,8 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
 !       Pointer to look-up table for aerosols
 
 ! Controlling variables:
-  INTEGER                                                                      &
-      i, ii                                                                    &
-!       Loop variable
-    , j, j_cont                                                                &
-!       Loop variable
-    , k                                                                        &
-!       Loop variable
-    , l, ll
-!       Loop variable
+  INTEGER :: i, ii, j, j_cont, k, l, ll, sub_band
+!       Loop variables
 
 ! Logical switches:
   LOGICAL                                                                      &
@@ -234,8 +230,14 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
   REAL (RealK) ::                                                              &
       solar_irrad_band(dimen%nd_profile)                                       &
 !       Solar irradiance in the band
-    , solar_irrad_band_ses(dimen%nd_profile, spectrum%dim%nd_k_term)
+    , solar_irrad_band_ses(dimen%nd_profile, spectrum%dim%nd_k_term)           &
 !       Incident solar flux for each k-term
+    , rayleigh_coeff_term(spectrum%dim%nd_k_term, spectrum%dim%nd_band)
+!       Rayleigh coefficient for each k-term
+
+  INTEGER :: i_sub_band_term(spectrum%dim%nd_k_term, spectrum%dim%nd_band)
+!       Counter for sub-bands associated with each k-term
+
   REAL (RealK) ::                                                              &
       gas_frac_rescaled(dimen%nd_profile,                                      &
                         dimen%nd_layer,                                        &
@@ -864,6 +866,31 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
   ELSE
     ! path_div is passed as an argument so must always be allocated
     ALLOCATE(sph%common%path_div(dimen%nd_profile,dimen%nd_layer))
+  END IF
+
+! Set the Rayleigh scattering for each k-term
+  IF (spectrum%rayleigh%i_rayleigh_scheme == ip_rayleigh_sub_band) THEN
+    rayleigh_coeff_term = 0.0_RealK
+    i_sub_band_term = 0
+    DO sub_band=1, Spectrum%Var%n_sub_band
+      i_band = Spectrum%Var%index_sub_band(1, sub_band)
+      i_term = Spectrum%Var%index_sub_band(2, sub_band)
+      i_gas = Spectrum%Gas%index_absorb(1, i_band)
+      IF (i_term > 0) THEN
+        ! The sub-band contributes to the weight of the specified k-term
+        i_sub_band_term(i_term, i_band) = i_sub_band_term(i_term, i_band) + 1
+        rayleigh_coeff_term(i_term, i_band) &
+          = rayleigh_coeff_term(i_term, i_band) &
+          + Spectrum%Var%rayleigh_coeff(sub_band, 0) &
+          * Spectrum%Map%weight_sub_band_k(i_sub_band_term(i_term, i_band), &
+                                           i_term, i_band) &
+          / Spectrum%Gas%w(i_term, i_band, i_gas)
+      ELSE
+        ! The sub-band corresponds to the whole band
+        rayleigh_coeff_term(:, i_band) &
+          = Spectrum%Var%rayleigh_coeff(sub_band, 0)
+      END IF
+    END DO
   END IF
 
 ! Set flag for calculation of actinic flux
@@ -1714,7 +1741,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , control%l_tile, bound%n_point_tile, bound%n_tile, bound%list_tile  &
           , bound%rho_alb_tile(1, 1, 1, i_band)                                &
 !                 Optical Properties
-          , ss_prop, photol, l_photol_only                                     &
+          , ss_prop, rayleigh_coeff_term, photol, l_photol_only                &
 !                 Cloudy properties
           , control%l_cloud, control%i_cloud                                   &
 !                 Cloud geometry
@@ -1857,7 +1884,7 @@ SUBROUTINE radiance_calc(control, dimen, spectrum, atm, cld, aer, bound, radout)
           , control%l_tile, bound%n_point_tile, bound%n_tile, bound%list_tile  &
           , bound%rho_alb_tile(1, 1, 1, i_band)                                &
 !                 Optical Properties
-          , ss_prop, photol, l_photol_only                                     &
+          , ss_prop, rayleigh_coeff_term, photol, l_photol_only                &
 !                 Cloudy properties
           , control%l_cloud, control%i_cloud                                   &
 !                 Cloud geometry

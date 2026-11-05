@@ -19,7 +19,7 @@ SUBROUTINE read_spectrum(file_spectral, Sp)
 USE realtype_rd, ONLY: RealK
 USE def_spectrum, ONLY: StrSpecData, allocate_spectrum
 USE rad_pcf, ONLY: i_err_fatal, i_normal, i_warning, &
-  ip_rayleigh_total, ip_rayleigh_custom, &
+  ip_rayleigh_total, ip_rayleigh_custom, ip_rayleigh_sub_band, &
   ip_ice_adt, ip_ice_adt_10, ip_ice_baran, ip_ice_fu_ir, &
   ip_ice_fu_phf, ip_ice_fu_solar, ip_ice_iwc_only, ip_ice_t_iwc, &
   ip_slingo_schr_ice_phf, ip_slingo_schrecker_ice, &
@@ -3296,6 +3296,9 @@ DO
   IF (desc_end==0) desc_end=LEN_TRIM(line)+1
 
   SELECT CASE (line(1:desc_end-1))
+  CASE ('Adjust Rayleigh scattering for each k-term')
+    Sp%Rayleigh%i_rayleigh_scheme = ip_rayleigh_sub_band
+
   CASE ('Number of spectral sub-bands','nd_sub_band')
 
     ! Read number of sub-bands

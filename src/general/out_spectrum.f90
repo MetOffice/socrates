@@ -18,7 +18,7 @@ SUBROUTINE out_spectrum(file_spectral, Spectrum, ierr)
     StrSpecRayleigh, StrSpecGas, StrSpecPlanck, StrSpecCont, StrSpecContGen, &
     StrSpecDrop, StrSpecAerosol, StrSpecIce, StrSpecVar
   USE rad_pcf, ONLY: i_normal, i_err_fatal, &
-    ip_rayleigh_total, ip_rayleigh_custom, &
+    ip_rayleigh_total, ip_rayleigh_custom, ip_rayleigh_sub_band, &
     ip_scale_lookup, ip_scale_t_lookup, &
     ip_scale_fnc_null, ip_scale_null, n_scale_variable, &
     ip_slingo_schrecker, ip_ackerman_stephens, ip_drop_pade_2, &
@@ -150,7 +150,7 @@ SUBROUTINE out_spectrum(file_spectral, Spectrum, ierr)
     ENDDO
   ENDIF
   IF (Spectrum%Basic%l_present(17)) &
-    CALL write_block_17(Spectrum%Basic, Spectrum%Var)
+    CALL write_block_17(Spectrum%Basic, Spectrum%Var, Spectrum%Rayleigh)
   IF (Spectrum%Basic%l_present(18)) CALL write_block_18
   IF (Spectrum%Basic%l_present(19)) &
     CALL write_block_19(Spectrum%Basic, Spectrum%ContGen)
@@ -405,7 +405,8 @@ CONTAINS
 !     Loop variable
 !
 !
-    IF (SpRayleigh%i_rayleigh_scheme == ip_rayleigh_total) THEN
+    IF (SpRayleigh%i_rayleigh_scheme == ip_rayleigh_total .OR. &
+        SpRayleigh%i_rayleigh_scheme == ip_rayleigh_sub_band) THEN
       WRITE(iu_spc, '(a19, a16, a16)') &
         '*BLOCK: TYPE =    3', ': SUBTYPE =    0', ': VERSION =    0'
       WRITE(iu_spc, '(a)') &
@@ -1184,12 +1185,13 @@ CONTAINS
 
 
 
-  SUBROUTINE write_block_17(SpBasic, SpVar)
+  SUBROUTINE write_block_17(SpBasic, SpVar, SpRayleigh)
 
     IMPLICIT NONE
 
-    TYPE (StrSpecBasic), INTENT(IN) :: SpBasic
-    TYPE (StrSpecVar),   INTENT(IN) :: SpVar
+    TYPE (StrSpecBasic),    INTENT(IN) :: SpBasic
+    TYPE (StrSpecVar),      INTENT(IN) :: SpVar
+    TYPE (StrSpecRayleigh), INTENT(IN) :: SpRayleigh
 
     ! Write block 17 in standard spectral file
     WRITE(iu_spc, '(a19, a16, a16)') &
@@ -1198,6 +1200,10 @@ CONTAINS
       'Specification of sub-bands for spectral variability data.'
     IF (SpVar%n_sub_band > SpBasic%n_band) WRITE(iu_spc, '(a)') &
       'Wavelength limits (m) and Rayleigh coefficients at STP (m2/kg).'
+    IF (SpRayleigh%i_rayleigh_scheme == ip_rayleigh_sub_band) THEN
+      WRITE(iu_spc, '(a)') &
+        'Adjust Rayleigh scattering for each k-term'
+    END IF
     WRITE(iu_spc, '(a, i0)') &
       'Number of spectral sub-bands = ', SpVar%n_sub_band
     IF (SpVar%n_sub_band > SpBasic%n_band) THEN

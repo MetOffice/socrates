@@ -19,7 +19,7 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
   USE def_refract, ONLY: StrRefract
   USE def_inst_flt, ONLY: StrFiltResp
   USE missing_data_mod, ONLY: imdi
-  USE rad_pcf, ONLY: ip_rayleigh_total
+  USE rad_pcf, ONLY: ip_rayleigh_total, ip_rayleigh_sub_band
   USE socrates_ereport, ONLY: ereport, errormessagelength, i_err_fatal
 
   IMPLICIT NONE
@@ -261,9 +261,14 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
   ALLOCATE(SubSp%Basic%wavelength_long(SubSp%Basic%n_band))
   SubSp%Basic%wavelength_long = Sp%Var%wavelength_sub_band(2, :)
   ALLOCATE(SubSp%Basic%l_present(0:14))
+  SubSp%Basic%l_present(3) = .FALSE.
   SubSp%Basic%l_present(14) = .FALSE.
   ALLOCATE(SubSp%Solar%solar_flux_band(SubSp%Basic%n_band))
   ALLOCATE(SubSp%Rayleigh%rayleigh_coeff(SubSp%Basic%n_band))
+  SubSp%Gas%n_absorb = Sp%Gas%n_absorb
+  SubSp%Dim%nd_species = Sp%Dim%nd_species
+  ALLOCATE(SubSp%Gas%type_absorb(SubSp%Dim%nd_species))
+  SubSp%Gas%type_absorb = Sp%Gas%type_absorb
 
   IF ( .NOT. Sp%Basic%l_present(17) ) THEN
     ! Fill sub-band Rayleigh coefficients for mean solar spectrum
@@ -271,6 +276,12 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
     WRITE(*, '(a)')  'Rayleigh coefficients per sub-band:'
     CALL make_block_3(SubSp, Sol, ierr)
     Sp%Var%rayleigh_coeff(:,0) = SubSp%Rayleigh%rayleigh_coeff
+    ! If total gas Rayleigh coefficients are used for the bands
+    ! use the scheme to update the Rayleigh coefficients for each
+    ! k-term using the sub-band values
+    IF (Sp%Rayleigh%i_rayleigh_scheme == ip_rayleigh_total) THEN
+      Sp%Rayleigh%i_rayleigh_scheme = ip_rayleigh_sub_band
+    END IF
   ELSE
     ! Currently only total gas Rayleigh coefficients are supported
     ! for sub-bands

@@ -19,7 +19,7 @@ CONTAINS
 SUBROUTINE single_scattering(i_scatter_method_band                      &
     , n_profile, i_first_layer, i_last_layer                            &
     , d_mass                                                            &
-    , k_grey_tot, k_ext_scat, k_gas_abs                                 &
+    , k_grey_tot, k_ext_scat, k_gas_abs, rayleigh_adjust                &
     , tau, omega                                                        &
     , nd_profile, nd_layer, id_lt, id_lb                                &
     )
@@ -69,8 +69,10 @@ SUBROUTINE single_scattering(i_scatter_method_band                      &
 !       Absorptive extinction
     , k_ext_scat(nd_profile, id_lt: id_lb)                              &
 !       Scattering extinction
-    , k_gas_abs(nd_profile, nd_layer)
+    , k_gas_abs(nd_profile, nd_layer)                                   &
 !       Gaseous extinction
+    , rayleigh_adjust
+!       Adjustment to Rayleigh scattering coefficient
 
 !                 Single scattering properties
   REAL (RealK), INTENT(OUT) ::                                          &
@@ -121,9 +123,9 @@ SUBROUTINE single_scattering(i_scatter_method_band                      &
 
     DO i=i_first_layer, i_last_layer
       DO l=1, n_profile
-        k_total=k_grey_tot(l, i)+k_gas_abs(l, i)
+        k_total=k_grey_tot(l, i)+k_gas_abs(l, i)+rayleigh_adjust
         tau(l, i)=k_total*d_mass(l, i)
-        omega(l, i)=k_ext_scat(l, i)/(k_total+TINY(omega))
+        omega(l, i)=(k_ext_scat(l, i)+rayleigh_adjust)/(k_total+TINY(omega))
         omega(l, i)                                                     &
           =MIN(omega(l, i), 1.0e+00_RealK-3.2e+01_RealK*eps_r)
       END DO
@@ -155,7 +157,7 @@ SUBROUTINE single_scattering(i_scatter_method_band                      &
 
     DO i=i_first_layer, i_last_layer
       DO l=1, n_profile
-        tau(l, i)=(k_grey_tot(l, i)+k_gas_abs(l, i))                    &
+        tau(l, i)=(k_grey_tot(l, i)+k_gas_abs(l, i)+rayleigh_adjust)    &
           *d_mass(l, i)
         omega(l, i)=0.0e+00_RealK
       END DO

@@ -50,7 +50,7 @@ SUBROUTINE mcica_sample(ierr                                            &
 !                 Spherical geometry
     , sph                                                               &
 !                 Optical Properties
-    , ss_prop                                                           &
+    , ss_prop, rayleigh_adjust                                          &
 !                 Cloudy Properties
     , l_cloud, i_cloud                                                  &
 !                 Cloud Geometry
@@ -81,7 +81,7 @@ SUBROUTINE mcica_sample(ierr                                            &
     , nd_cloud_type, nd_region, nd_overlap_coeff                        &
     , nd_max_order, nd_sph_coeff                                        &
     , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level                &
-    , nd_direction, nd_source_coeff                                     &
+    , nd_direction, nd_source_coeff, nd_k_term_inner                    &
     )
 
 
@@ -159,8 +159,10 @@ SUBROUTINE mcica_sample(ierr                                            &
 !       Allocated size for levels where radiances are calculated
     , nd_direction                                                      &
 !       Allocated size for viewing directions
-    , nd_source_coeff
+    , nd_source_coeff                                                   &
 !       Size allocated for source coefficients
+    , nd_k_term_inner
+!       Size allocated for k-terms in inner loop
 
 
 ! Dummy arguments.
@@ -229,8 +231,11 @@ SUBROUTINE mcica_sample(ierr                                            &
 
 !                 Gaseous properties
   REAL (RealK), INTENT(IN) ::                                           &
-      k_gas_abs(nd_profile, nd_layer)
+      k_gas_abs(nd_profile, nd_layer)                                   &
 !       Gaseous absorptive extinctions
+    , rayleigh_adjust(nd_k_term_inner)
+!       Adjustment to retrieve Rayleigh coefficient for k-term
+!       from band value
 
 !                 Variables for equivalent extinction
   LOGICAL, INTENT(IN) ::                                                &
@@ -407,10 +412,8 @@ SUBROUTINE mcica_sample(ierr                                            &
 !       Index of current sub-grid cloud column
 
   INTEGER, PARAMETER ::                                                 &
-      n_k_term_inner_dummy = 1                                          &
+      n_k_term_inner_dummy = 1
 !       Number of monochromatic calculations in inner loop (dummy here)
-    , nd_k_term_inner_dummy = 1
-!       Maximum number of k-terms in inner loops (dummy here)
 
   REAL (RealK) ::                                                       &
       i_direct_subcol(nd_radiance_profile, 0: nd_layer)                 &
@@ -771,7 +774,7 @@ SUBROUTINE mcica_sample(ierr                                            &
 !             Spherical geometry
       , sph                                                             &
 !             optical properties
-      , ss_prop                                                         &
+      , ss_prop, rayleigh_adjust                                        &
 !             cloudy properties
       , l_cloud, i_cloud                                                &
 !             cloud geometry
@@ -803,7 +806,7 @@ SUBROUTINE mcica_sample(ierr                                            &
       , nd_cloud_type, nd_region, nd_overlap_coeff                      &
       , nd_max_order, nd_sph_coeff                                      &
       , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level              &
-      , nd_direction, nd_source_coeff, nd_k_term_inner_dummy            &
+      , nd_direction, nd_source_coeff, nd_k_term_inner                  &
       )
 
     IF (m == cld%first_subcol_k(i_band,iex)) THEN

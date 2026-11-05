@@ -473,8 +473,10 @@ SUBROUTINE solve_band_ses(ierr                                          &
 !       Incident direct flux
     , flux_inc_down(nd_profile)                                         &
 !       Incident downward flux
-    , dummy_ke(nd_profile, nd_layer)
+    , dummy_ke(nd_profile, nd_layer)                                    &
 !       Dummy array (not used)
+    , rayleigh_adjust(nd_k_term_inner_dummy)
+!       Adjustment to Rayleigh scattering (zero here)
 
 ! Monochromatic incrementing radiances:
   REAL (RealK) ::                                                       &
@@ -607,6 +609,8 @@ SUBROUTINE solve_band_ses(ierr                                          &
       END DO
     END IF
 
+!   Rayleigh scattering adjustment for sub-bands not used here
+    rayleigh_adjust = 0.0_RealK
 
     IF (i_cloud == ip_cloud_mcica) THEN
 
@@ -644,7 +648,7 @@ SUBROUTINE solve_band_ses(ierr                                          &
 !                   Spherical geometry
         , sph                                                           &
 !                   Optical properties
-        , ss_prop                                                       &
+        , ss_prop, rayleigh_adjust                                      &
 !                   Cloudy properties
         , l_cloud, i_cloud                                              &
 !                   Cloud geometry
@@ -677,7 +681,7 @@ SUBROUTINE solve_band_ses(ierr                                          &
         , nd_cloud_type, nd_region, nd_overlap_coeff                    &
         , nd_max_order, nd_sph_coeff                                    &
         , nd_brdf_basis_fnc, nd_brdf_trunc, nd_viewing_level            &
-        , nd_direction, nd_source_coeff                                 &
+        , nd_direction, nd_source_coeff, nd_k_term_inner_dummy          &
         )
 
     ELSE
@@ -716,7 +720,7 @@ SUBROUTINE solve_band_ses(ierr                                          &
 !                   Spherical geometry
         , sph                                                           &
 !                   Optical properties
-        , ss_prop                                                       &
+        , ss_prop, rayleigh_adjust                                      &
 !                   Cloudy properties
         , l_cloud, i_cloud                                              &
 !                   Cloud geometry

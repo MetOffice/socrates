@@ -1010,6 +1010,13 @@ PROGRAM l_run_cdf
     END IF
   ENDIF
 
+  IF (control%i_cloud /= IP_cloud_mcica .AND. &
+      control%i_cloud /= IP_cloud_clear) THEN
+    ! Actinic flux calculation currently only implemented for
+    ! clear-sky or MCICA cloud
+    control%l_actinic_flux = .FALSE.
+  END IF
+
 ! ------------------------------------------------------------------
 ! Angular Integration:
 ! ------------------------------------------------------------------
