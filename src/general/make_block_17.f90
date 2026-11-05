@@ -261,9 +261,14 @@ SUBROUTINE make_block_17(Sp, Sol, ierr)
   ALLOCATE(SubSp%Basic%wavelength_long(SubSp%Basic%n_band))
   SubSp%Basic%wavelength_long = Sp%Var%wavelength_sub_band(2, :)
   ALLOCATE(SubSp%Basic%l_present(0:14))
+  SubSp%Basic%l_present(3) = .FALSE.
   SubSp%Basic%l_present(14) = .FALSE.
   ALLOCATE(SubSp%Solar%solar_flux_band(SubSp%Basic%n_band))
   ALLOCATE(SubSp%Rayleigh%rayleigh_coeff(SubSp%Basic%n_band))
+  SubSp%Gas%n_absorb = Sp%Gas%n_absorb
+  SubSp%Dim%nd_species = Sp%Dim%nd_species
+  ALLOCATE(SubSp%Gas%type_absorb(SubSp%Dim%nd_species))
+  SubSp%Gas%type_absorb = Sp%Gas%type_absorb
 
   IF ( .NOT. Sp%Basic%l_present(17) ) THEN
     ! Fill sub-band Rayleigh coefficients for mean solar spectrum
