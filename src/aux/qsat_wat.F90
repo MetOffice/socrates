@@ -495,7 +495,7 @@
       ! Parameters Used: zerodegc, delta_t,repsilon,one_minus_epsilon
       ! t_high, t_low
 !$OMP  PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE)                       &
-!$OMP& SHARED(qs, t, p, es, npnts)                                      &  
+!$OMP& SHARED(qs, t, p, es, npnts, REPSILON, ONE_MINUS_EPSILON)         &
 !$OMP& PRIVATE(fsubw, tt, atable, itable, i)    
       DO I=1,NPNTS
 !      COMPUTE THE FACTOR THAT CONVERTS FROM SAT VAPOUR PRESSURE IN A

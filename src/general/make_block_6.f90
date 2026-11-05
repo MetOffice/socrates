@@ -32,6 +32,8 @@ SUBROUTINE make_block_6(Spectrum, ierr)
   CHARACTER (LEN=1) :: l_filter
 !   Character flag for filter function
 
+  EXTERNAL make_block_6_1, make_block_6_2
+
 
   IF (ALLOCATED(Spectrum%Planck%thermal_coeff)) &
       DEALLOCATE(Spectrum%Planck%thermal_coeff)

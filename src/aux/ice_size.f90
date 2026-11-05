@@ -76,6 +76,7 @@ PROGRAM ice_size
   REAL  (RealK) :: stdev_size
 !   Standard deviation of crystal size
   REAL  (RealK) :: rand_gauss
+  EXTERNAL rand_gauss
 !   Random variable from a Gaussian distribution with zero mean
 !   and unit variance
 !

@@ -363,8 +363,8 @@
      &        , WEIGHTS,A, B)
           IF (IERR.NE.I_NORMAL) RETURN
 
-   ! If regions of the band are excluded, the corresponding regions
-   ! must be removed from B.
+! If regions of the band are excluded, the corresponding regions
+! must be removed from B.
 
           IF (L_EXCLUDE) THEN
             DO j=1, N_BAND_EXCLUDE(I)
