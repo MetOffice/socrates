@@ -1067,6 +1067,11 @@ PROGRAM l_run_cdf
 ! ------------------------------------------------------------------
   WRITE(iu_stdout, '(/a)') 'Enter treatment of scattering.'
   READ(iu_stdin, *) control%i_scatter_method
+  IF (control%i_scatter_method /= ip_scatter_full) THEN
+    ! Prevent unnecessary calculation of equivalent extinction when
+    ! there is only one term
+    control%l_grey_single = .TRUE.
+  END IF
   DO i=control%first_band, control%last_band
     control%i_scatter_method_band(i)=control%i_scatter_method
   ENDDO

@@ -8,7 +8,7 @@ SOURCE_RADCORE=	adjust_ir_radiance.f90 \
 		calc_actinic_flux_mod.f90 \
 		calc_brdf.f90 \
 		calc_cg_coeff.f90 \
-                calc_contrib_func.f90 \
+		calc_contrib_func.f90 \
 		calc_flux_ipa.f90 \
 		calc_gauss_weight_90.f90 \
 		calc_photolysis_incr_mod.f90 \
@@ -95,6 +95,7 @@ SOURCE_RADCORE=	adjust_ir_radiance.f90 \
 		single_scattering_all.f90 \
 		sol_scat_cos.f90 \
 		solar_coefficient_basic.f90 \
+		solar_no_scat.f90 \
 		solar_source.f90 \
 		solve_band_k_eqv_scl.f90 \
 		solve_band_random_overlap.f90 \

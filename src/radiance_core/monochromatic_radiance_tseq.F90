@@ -69,7 +69,7 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
                      ip_cloud_mcica, ip_cloud_triple, ip_solar,         &
                      ip_cloud_mix_max, ip_cloud_mix_random,             &
                      ip_cloud_part_corr, ip_cloud_part_corr_cnv,        &
-                     ip_cloud_column_max
+                     ip_cloud_column_max, ip_no_scatter_sw
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
   USE calc_actinic_flux_mod, ONLY: calc_actinic_flux
@@ -79,6 +79,7 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
   USE mix_column_mod, ONLY: mix_column
   USE triple_column_mod, ONLY: triple_column
   USE two_stream_mod, ONLY: two_stream
+  USE solar_no_scat_mod, ONLY: solar_no_scat
 
   IMPLICIT NONE
 
@@ -293,7 +294,45 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
 ! Choose an appropriate routine to calculate the fluxes as
 ! determined by the cloud scheme selected.
 
-  IF (i_cloud == ip_cloud_clear) THEN
+  IF (i_scatter_method == ip_no_scatter_sw) THEN
+    ! Fill a single array of clear-sky optical depth    
+    ALLOCATE(tau_clr_f(nd_profile, nd_layer))
+
+    ! Above cloud top.
+    DO i=1, n_cloud_top-1
+      DO l=1, n_profile
+        tau_clr_f(l, i)=ss_prop%tau_clr(l, i)
+      END DO
+    END DO
+
+    ! Below cloud top.
+    DO i=n_cloud_top, n_layer
+      DO l=1, n_profile
+        tau_clr_f(l, i)=ss_prop%tau(l, i, 0)
+      END DO
+    END DO
+
+    ! Solve for the solar transmission with no clouds or scattering
+    CALL solar_no_scat( &
+      control, n_profile, n_layer, &
+      l_scale_solar, adjust_solar_ke, &
+      flux_inc_direct, sec_0, &
+      sph, tau_clr_f, &
+      flux_direct, flux_total, &
+      nd_profile, nd_layer)
+
+    ! Calculate the actinic flux
+    IF (l_actinic) THEN
+      CALL calc_actinic_flux(control, sph%allsky, sph%common, &
+        n_profile, n_layer, tau_clr_f, flux_total, flux_direct, sec_0, &
+        l_scale_solar, adjust_solar_ke, &
+        actinic_flux, &
+        nd_profile, nd_layer)
+    END IF
+
+    DEALLOCATE(tau_clr_f)
+    
+  ELSE IF (i_cloud == ip_cloud_clear) THEN
 !   Allocate and set dynamic arrays.
     ALLOCATE(tau_clr_f(nd_profile, nd_layer))
     ALLOCATE(tau_clr_dir_f(nd_profile, nd_layer))
@@ -365,46 +404,7 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
     DEALLOCATE(omega_clr_f)
     DEALLOCATE(phase_fnc_clr_f)
 
-    IF (l_clear) THEN
-!     The clear fluxes here can be copied directly without
-!     any further calculation.
-      IF (isolir == ip_solar) THEN
-        DO i=0, n_layer
-          DO l=1, n_profile
-            flux_direct_clear(l, i)=flux_direct(l, i)
-          END DO
-        END DO
-        IF (control%l_spherical_solar) THEN
-          DO i=0, n_layer+1
-            DO l=1, n_profile
-              sph%clear%flux_direct(l, i) &
-                = sph%allsky%flux_direct(l, i)
-            END DO
-          END DO
-          DO i=1, n_layer
-            DO l=1, n_profile
-              sph%clear%flux_direct_div(l, i) &
-                = sph%allsky%flux_direct_div(l, i)
-            END DO
-          END DO
-        END IF
-      END IF
-      DO i=1, 2*n_layer+2
-        DO l=1, n_profile
-          flux_total_clear(l, i)=flux_total(l, i)
-        END DO
-      END DO
-      IF (l_actinic) THEN
-        DO i=1, n_layer
-          DO l=1, n_profile
-            actinic_flux_clear(l, i)=actinic_flux(l, i)
-          END DO
-        END DO
-      END IF
-    END IF
-
   ELSE IF (i_cloud == ip_cloud_mcica) THEN
-
 
     CALL mcica_column(ierr                                              &
       , control, cld, bound                                             &
@@ -590,6 +590,46 @@ SUBROUTINE monochromatic_radiance_tseq(ierr                             &
 
   END IF
 
+  IF (i_scatter_method == ip_no_scatter_sw .OR. &
+      i_cloud == ip_cloud_clear) THEN
+    IF (l_clear) THEN
+!     The clear fluxes here can be copied directly without
+!     any further calculation.
+      IF (isolir == ip_solar) THEN
+        DO i=0, n_layer
+          DO l=1, n_profile
+            flux_direct_clear(l, i)=flux_direct(l, i)
+          END DO
+        END DO
+        IF (control%l_spherical_solar) THEN
+          DO i=0, n_layer+1
+            DO l=1, n_profile
+              sph%clear%flux_direct(l, i) &
+                = sph%allsky%flux_direct(l, i)
+            END DO
+          END DO
+          DO i=1, n_layer
+            DO l=1, n_profile
+              sph%clear%flux_direct_div(l, i) &
+                = sph%allsky%flux_direct_div(l, i)
+            END DO
+          END DO
+        END IF
+      END IF
+      DO i=1, 2*n_layer+2
+        DO l=1, n_profile
+          flux_total_clear(l, i)=flux_total(l, i)
+        END DO
+      END DO
+      IF (l_actinic) THEN
+        DO i=1, n_layer
+          DO l=1, n_profile
+            actinic_flux_clear(l, i)=actinic_flux(l, i)
+          END DO
+        END DO
+      END IF
+    END IF
+  END IF
 
   IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 

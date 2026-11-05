@@ -546,6 +546,8 @@ INTEGER, PARAMETER :: ip_scatter_approx = 4
 !   Approximate treatment of scattering
 INTEGER, PARAMETER :: ip_scatter_hybrid = 5
 !   Scattering treatment depends on k-term (specified in spectral file)
+INTEGER, PARAMETER :: ip_no_scatter_sw  = 6
+!   Scattering, surface reflection and clouds ignored completely
 
 ! -----------------------------------------------------------------
 ! Scaling optical depth for direct solar flux calculation

@@ -94,9 +94,10 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
   USE def_ss_prop,  ONLY: str_ss_prop
   USE def_qy,       ONLY: StrQy
   USE def_spherical_geometry, ONLY: StrSphGeo
-  USE rad_pcf, ONLY: ip_solar, ip_infra_red, ip_spherical_harmonic,     &
-                     ip_two_stream, ip_surf_alb_diff, ip_ir_gauss,      &
-                     ip_cloud_mcica, ip_scatter_hybrid, ip_scatter_full
+  USE rad_pcf, ONLY: ip_solar, ip_infra_red, ip_spherical_harmonic, &
+                     ip_two_stream, ip_surf_alb_diff, ip_ir_gauss, &
+                     ip_cloud_mcica, ip_scatter_hybrid, ip_scatter_full, &
+                     ip_no_scatter_sw
   USE diffusivity_factor, ONLY: diffusivity_factor_minor
   USE vectlib_mod, ONLY: exp_v
   USE yomhook, ONLY: lhook, dr_hook
@@ -607,7 +608,8 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
       ! Ignore absorption for gases that only require photolysis rates
       IF (l_photol_only(i_abs_band)) CYCLE
 
-      IF (n_abs_esft(i_abs_band) == 1 .AND. control%l_spherical_solar) THEN
+      IF (n_abs_esft(i_abs_band) == 1 .AND. &
+         (control%l_grey_single .OR. control%l_spherical_solar)) THEN
         ! If there is only 1 k-term for this absorber there is no need to
         ! calculate an equivalent extinction: the single absorption coefficient
         ! is added directly to the grey absorption.
@@ -1129,7 +1131,8 @@ SUBROUTINE solve_band_k_eqv_scl(ierr &
       END DO
     END IF
 
-    IF (i_cloud == ip_cloud_mcica) THEN
+    IF (i_cloud == ip_cloud_mcica .AND. &
+        i_scatter_method /= ip_no_scatter_sw) THEN
 
       CALL mcica_sample(ierr &
         , control, dimen, atm, cld, bound &

@@ -1140,8 +1140,16 @@ calculation of the single scattering properties and the use of a faster
 procedure to calculate the fluxes, for if scattering is neglected, the
 equations for the fluxes reduce to problems of transmission. This is
 not recommended where clouds and aerosols such as dust can cause
-significant scattering in the LW. A hybrid scattering method is also
-available which allows a different treatment of scattering for each
+significant scattering in the LW.
+
+SW scattering may also be ignored which results in calculation of the
+direct flux alone with no need for a two-stream calculation. This only
+includes gas and aerosol absorption with no surface reflection and no
+clouds. It saves considerable computation time but is only suitable
+where gas absorption in the upper atmosphere is optically thick.
+
+A hybrid scattering method is available for both the SW and LW
+which allows a different treatment of scattering for each
 monochromatic calculation (i.e. per k-term). The specified methods are
 read from the spectral file and so require a compatible spectral file
 to be used. This restricts the expensive scattering calculations to

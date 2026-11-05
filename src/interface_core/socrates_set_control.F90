@@ -270,7 +270,7 @@ if (present(l_set_defaults)) then
       call set_int_default(control%i_gas_overlap, ip_overlap_k_eqv_scl)
 
       ! Prevent unnecessary calculation of equivalent extinction when
-      ! there is only one term in the LW
+      ! there is only one term
       if (control%i_scatter_method /= ip_scatter_full) then
         ! Not done for full scattering to maintain LFRic KGO
         control%l_grey_single = .true.

@@ -18,12 +18,12 @@ PROGRAM tidy_90
 !      modified spectral file is written out.
 !
 ! Modules used
-  USE realtype_rd
-  USE def_spectrum
-  USE def_std_io_icf
-  USE error_pcf
-!
-!
+  USE realtype_rd, ONLY: RealK
+  USE def_spectrum, ONLY: StrSpecData
+  USE def_std_io_icf, ONLY: iu_stdout, iu_stdin, iu_err
+  USE socrates_ereport, ONLY: ereport, errormessagelength, &
+    i_normal, i_err_exist, i_err_fatal, i_err_io, i_warning
+
   IMPLICIT NONE
 !
 !
@@ -34,11 +34,8 @@ PROGRAM tidy_90
 !   Character response variable
   CHARACTER (LEN=1)   :: char_yn
 !   Character response variable
-  INTEGER :: ierr = 0
+  INTEGER :: ierr = i_normal
 !   Error flag
-  LOGICAL :: l_interactive
-!   Flag for interactive operation
-!
   INTEGER :: i_process
 !   Process to be carried out
   INTEGER :: ios
@@ -56,9 +53,11 @@ PROGRAM tidy_90
 !
   TYPE(StrSpecData) :: Spectrum
 !   The spectral configuration to be defined
-!
-!
-!
+
+  CHARACTER (LEN=errormessagelength) :: cmessage
+  CHARACTER (LEN=*), PARAMETER :: RoutineName = 'TIDY_90'
+
+
 ! Read in the spectral file.
   WRITE(*, "(a)") "Enter the name of the spectral file."
   READ(*, "(a)") file_spectral
@@ -71,53 +70,31 @@ PROGRAM tidy_90
   WRITE(iu_stdout, '(6x, a)') &
     '"o" to overwrite the existing file;'
   WRITE(iu_stdout, '(6x, a)') &
-    '"n" to create a new file;'
-  WRITE(iu_stdout, '(6x, a)') &
-    '"q" to quit.'
+    '"n" to create a new file'
   WRITE(iu_stdout, '(/)')
-!
-  DO
-    READ(iu_stdin, '(a)') char_qna
-    SELECT CASE(char_qna)
-      CASE('o', 'O')
-        EXIT
-      CASE('n', 'N')
-        WRITE(iu_stdout, '(a)') 'Enter the name of the new file'
-        DO
-          READ(iu_stdin, '(a)') file_spectral
-!         Check for existence of file.
-          INQUIRE(file=file_spectral, exist=l_exist)
-          IF (l_exist) THEN
-            IF (l_interactive) THEN
-              WRITE(iu_stdout, '(/a)') &
-                'This file already exists: do you wish to overwrite? (y/n)'
-              DO
-                READ(iu_stdin, '(a)') char_yn
-                SELECT CASE(char_yn)
-                  CASE('n', 'N')
-                    STOP
-                  CASE('y', 'Y')
-                    EXIT
-                END SELECT
-              ENDDO
-            ELSE
-              STOP
-            ENDIF
-          ELSE
-            EXIT
-          ENDIF
-        ENDDO
-      CASE('q', 'Q')
-        STOP
-      CASE DEFAULT
-        WRITE(iu_err, '(a)') '+++ erroneous response:'
-        IF (.NOT.l_interactive) STOP
-    END SELECT
-    EXIT
-  ENDDO
-!
+
+  READ(iu_stdin, '(a)') char_qna
+  SELECT CASE(char_qna)
+    CASE('o', 'O')
+      ! File will be overwritten
+    CASE('n', 'N')
+      WRITE(iu_stdout, '(a)') 'Enter the name of the new file'
+      READ(iu_stdin, '(a)') file_spectral
+      ! Check for existence of file.
+      INQUIRE(file=file_spectral, exist=l_exist)
+      IF (l_exist) THEN
+        cmessage = 'File exists: will not overwrite.'
+        ierr = i_err_exist
+        CALL ereport(RoutineName, ierr, cmessage)
+      END IF
+    CASE DEFAULT
+      cmessage = 'Erroneous response'
+      ierr = i_err_fatal
+      CALL ereport(RoutineName, ierr, cmessage)
+  END SELECT
+
 ! Now decide which processes are needed.
-  DO
+  loop: DO
 !
     WRITE(iu_stdout, '(/a)') &
       'Select from the following list of operations.'
@@ -142,22 +119,17 @@ PROGRAM tidy_90
       '9.   Scale extinction for ice-crystals.'
     WRITE(iu_stdout, '(5x, a)') &
       '10.   Ensure a single null absorber is present in each band.'
+    WRITE(iu_stdout, '(5x, a)') &
+      '11.   Set the scattering method for each k-term.'
     WRITE(iu_stdout, '(/5x, a//)') &
       '-1.  to finish.'
-!
-    DO
-      READ(iu_stdin, *, iostat=ios) i_process
-      IF (ios /= 0) THEN
-        WRITE(iu_err, '(a)') '+++ Erroneous input:'
-        IF (.NOT.l_interactive) THEN
-          STOP
-        ELSE
-          WRITE(iu_stdout, '(a)') 'Please re-type.'
-        ENDIF
-      ELSE
-        EXIT
-      ENDIF
-    ENDDO
+
+    READ(iu_stdin, *, iostat=ios) i_process
+    IF (ios /= 0) THEN
+      cmessage = 'Erroneous input'
+      ierr = i_err_io
+      CALL ereport(RoutineName, ierr, cmessage)
+    END IF
 !
 !
 !   For each valid process call the appropriate routine.
@@ -165,11 +137,10 @@ PROGRAM tidy_90
       CASE(-1)
 !       Write out the spectral file.
         CALL out_spectrum(file_spectral, Spectrum, ierr)
-        STOP
+        EXIT loop
       CASE(1)
         IF (Spectrum%Basic%l_present(5)) THEN
           CALL remove_weak
-          IF (ierr /= i_normal) STOP
         ELSE
           WRITE(iu_err,'(/a)') &
             'The file contains no k-distribution data: the process ' &
@@ -207,13 +178,13 @@ PROGRAM tidy_90
         ENDIF
       CASE(4)
         IF (Spectrum%Basic%l_present(9)) THEN
-!          CALL remove_weak_cont
-          IF (ierr /= i_normal) STOP
-      ELSE
-        WRITE(iu_err,'(/a)') &
-          'The file contains no continuum data: the process ' &
-          //'cannot be carried out.'
-      ENDIF
+          cmessage = 'remove_weak_cont not implemented'
+          ierr = i_warning
+        ELSE
+          WRITE(iu_err,'(/a)') &
+            'The file contains no continuum data: the process ' &
+            //'cannot be carried out.'
+        ENDIF
       CASE(5)
         IF (Spectrum%Basic%l_present(9)) THEN
           CALL remove_negative_cont_90( &
@@ -233,7 +204,6 @@ PROGRAM tidy_90
       CASE(6)
         IF (Spectrum%Basic%l_present(5)) THEN
           CALL set_major_gas_cont
-          IF (ierr /= i_normal) STOP
         ELSE
           WRITE(iu_err,'(/a)') &
             'The file contains no k-distribution data: the process ' &
@@ -242,7 +212,6 @@ PROGRAM tidy_90
       CASE(7)
         IF (Spectrum%Basic%l_present(11)) THEN
           CALL reorder_aerosols
-          IF (ierr /= i_normal) STOP
         ELSE
           WRITE(iu_err,'(/a)') &
             'The file contains no aerosol data: the process ' &
@@ -266,19 +235,17 @@ PROGRAM tidy_90
         ENDIF
       CASE(10)
         CALL set_null_absorber
+      CASE(11)
+        CALL set_scatter_method
       CASE DEFAULT
-        WRITE(iu_err, '(a)') '+++ Invalid type of process:'
-        IF (l_interactive) THEN
-          WRITE(iu_stdout, '(a)') 'Please re-type.'
-        ELSE
-          STOP
-        ENDIF
+        cmessage = 'Invalid type of process'
+        ierr = i_warning
     END SELECT
-    IF (ierr /= i_normal) stop
-!
+    CALL ereport(RoutineName, ierr, cmessage)
+
     WRITE(iu_stdout, '(/a/)') 'specify next process.'
-!
-  ENDDO
+
+  END DO loop
 
 CONTAINS
 
@@ -330,7 +297,9 @@ CONTAINS
         IF (ios.NE.0) THEN
           WRITE(iu_err, '(A)') '+++ Erroneous response:'
           IF (lock_code(.TRUE.)) THEN
-            STOP
+            cmessage = 'Erroneous response'
+            ierr = i_err_io
+            CALL ereport(RoutineName, ierr, cmessage)
           ELSE
             WRITE(iu_stdout, '(A)') 'Please re-type.'
           ENDIF
@@ -352,7 +321,9 @@ CONTAINS
         IF (ios.NE.0) THEN
           WRITE(iu_err, '(A)') '+++ Erroneous response:'
           IF (lock_code(.TRUE.)) THEN
-            STOP
+            cmessage = 'Erroneous response'
+            ierr = i_err_io
+            CALL ereport(RoutineName, ierr, cmessage)
           ELSE
             WRITE(iu_stdout, '(A)') 'Please re-type.'
           ENDIF
@@ -369,7 +340,9 @@ CONTAINS
       IF (ios.NE.0) THEN
         WRITE(iu_err, '(A)') '+++ Erroneous response:'
         IF (lock_code(.TRUE.)) THEN
-          STOP
+          cmessage = 'Erroneous response'
+          ierr = i_err_io
+          CALL ereport(RoutineName, ierr, cmessage)
         ELSE
           WRITE(iu_stdout, '(A)') 'Please re-type.'
         ENDIF
@@ -447,7 +420,9 @@ CONTAINS
 !     Number of absorbers and continua in a band
     INTEGER :: n_k
 !     Number of k-terms
-    REAL (RealK) :: column_gas(Spectrum%Dim%nd_species)
+    INTEGER :: n_column(Spectrum%Dim%nd_species), n_column_p
+!     Number of column amounts
+    REAL (RealK) :: column_gas(3, Spectrum%Dim%nd_species)
 !     Specified column amounts for gases
     REAL (RealK) :: column_cont(Spectrum%Dim%nd_cont)
 !     Specified column amounts for continua
@@ -470,7 +445,9 @@ CONTAINS
 !     Surface pressure
     REAL (RealK) :: p_level
 !     Pressure at current level
-    REAL (RealK), PARAMETER :: p_toa = 1.0_RealK
+    REAL (RealK) :: p_column(3)
+!     Pressure for different gas cumulative column amounts
+    REAL (RealK), PARAMETER :: p_toa = 0.001_RealK
 !     Pressure at TOA
     REAL (RealK), PARAMETER :: p_inc = 10.0**(0.1_RealK)
 !     Factor to increment pressure across a layer
@@ -480,6 +457,8 @@ CONTAINS
 !     Map sorting absorbers by increasing transmission
     CHARACTER(LEN=1) :: char_yn
 !     Response to yes/no question
+    CHARACTER(LEN=1024) :: column
+!     Column amounts
     LOGICAL :: l_allow_cont_major
 !     Flag for allowing continua to become the major absorber
     LOGICAL :: l_cont_added(Spectrum%Dim%nd_cont)
@@ -499,37 +478,44 @@ CONTAINS
     WRITE(iu_stdout, '(/A, /A)') &
       'For each absorber enter the amounts of the gas to find', &
       'the major gas in each band.'
-    DO i=1, Spectrum%Gas%n_absorb
-      WRITE(iu_stdout, '(4X, 2A)') 'Column amount for ', &
-        name_absorb(Spectrum%Gas%type_absorb(i))
+    n_column = 1
+    DO i_gas=1, Spectrum%Gas%n_absorb
+      WRITE(iu_stdout, '(4X, 2A)') &
+        'Increasing cumulative column amounts (up to 3) for ', &
+        name_absorb(Spectrum%Gas%type_absorb(i_gas))
+      READ(iu_stdin, '(a)') column
+      n_column(i_gas) = 3
       DO
-        READ(iu_stdin, *, IOSTAT=ios) column_gas(i)
-        IF (ios.NE.0) THEN
-          WRITE(iu_err, '(A)') '+++ Erroneous response:'
-          IF (lock_code(.TRUE.)) THEN
-            STOP
+        READ(column, *, IOSTAT=ios) column_gas(1:n_column(i_gas), i_gas)
+        IF (ios /= 0) THEN
+          IF (n_column(i_gas) == 1) THEN
+            cmessage = 'Erroneous response'
+            ierr = i_err_fatal
+            CALL ereport(RoutineName, ierr, cmessage)
           ELSE
-            WRITE(iu_stdout, '(A)') 'Please re-type.'
-          ENDIF
+            n_column(i_gas) = n_column(i_gas) - 1
+          END IF
         ELSE
           EXIT
-        ENDIF
+        END IF
       END DO
-    ENDDO
-    DO i=1, Spectrum%ContGen%n_cont
-      index_gas_1=Spectrum%ContGen%index_cont_gas_1(i)
-      index_gas_2=Spectrum%ContGen%index_cont_gas_2(i)
+    END DO
+    DO i_cont=1, Spectrum%ContGen%n_cont
+      index_gas_1=Spectrum%ContGen%index_cont_gas_1(i_cont)
+      index_gas_2=Spectrum%ContGen%index_cont_gas_2(i_cont)
       WRITE(iu_stdout, '(4X, A)') 'Column amount for ' // &
         TRIM(name_absorb(Spectrum%Gas%type_absorb(index_gas_1))) // &
         ' -- ' // &
         TRIM(name_absorb(Spectrum%Gas%type_absorb(index_gas_2))) // &
         ' continuum'
       DO
-        READ(iu_stdin, *, IOSTAT=ios) column_cont(i)
+        READ(iu_stdin, *, IOSTAT=ios) column_cont(i_cont)
         IF (ios.NE.0) THEN
           WRITE(iu_err, '(A)') '+++ Erroneous response:'
           IF (lock_code(.TRUE.)) THEN
-            STOP
+            cmessage = 'Erroneous response'
+            ierr = i_err_io
+            CALL ereport(RoutineName, ierr, cmessage)
           ELSE
             WRITE(iu_stdout, '(A)') 'Please re-type.'
           ENDIF
@@ -539,22 +525,33 @@ CONTAINS
       END DO
     ENDDO
 
-    IF (Spectrum%ContGen%n_cont > 0) THEN
-      WRITE(iu_stdout, '(/,A)') 'Enter the surface pressure.'
-      DO
+    n_column_p = MAXVAL(n_column)
+    IF (Spectrum%ContGen%n_cont > 0 .OR. n_column_p > 1) THEN
+      IF (n_column_p > 1) THEN
+        WRITE(iu_stdout, '(/,A)') 'Enter the column pressures (low to high)'
+        READ(iu_stdin, *, IOSTAT=ios) p_column(1:n_column_p)
+        IF (ios /= 0 .OR. ANY(p_column(1:n_column_p) <= 0.0_RealK)) THEN
+          cmessage = 'Erroneous response'
+          ierr = i_err_io
+          CALL ereport(RoutineName, ierr, cmessage)
+        ELSE
+          p_surf=MAXVAL(p_column(1:n_column_p))
+        END IF
+      ELSE
+        WRITE(iu_stdout, '(/,A)') 'Enter the surface pressure.'
         READ(iu_stdin, *, IOSTAT=ios) p_surf
         IF (ios /= 0 .OR. p_surf <= 0.0_RealK) THEN
-          WRITE(iu_err, '(A)') '+++ Erroneous response:'
-          IF (lock_code(.TRUE.)) THEN
-            STOP
-          ELSE
-            WRITE(iu_stdout, '(A)') 'Please re-type.'
-          ENDIF
-        ELSE
-          EXIT
-        ENDIF
-      ENDDO
+          cmessage = 'Erroneous response'
+          ierr = i_err_io
+          CALL ereport(RoutineName, ierr, cmessage)
+        END IF
+      END IF
+    ELSE
+!     If there are no continua the surface pressure is arbitrary
+      p_surf=1.0E+05_RealK
+    END IF
 
+    IF (Spectrum%ContGen%n_cont > 0) THEN
       WRITE(iu_stdout, '(/,A)') 'Do you wish to allow continua to ' // &
           'become the major absorber? (Y/N)'
       DO
@@ -568,124 +565,126 @@ CONTAINS
         ELSE
           WRITE(iu_err, '(A)') '+++ Erroneous response:'
           IF (lock_code(.TRUE.)) THEN
-            STOP
+            cmessage = 'Erroneous response'
+            ierr = i_err_fatal
+            CALL ereport(RoutineName, ierr, cmessage)
           ELSE
             WRITE(iu_stdout, '(A)') 'Please re-type.'
           ENDIF
         ENDIF
       ENDDO
+    ELSE
+      l_allow_cont_major=.FALSE.
     END IF
 
-    IF (Spectrum%ContGen%n_cont > 0) THEN
+    DO i_band=1,Spectrum%Basic%n_band
+      n_band_absorb=Spectrum%Gas%n_band_absorb(i_band)
+      n_band_cont=Spectrum%ContGen%n_band_cont(i_band)
 
-      DO i_band=1,Spectrum%Basic%n_band
-        n_band_absorb=Spectrum%Gas%n_band_absorb(i_band)
-        n_band_cont=Spectrum%ContGen%n_band_cont(i_band)
+!     Attempt to define major absorber from where the total optical depth
+!     reaches 1
+      p_level=p_toa
+      DO WHILE (p_level <= p_surf)
+        p_level=p_level*p_inc
 
-!       Attempt to define major absorber from where the total optical depth
-!       reaches 1
-        p_level=p_toa
-        DO WHILE (p_level <= p_surf)
-          p_level=p_level*p_inc
-
-!         Gaseous transmissions. Experience shows that the major absorber is
-!         best determined if any continua that are perfectly correlated with
-!         the gas are not included.
-          trans_column_gas=1.0_RealK
-          l_cont_added=.FALSE.
-          DO i=1,n_band_absorb
-            i_gas=Spectrum%Gas%index_absorb(i, i_band)
-            column_mass_gas(i)=column_gas(i)*p_level/p_surf
-            n_k=Spectrum%Gas%i_band_k(i_band, i_gas)
-            trans_column_gas(i)=SUM(Spectrum%Gas%w(1:n_k, i_band, i_gas) &
-              *EXP(-Spectrum%Gas%k(1:n_k, i_band, i_gas)*column_mass_gas(i)))
-          END DO
-
-!         Continuum transmissions.
-          trans_column_cont=1.0_RealK
-          DO j=1,n_band_cont
-            i_cont=Spectrum%ContGen%index_cont(j, i_band)
-!           Only consider continua whose overlap treatment is the same as that
-!           for gases.
-            IF (Spectrum%ContGen%i_cont_overlap_band(i_band, i_cont) == 0) THEN
-              column_mass_cont(j)=column_cont(j)*(p_level/p_surf)**2
-              n_k=Spectrum%ContGen%i_band_k_cont(i_band, i_cont)
-              trans_column_cont(j) &
-                  =SUM(Spectrum%ContGen%w_cont(1:n_k, i_band, i_cont) &
-                  *EXP(-Spectrum%ContGen%k_cont(1:n_k, i_band, i_cont) &
-                  *column_mass_cont(j)))
+!       Gaseous transmissions. Experience shows that the major absorber is
+!       best determined if any continua that are perfectly correlated with
+!       the gas are not included.
+        trans_column_gas=1.0_RealK
+        l_cont_added=.FALSE.
+        DO i=1,n_band_absorb
+          i_gas=Spectrum%Gas%index_absorb(i, i_band)
+          IF (n_column(i_gas) == 3) THEN
+            IF (p_level < p_column(1)) THEN
+              column_mass_gas(i) = column_gas(1, i_gas)*p_level/p_column(1)
+            ELSE IF (p_level < p_column(2)) THEN
+              column_mass_gas(i) = column_gas(1, i_gas) &
+                + ( column_gas(2, i_gas) - column_gas(1, i_gas) ) &
+                * ( p_level - p_column(1) ) / ( p_column(2) - p_column(1) )
+            ELSE
+              column_mass_gas(i) = column_gas(2, i_gas) &
+                + ( column_gas(3, i_gas) - column_gas(2, i_gas) ) &
+                * ( p_level - p_column(2) ) / ( p_column(3) - p_column(2) )
             END IF
-          END DO
-
-!         Assume random overlap to calculate total band transmission and
-!         check if an optical depth of 1 has been reached
-          trans_column_tot=PRODUCT(trans_column_gas)*PRODUCT(trans_column_cont)
-          IF (trans_column_tot <= trans_def_major) EXIT
+          ELSE IF (n_column(i_gas) == 2) THEN
+            IF (p_level < p_column(1)) THEN
+              column_mass_gas(i) = column_gas(1, i_gas)*p_level/p_column(1)
+            ELSE
+              column_mass_gas(i) = column_gas(1, i_gas) &
+                + ( column_gas(2, i_gas) - column_gas(1, i_gas) ) &
+                * ( p_level - p_column(1) ) / ( p_surf - p_column(1) )
+            END IF
+          ELSE
+            column_mass_gas(i)=column_gas(1, i_gas)*p_level/p_surf
+          END IF
+          n_k=Spectrum%Gas%i_band_k(i_band, i_gas)
+          trans_column_gas(i)=SUM(Spectrum%Gas%w(1:n_k, i_band, i_gas) &
+            *EXP(-Spectrum%Gas%k(1:n_k, i_band, i_gas)*column_mass_gas(i)))
         END DO
 
-!       Sort gases by increasing transmission
-        IF (n_band_absorb > 0) THEN
-          CALL map_heap_func(trans_column_gas(1:n_band_absorb), &
-            map(1:n_band_absorb))
-          Spectrum%Gas%index_absorb(1:n_band_absorb, i_band) = &
-            Spectrum%Gas%index_absorb(map(1:n_band_absorb), i_band)
-          trans_major_gas = trans_column_gas(map(1))
-        ELSE
-          trans_major_gas = 1.0_RealK
-        END IF
+!       Continuum transmissions.
+        trans_column_cont=1.0_RealK
+        DO j=1,n_band_cont
+          i_cont=Spectrum%ContGen%index_cont(j, i_band)
+!         Only consider continua whose overlap treatment is the same as that
+!         for gases.
+          IF (Spectrum%ContGen%i_cont_overlap_band(i_band, i_cont) == 0) THEN
+            column_mass_cont(j)=column_cont(i_cont)*(p_level/p_surf)**2
+            n_k=Spectrum%ContGen%i_band_k_cont(i_band, i_cont)
+            trans_column_cont(j) &
+                =SUM(Spectrum%ContGen%w_cont(1:n_k, i_band, i_cont) &
+                *EXP(-Spectrum%ContGen%k_cont(1:n_k, i_band, i_cont) &
+                *column_mass_cont(j)))
+          END IF
+        END DO
 
-!       Sort continua by increasing transmission
-        IF (n_band_cont > 0) THEN
-          CALL map_heap_func(trans_column_cont(1:n_band_cont), &
-            map(1:n_band_cont))
-          Spectrum%ContGen%index_cont(1:n_band_cont, i_band) &
-            =Spectrum%ContGen%index_cont(map(1:n_band_cont), i_band)
-          trans_major_cont=trans_column_cont(map(1))
-        ELSE
-          trans_major_cont = 1.0_RealK
-        END IF
-
-!       Determine if the a continuum is the major absorber
-        IF (l_allow_cont_major .AND. &
-            trans_major_cont < trans_major_gas) THEN
-          Spectrum%ContGen%l_cont_major(i_band)=.TRUE.
-        ELSE
-          Spectrum%ContGen%l_cont_major(i_band)=.FALSE.
-        END IF
-
+!       Assume random overlap to calculate total band transmission and
+!       check if an optical depth of 1 has been reached
+        trans_column_tot=PRODUCT(trans_column_gas)*PRODUCT(trans_column_cont)
+        IF (trans_column_tot <= trans_def_major) EXIT
       END DO
 
-    ELSE
-
-!     Go through the bands to find the transmission for each gas
-      DO i_band=1,Spectrum%Basic%n_band
-        n_band_absorb = Spectrum%Gas%n_band_absorb(i_band)
-        DO j=1,n_band_absorb
-          i_gas=Spectrum%Gas%index_absorb(j, i_band)
-          n_k=Spectrum%Gas%i_band_k(i_band, i_gas)
-          trans_column_gas(j)=SUM(Spectrum%Gas%w(1:n_k, i_band, i_gas) &
-            *EXP(-Spectrum%Gas%k(1:n_k, i_band, i_gas)*column_gas(i_gas)))
-        END DO
-        IF (n_band_absorb > 0) THEN
-          CALL map_heap_func(trans_column_gas(1:n_band_absorb), &
-            map(1:n_band_absorb))
-          Spectrum%Gas%index_absorb(1:n_band_absorb, i_band) = &
-              Spectrum%Gas%index_absorb(map(1:n_band_absorb), i_band)
-          trans_major_gas = trans_column_gas(map(1))
-        END IF
-        IF (n_band_absorb > 1) THEN
-          IF (-2.0_RealK*LOG(trans_column_gas(map(2))) &
-            > -LOG(trans_major_gas)) THEN
-            Spectrum%Gas%i_overlap(i_band) = 3
-          ELSE
-            Spectrum%Gas%i_overlap(i_band) = 4
-          END IF
-        ELSE
+!     Sort gases by increasing transmission
+      IF (n_band_absorb > 0) THEN
+        CALL map_heap_func(trans_column_gas(1:n_band_absorb), &
+          map(1:n_band_absorb))
+        Spectrum%Gas%index_absorb(1:n_band_absorb, i_band) = &
+          Spectrum%Gas%index_absorb(map(1:n_band_absorb), i_band)
+        trans_major_gas = trans_column_gas(map(1))
+      ELSE
+        trans_major_gas = 1.0_RealK
+      END IF
+      IF (n_band_absorb > 1) THEN
+        IF (-2.0_RealK*LOG(trans_column_gas(map(2))) &
+          > -LOG(trans_major_gas)) THEN
           Spectrum%Gas%i_overlap(i_band) = 3
+        ELSE
+          Spectrum%Gas%i_overlap(i_band) = 4
         END IF
-      ENDDO
+      ELSE
+        Spectrum%Gas%i_overlap(i_band) = 3
+      END IF
 
-    END IF
+!     Sort continua by increasing transmission
+      IF (n_band_cont > 0) THEN
+        CALL map_heap_func(trans_column_cont(1:n_band_cont), &
+          map(1:n_band_cont))
+        Spectrum%ContGen%index_cont(1:n_band_cont, i_band) &
+          =Spectrum%ContGen%index_cont(map(1:n_band_cont), i_band)
+        trans_major_cont=trans_column_cont(map(1))
+      ELSE
+        trans_major_cont = 1.0_RealK
+      END IF
+
+!     Determine if the a continuum is the major absorber
+      IF (l_allow_cont_major .AND. &
+          trans_major_cont < trans_major_gas) THEN
+        Spectrum%ContGen%l_cont_major(i_band)=.TRUE.
+      ELSE
+        Spectrum%ContGen%l_cont_major(i_band)=.FALSE.
+      END IF
+
+    END DO
 
   END SUBROUTINE set_major_gas_cont
 
@@ -772,7 +771,9 @@ CONTAINS
         IF (ios /= 0) THEN
           WRITE(iu_err, '(a)') '+++ Erroneous response:'
           IF (lock_code(.TRUE.)) THEN
-            STOP
+            cmessage = 'Erroneous response'
+            ierr = i_err_io
+            CALL ereport(RoutineName, ierr, cmessage)
           ELSE
             WRITE(iu_stdout, '(a)') 'Please re-type.'
           ENDIF
@@ -791,7 +792,9 @@ CONTAINS
             IF (index_gas == 0) THEN
               WRITE(iu_err, '(a)') '+++ Erroneous response:'
               IF (lock_code(.TRUE.)) THEN
-                STOP
+                cmessage = 'Erroneous response'
+                ierr = i_err_fatal
+                CALL ereport(RoutineName, ierr, cmessage)
               ELSE
                 WRITE(iu_stdout, '(a)') 'Please re-type.'
               ENDIF
@@ -883,5 +886,84 @@ CONTAINS
     END DO
 
   END SUBROUTINE set_null_absorber
+
+!+ ---------------------------------------------------------------------
+! Subroutine to set the scattering method per k-term 
+!
+! Method:
+!      A typical amount of each gas in a column is given.
+!      For each k-term the scattering method is set depending on the
+!      column optical depth.
+!      (For use with the Hybrid Scattering scheme.)
+!
+!- ---------------------------------------------------------------------
+  SUBROUTINE set_scatter_method
+
+    USE gas_list_pcf, ONLY: name_absorb
+    USE rad_pcf, ONLY: ip_no_scatter_sw, ip_no_scatter_abs, ip_scatter_full
+    IMPLICIT NONE
+
+    INTEGER :: i, k, i_band, i_gas
+!     Loop variables
+    INTEGER :: n_k
+!     Number of k-terms
+    REAL (RealK) :: column_gas(Spectrum%Dim%nd_species)
+!     Specified column amounts for gases
+    REAL (RealK) :: tau
+!     Optical depth of column
+    REAL (RealK) :: tau_max
+!     Threshold optical depth for neglecting scattering
+
+!   Obtain column amounts of gas absorbers.
+    WRITE(iu_stdout, '(/A, /A)') &
+      'For each gas absorber enter the column amount (kg/m2)', &
+      'to determine where scattering can be neglected.'
+    DO i=1, Spectrum%Gas%n_absorb
+      WRITE(iu_stdout, '(4X, 2A)') 'Column amount for ', &
+        name_absorb(Spectrum%Gas%type_absorb(i))
+      READ(iu_stdin, *, IOSTAT=ios) column_gas(i)
+      IF (ios.NE.0) THEN
+        cmessage = 'Erroneous response'
+        ierr = i_err_io
+        CALL ereport(RoutineName, ierr, cmessage)
+      END IF
+    END DO
+
+!   Optical depth of column for which scattering is neglected
+    WRITE(iu_stdout, '(/A)') &
+      'Enter the column optical depth threshold for neglecting scattering.'
+    READ(iu_stdin, *, IOSTAT=ios) tau_max
+    IF (ios.NE.0) THEN
+      cmessage = 'Erroneous response'
+      ierr = i_err_io
+      CALL ereport(RoutineName, ierr, cmessage)
+    END IF
+
+    DO i_band=1, Spectrum%Basic%n_band
+      DO i=1, Spectrum%Gas%n_band_absorb(i_band)
+        i_gas = Spectrum%Gas%index_absorb(i, i_band)
+        n_k = Spectrum%Gas%i_band_k(i_band, i_gas)
+        IF (column_gas(i_gas) > 0.0_RealK) THEN
+          DO k=1, n_k
+            tau = Spectrum%Gas%k(k, i_band, i_gas) * column_gas(i_gas)
+            IF (tau > tau_max) THEN
+              IF (Spectrum%Basic%l_present(2)) THEN
+                ! SW spectral file
+                Spectrum%Gas%i_scat(k, i_band, i_gas) = ip_no_scatter_sw
+              ELSE
+                ! LW spectral file
+                Spectrum%Gas%i_scat(k, i_band, i_gas) = ip_no_scatter_abs
+              END IF
+            ELSE
+              Spectrum%Gas%i_scat(k, i_band, i_gas) = ip_scatter_full
+            END IF
+          END DO
+        ELSE
+          Spectrum%Gas%i_scat(1:n_k, i_band, i_gas) = 0
+        END IF
+      END DO
+    END DO
+
+  END SUBROUTINE set_scatter_method
 
 END PROGRAM tidy_90

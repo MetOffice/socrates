@@ -97,7 +97,7 @@ SUBROUTINE monochromatic_radiance(ierr                                  &
   USE def_spherical_geometry, ONLY: StrSphGeo
   USE rad_pcf, ONLY: ip_direct_csr_scaling, ip_direct_noscaling,        &
                      ip_ir_gauss, ip_spherical_harmonic, ip_two_stream, &
-                     ip_surf_alb_diff
+                     ip_surf_alb_diff, ip_no_scatter_sw
   USE yomhook, ONLY: lhook, dr_hook
   USE parkind1, ONLY: jprb, jpim
   USE calc_contrib_func_mod, ONLY: calc_contrib_func 
@@ -450,7 +450,8 @@ SUBROUTINE monochromatic_radiance(ierr                                  &
          (i_angular_integration == ip_spherical_harmonic) ) THEN
 
 !     Rescale the optical depth and albedo of single scattering.
-      IF (l_rescale) THEN
+      IF (l_rescale .AND. &
+          i_scatter_method /= ip_no_scatter_sw) THEN
 
         !-----------------------------------------------------------------
         ! For direct solar flux, the optical depth can be scaled by three
