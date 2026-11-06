@@ -135,6 +135,7 @@ if (present(spectrum_name).and.present(spectrum)) then
 else if (present(spectrum_name).or.present(spectrum)) then
   ! DEPENDS ON: read_spectrum
   call read_spectrum(spectral_file, spec)
+  call set_weight_uv_index(spec)
   if (spec%solar%weight_blue(1) == rmdi) then
     allocate(weight_blue(spec%basic%n_band))
     call set_weight_blue(spec, weight_blue, wavelength_blue)
@@ -403,6 +404,69 @@ contains
   end function retain_absorber
 
 end subroutine compress_spectrum
+
+
+subroutine set_weight_uv_index(spec)
+
+use realtype_rd, only: RealK
+
+implicit none
+
+type(StrSpecData), intent(inout) :: spec
+
+! Parameters defining UV-index erythema action spectrum (CIE 1998)
+real(RealK), parameter :: k_er = 40.0_RealK  ! m2 W-1
+real(RealK), parameter :: wl_1 = 250.0_RealK ! nm
+real(RealK), parameter :: wl_2 = 298.0_RealK ! nm
+real(RealK), parameter :: wl_3 = 328.0_RealK ! nm
+real(RealK), parameter :: wl_4 = 400.0_RealK ! nm
+real(RealK), parameter :: a_1 = 0.094_RealK
+real(RealK), parameter :: a_2 = 0.015_RealK
+real(RealK), parameter :: b_1 = 298.0_RealK
+real(RealK), parameter :: b_2 = 140.0_RealK
+real(RealK), parameter :: m2nm = 1.0e9_RealK
+
+integer :: i_sub
+real(RealK) :: sub_band_min, sub_band_max, total_range
+real(RealK) :: range_min, range_max, range
+
+do i_sub=1, spec%var%n_sub_band
+  spec%var%weight_uv_index(i_sub) = 0.0_RealK
+  sub_band_min = spec%var%wavelength_sub_band(1, i_sub) * m2nm
+  sub_band_max = spec%var%wavelength_sub_band(2, i_sub) * m2nm
+  total_range = sub_band_max - sub_band_min
+
+  ! Range 1: S_er = 1, for wavelengths wl_1 - wl_2
+  range_min = max(sub_band_min, wl_1)
+  range_max = min(sub_band_max, wl_2)
+  range = range_max - range_min
+  if (range > 0.0_RealK) then
+    spec%var%weight_uv_index(i_sub) = spec%var%weight_uv_index(i_sub) &
+      + k_er * range / total_range
+  end if
+
+  ! Range 2: S_er = 10**(a_1*(b_1-wavelength)), for wavelengths wl_2 - wl_3
+  range_min = max(sub_band_min, wl_2)
+  range_max = min(sub_band_max, wl_3)
+  range = range_max - range_min
+  if (range > 0.0_RealK) then
+    spec%var%weight_uv_index(i_sub) = spec%var%weight_uv_index(i_sub) &
+      + ( 10**(a_1 * (b_1 - range_min)) - 10**(a_1 * (b_1 - range_max)) ) &
+      * k_er / ( a_1 * log(10.0_RealK) * total_range )
+  end if
+
+  ! Range 3: S_er = 10**(a_2*(b_2-wavelength)), for wavelengths wl_3 - wl_4
+  range_min = max(sub_band_min, wl_3)
+  range_max = min(sub_band_max, wl_4)
+  range = range_max - range_min
+  if (range > 0.0_RealK) then
+    spec%var%weight_uv_index(i_sub) = spec%var%weight_uv_index(i_sub) &
+      + ( 10**(a_2 * (b_2 - range_min)) - 10**(a_2 * (b_2 - range_max)) ) &
+      * k_er / ( a_2 * log(10.0_RealK) * total_range )
+  end if
+end do
+
+end subroutine set_weight_uv_index
 
 
 subroutine set_weight_blue(spec, weight_blue, wavelength_blue)

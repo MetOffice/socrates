@@ -1024,6 +1024,13 @@ if (control%l_clean .or. control%l_clear_clean) then
   control_clean%l_photolysis_rate = control%l_photolysis_rate_clean
   control_clean%l_photolysis_rate_clear = control%l_photolysis_rate_clear_clean
 
+  control_clean%l_uv_index = associated(diag%uv_index_clean)
+  control_clean%l_uv_index_clear = associated(diag%uv_index_clear_clean)
+  control_clean%l_uv_index_surf = associated(diag%uv_index_clean_surf)
+  control_clean%l_uv_index_clear_surf = associated( &
+             diag%uv_index_clear_clean_surf)
+
+  control_clean%l_blue_flux_surf          = .false.
   control_clean%l_aerosol_absorption_band = .false.
   control_clean%l_aerosol_scattering_band = .false.
   control_clean%l_aerosol_asymmetry_band  = .false.
@@ -1045,6 +1052,8 @@ if (associated(diag%heating_rate) .or. &
     associated(diag%flux_up_toa) .or. &
     associated(diag%flux_up_tile) .or. &
     control%l_clear .or. &
+    control%l_uv_index .or. &
+    control%l_uv_index_surf .or. &
     control%l_blue_flux_surf .or. &
     control%l_aerosol_absorption_band .or. &
     control%l_aerosol_scattering_band .or. &

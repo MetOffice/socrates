@@ -131,6 +131,11 @@ control%l_flux_direct_clear_band = associated(diag%flux_direct_clear_band)
 control%l_flux_down_clear_band = associated(diag%flux_down_clear_band)
 control%l_flux_up_clear_band = associated(diag%flux_up_clear_band)
 
+control%l_uv_index = associated(diag%uv_index)
+control%l_uv_index_clear = associated(diag%uv_index_clear)
+control%l_uv_index_surf = associated(diag%uv_index_surf)
+control%l_uv_index_clear_surf = associated(diag%uv_index_clear_surf)
+
 control%l_photolysis_rate = associated(diag%photolysis_rate)
 do k=1, spectrum%photol%n_pathway
   if (associated(diag%photolysis(k)%rate)) &
@@ -155,6 +160,8 @@ if (associated(diag%flux_direct_clear)      .or. &
     control%l_flux_direct_clear_band        .or. &
     control%l_flux_down_clear_band          .or. &
     control%l_flux_up_clear_band            .or. &
+    control%l_uv_index_clear                .or. &
+    control%l_uv_index_clear_surf           .or. &
     control%l_photolysis_rate_clear) then
   control%l_clear = .true.
 end if
@@ -171,6 +178,8 @@ if (associated(diag%flux_direct_clean)      .or. &
     associated(diag%flux_direct_clean_band) .or. &
     associated(diag%flux_down_clean_band)   .or. &
     associated(diag%flux_up_clean_band)     .or. &
+    associated(diag%uv_index_clean)         .or. &
+    associated(diag%uv_index_clean_surf)    .or. &
     control%l_photolysis_rate_clean) then
   control%l_clean = .true.
 end if
@@ -187,6 +196,8 @@ if (associated(diag%flux_direct_clear_clean)      .or. &
     associated(diag%flux_direct_clear_clean_band) .or. &
     associated(diag%flux_down_clear_clean_band)   .or. &
     associated(diag%flux_up_clear_clean_band)     .or. &
+    associated(diag%uv_index_clear_clean)         .or. &
+    associated(diag%uv_index_clear_clean_surf)    .or. &
     control%l_photolysis_rate_clear_clean) then
   control%l_clear_clean = .true.
 end if

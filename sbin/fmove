@@ -3,7 +3,7 @@
 # Script to change the base name of all output files from a run of the
 # radiation code.
 #
-for suffix in uflx dflx sflx nflx vflx hrts radn cfi cff aflx \
+for suffix in uflx dflx sflx nflx vflx hrts radn cfi cff aflx uvindex \
               `ls | grep $1.ph_rate | sed s/$1.//`
 do
    if [ -f $1.$suffix ] 

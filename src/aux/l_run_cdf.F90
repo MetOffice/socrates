@@ -170,6 +170,8 @@ PROGRAM l_run_cdf
 !       Contribution function (to the upwards intensity at TOA)
   REAL  (RealK), ALLOCATABLE :: contrib_func_f(:,:,:)
 !       Contribution function (to the outgoing flux at TOA)
+  REAL  (RealK), ALLOCATABLE :: uv_index(:,:,:)
+!       UV-index
   
   REAL  (RealK), ALLOCATABLE :: layer_heat_capacity(:,:)
 !       Heat capacity of layers
@@ -334,6 +336,11 @@ PROGRAM l_run_cdf
   control%l_flux_direct_clear_sph_band = .FALSE.
   control%l_flux_down_clear_band = .FALSE.
   control%l_flux_up_clear_band = .FALSE.
+  control%l_uv_index = spectrum%basic%l_present(17) &
+                 .AND. spectrum%basic%l_present(2)
+  control%l_uv_index_surf = control%l_uv_index
+  control%l_uv_index_clear = .FALSE.
+  control%l_uv_index_clear_surf = .FALSE.
   control%l_actinic_flux = spectrum%basic%l_present(2)
   control%l_actinic_flux_clear = .FALSE.
   control%l_actinic_flux_band = .FALSE.
@@ -411,6 +418,12 @@ PROGRAM l_run_cdf
               dimen%nd_channel)                                       )
   ALLOCATE( heating_rate(dimen%nd_profile, dimen%nd_layer,              &
               dimen%nd_channel)                                       )
+  IF (control%l_uv_index) THEN
+    ALLOCATE( uv_index(dimen%nd_profile, 0: dimen%nd_layer,             &
+              dimen%nd_channel)                                       )
+  ELSE
+    ALLOCATE( uv_index(1, 1, 1) )
+  END IF
   IF (control%l_actinic_flux) THEN
     ALLOCATE( actinic_flux(dimen%nd_profile, dimen%nd_layer,            &
                 dimen%nd_channel)                                     )
@@ -1493,6 +1506,12 @@ END IF
       END IF
     END IF
 
+    IF (control%l_uv_index_surf) THEN
+      WRITE(iu_stdout, "(a,(f5.2))") 'UV-index:', radout%uv_index_surf
+    END IF
+    IF (control%l_uv_index) THEN
+      uv_index = radout%uv_index
+    END IF
     IF (control%l_actinic_flux) THEN
       actinic_flux = radout%actinic_flux
     END IF
@@ -1514,8 +1533,8 @@ END IF
       atm%p, atm%p_level,                                               &
       n_channel,                                                        &
       flux_total, flux_diffuse_down,                                    &
-      radout%flux_up, flux_net,                                         &
-      flux_direct, actinic_flux, photolysis_rate, heating_rate,         &
+      radout%flux_up, flux_net, flux_direct,                            &
+      uv_index, actinic_flux, photolysis_rate, heating_rate,            &
       contrib_func_i, contrib_func_f,                                   &
       dimen%nd_profile, npd_latitude, npd_longitude, dimen%nd_layer,    &
       dimen%nd_channel,                                                 &

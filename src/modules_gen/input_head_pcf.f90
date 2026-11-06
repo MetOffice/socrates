@@ -30,7 +30,7 @@ MODULE input_head_pcf
 !   Maximum number of input profiles
   INTEGER, Parameter :: NPD_data_column      = 35
 !   Maximum number of columns of data
-  INTEGER, Parameter :: NPD_phys_type        = 62
+  INTEGER, Parameter :: NPD_phys_type        = 63
 !   Maximum number of types of data
   INTEGER, Parameter :: NPD_unit             = 20
 !   Number of physical units
@@ -182,6 +182,8 @@ MODULE input_head_pcf
 !   Actinic flux
   INTEGER, Parameter :: IP_photolysis_rate                       = 62
 !   Photolysis rate
+  INTEGER, Parameter :: IP_uv_index                              = 63
+!   UV-index
 
 !
   CHARACTER  (LEN=len_col_header), Parameter, &
@@ -201,7 +203,7 @@ MODULE input_head_pcf
     'AZIM      ', 'RADN      ', 'SRFCHR    ', 'OPWT      ', &
     'OPICE     ', 'OPSS      ', 'ISOS      ', 'GEOM      ', &
     'PHOTOL    ', 'PLEV      ', 'CFI       ', 'CFF       ', &
-    'AFLX      ', 'PHRATE    ' /) 
+    'AFLX      ', 'PHRATE    ', 'UVINDEX   ' /) 
 !   Headers for physical data
 !
   CHARACTER  (LEN=len_file_suffix), Parameter, &
@@ -221,7 +223,7 @@ MODULE input_head_pcf
     'vwazim      ', 'radn        ', 'surf        ', 'op_water    ', &
     'op_ice      ', 'ss          ', 'isos        ', 'view        ', &
     'photol      ', 'pl          ', 'cfi         ', 'cff         ', &
-    'aflx        ', 'ph_rate     '  /) 
+    'aflx        ', 'ph_rate     ', 'uvindex     '  /) 
 !   File suffixes for physical data
 !
 !
@@ -257,7 +259,8 @@ MODULE input_head_pcf
     ' Isotropic source             ', ' Viewing Geometry             ', &
     ' Rate of photolysis           ', ' Pressure on Levels           ', &
     ' Contribution function (inty) ', ' Contribution function (flux) ', &
-    ' Actinic flux                 ', ' Photolysis rate              '/)
+    ' Actinic flux                 ', ' Photolysis rate              ', &
+    ' UV-index                     '/)
 !   Long titles for physical data
 !
 !

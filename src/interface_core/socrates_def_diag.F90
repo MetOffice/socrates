@@ -139,6 +139,30 @@ real(RealExt), pointer :: flux_up_uv_clear_surf(:) => null()
 real(RealExt) :: wavelength_uv = 3.2e-07_RealExt
 ! Upper wavelength boundary for the UV flux diagnostics, defaults to 320nm
 
+real(RealExt), pointer :: uv_index(:, :) => null()
+! UV-index (n_profile, 0:n_layer)
+
+real(RealExt), pointer :: uv_index_clear(:, :) => null()
+! Clear-sky UV-index (n_profile, 0:n_layer)
+
+real(RealExt), pointer :: uv_index_surf(:) => null()
+! UV-index at the surface (n_profile)
+
+real(RealExt), pointer :: uv_index_clear_surf(:) => null()
+! Clear-sky UV-index at the surface (n_profile)
+
+real(RealExt), pointer :: uv_index_clean(:, :) => null()
+! Clean-air UV-index (n_profile, 0:n_layer)
+
+real(RealExt), pointer :: uv_index_clear_clean(:, :) => null()
+! Clear-clean UV-index (n_profile, 0:n_layer)
+
+real(RealExt), pointer :: uv_index_clean_surf(:) => null()
+! Clean-air UV-index at the surface (n_profile)
+
+real(RealExt), pointer :: uv_index_clear_clean_surf(:) => null()
+! Clear-clean UV-index at the surface (n_profile)
+
 real(RealExt), pointer :: flux_direct_toa(:) => null()
 ! Direct downwards flux at top-of-atmosphere, Wm-2 (n_profile)
 

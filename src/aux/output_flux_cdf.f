@@ -10,9 +10,6 @@
 !   This subroutine receives fluxes and heating rates as input and
 !   calls routines to write them to netCDF-files.
 !
-! Method:
-!   Straightforward.
-!
 !- ---------------------------------------------------------------------
       SUBROUTINE output_flux_cdf(ierr
      &  , control, sp
@@ -21,7 +18,7 @@
      &  , n_layer, name_vert_coord, len_vert_coord, p, p_level
      &  , n_channel
      &  , flux_down, flux_down_diffuse, flux_up, flux_net, flux_direct
-     &  , actinic_flux, photolysis_rate, heating_rate
+     &  , uv_index, actinic_flux, photolysis_rate, heating_rate
      &  , contrib_funci, contrib_funcf
      &  , nd_profile, nd_latitude, nd_longitude, nd_layer, nd_channel
      &  , nd_cdl_dimen, nd_cdl_dimen_size, nd_cdl_data, nd_cdl_var
@@ -114,6 +111,8 @@
 !           Net fluxes
      &  , flux_direct(nd_profile, 0: nd_layer, nd_channel)
 !           Direct fluxes
+     &  , uv_index(nd_profile, 0: nd_layer, nd_channel)
+!           UV-index
      &  , actinic_flux(nd_profile, nd_layer, nd_channel)
 !           Actinic fluxes
      &  , photolysis_rate(nd_profile, nd_layer,
@@ -488,8 +487,40 @@
         IF (ierr /= i_normal) RETURN
 !
       ENDIF
-!
-!
+
+      IF (control%l_uv_index) THEN
+!       UV-index:
+        file_name(1: length_name+1+len_file_suffix)
+     &    =base_name(1: length_name)//'.'
+     &    //phys_suffix(IP_uv_index)
+        var_name(n_var)='uvindex'
+        var_type(n_var)='float'
+        var_unit(n_var)='None'
+        var_long(n_var)='UV-index'
+        n_data(n_var)=n_profile*(n_layer+1)*n_channel
+        DO k=1, n_channel
+          DO i=1, n_layer+1
+            DO l=1, n_profile
+              point=l+(i-1+(k-1)*(n_layer+1))*n_profile
+              data_fl(point, n_var)=uv_index(l, i-1, k)
+            ENDDO
+          ENDDO
+        ENDDO
+        CALL write_cdf(ierr
+     &    , file_name(1: length_name+1+len_file_suffix)
+     &    , nd_cdl_dimen, nd_cdl_dimen_size, nd_cdl_data, nd_cdl_var
+     &    , n_dimension, dimension_name, dimension_type
+     &    , dimension_unit
+     &    , dimension_long, dimension_size
+     &    , dimension_array_int, dimension_array_fl
+     &    , n_var, var_name, var_type, var_unit, var_long
+     &    , n_dimension_var, list_dimension_var
+     &    , n_data, data_int, data_fl
+     &    )
+        IF (ierr /= i_normal) RETURN
+      END IF
+
+
 !     Heating Rates:
       file_name(1: length_name+1+len_file_suffix)
      &  =base_name(1: length_name)//'.'//phys_suffix(IP_heating_rate)
