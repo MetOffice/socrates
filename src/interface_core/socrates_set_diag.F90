@@ -315,6 +315,35 @@ call sum_surf_weight_bands(diag%flux_down_uv_clear_surf, &
 call sum_surf_weight_bands(diag%flux_up_uv_clear_surf, &
                            radout%flux_up_clear_band)
 
+call sum_flux_channels(diag%uv_index, radout%uv_index)
+call sum_flux_channels(diag%uv_index_clear, radout%uv_index_clear)
+call sum_flux_channels(diag%uv_index_clean, radout_clean%uv_index)
+call sum_flux_channels(diag%uv_index_clear_clean, radout_clean%uv_index_clear)
+if (associated(diag%uv_index_surf)) then
+  do l=1, n_profile
+    diag%uv_index_surf(list(l)) &
+      = real(radout%uv_index_surf(l), RealExt)
+  end do
+end if
+if (associated(diag%uv_index_clear_surf)) then
+  do l=1, n_profile
+    diag%uv_index_clear_surf(list(l)) &
+      = real(radout%uv_index_clear_surf(l), RealExt)
+  end do
+end if
+if (associated(diag%uv_index_clean_surf)) then
+  do l=1, n_profile
+    diag%uv_index_clean_surf(list(l)) &
+      = real(radout_clean%uv_index_surf(l), RealExt)
+  end do
+end if
+if (associated(diag%uv_index_clear_clean_surf)) then
+  do l=1, n_profile
+    diag%uv_index_clear_clean_surf(list(l)) &
+      = real(radout_clean%uv_index_clear_surf(l), RealExt)
+  end do
+end if
+
 !------------------------------------------------------------------------------
 ! Photolysis rates
 !------------------------------------------------------------------------------
