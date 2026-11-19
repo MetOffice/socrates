@@ -41,7 +41,7 @@ use rad_pcf,      only: &
   ip_cloud_type_sw, ip_cloud_type_si, ip_cloud_type_cw, ip_cloud_type_ci, &
   ip_drop_unparametrized, ip_ice_unparametrized, &
   ip_scaling, ip_cairns, ip_mcica, ip_tripleclouds_2019, &
-  i_normal, i_err_fatal
+  i_normal, i_err_fatal, i_warning
 use ereport_mod,  only: ereport
 use errormessagelength_mod, only: errormessagelength
 
@@ -846,9 +846,17 @@ do k = dimen%id_cloud_top, atm%n_layer
       end if
     end if
     if (cld%w_cloud(l, k) > 1.0_RealK + min_cloud_fraction) then
-      cmessage = 'Cloud fraction greater than 1.'
-      ierr=i_err_fatal
+      ierr = i_warning
+      write(cmessage, '(A,I4,A,I4,A,E16.8)') &
+        'Cloud fraction greater than 1: l=', l, ', k=', k, &
+        ', w_cloud=', cld%w_cloud(l, k)
       call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+      do j = 1, cld%n_cloud_type
+        ierr = i_warning
+        write(cmessage, '(A,I4,A,E16.8)') &
+          'frac_cloud(', j, ')=', cld%frac_cloud(l, k, j)
+        call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+      end do
     else if (cld%w_cloud(l, k) > 1.0_RealK) then
       cld%w_cloud(l, k) = 1.0_RealK
     end if
