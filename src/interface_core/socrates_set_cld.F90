@@ -857,6 +857,9 @@ do k = dimen%id_cloud_top, atm%n_layer
           'frac_cloud(', j, ')=', cld%frac_cloud(l, k, j)
         call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
       end do
+      cmessage = 'Cloud fraction greater than 1.'
+      ierr=i_err_fatal
+      call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
     else if (cld%w_cloud(l, k) > 1.0_RealK) then
       cld%w_cloud(l, k) = 1.0_RealK
     end if
