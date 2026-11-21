@@ -122,8 +122,6 @@ logical :: l_split
 real(RealK) :: eps = EPSILON(1.0_RealK)
 real(RealK) :: min_cloud_fraction = 0.001_RealK
 real(RealK) :: frac_c, frac_m
-real(RealK) :: dbg_f, dbg_a, dbg_b, dbg_ml, dbg_mi, dbg_mix
-real(RealK) :: dbg_lm, dbg_im, dbg_a2, dbg_b2
 
 integer                      :: ierr = i_normal
 character (len=*), parameter :: RoutineName = 'SET_CLD'
@@ -517,10 +515,16 @@ case (ip_cloud_ice_water, ip_cloud_combine_ice_water)
         if (frac_liq(l, k) + frac_ice(l, k) > eps) then
           ! Split mixed phase fraction between ice and liquid
           call split_mix_phase(ip_cloud_type_water, ip_cloud_type_ice)
-          cld%frac_cloud(l, k, ip_cloud_type_water) = &
-            frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
-          cld%frac_cloud(l, k, ip_cloud_type_ice) = &
-            frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+          ! The split can remove all of the cloud (e.g. when frac is zero)
+          if (frac_liq(l, k) + frac_ice(l, k) > 0.0_RealK) then
+            cld%frac_cloud(l, k, ip_cloud_type_water) = &
+              frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+            cld%frac_cloud(l, k, ip_cloud_type_ice) = &
+              frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+          else
+            cld%frac_cloud(l, k, ip_cloud_type_water) = 0.0_RealK
+            cld%frac_cloud(l, k, ip_cloud_type_ice) = 0.0_RealK
+          end if
         else
           cld%frac_cloud(l, k, ip_cloud_type_water) = 0.0_RealK
           cld%frac_cloud(l, k, ip_cloud_type_ice) = 0.0_RealK
@@ -551,10 +555,16 @@ case (ip_cloud_ice_water, ip_cloud_combine_ice_water)
           if (frac_liq(l, k) + frac_ice(l, k) > eps) then
             ! Split mixed phase fraction between ice and liquid
             call split_mix_phase(ip_cloud_type_water, ip_cloud_type_ice)
-            frac_liq(l, k) = &
-              frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
-            frac_ice(l, k) = &
-              frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+            ! The split can remove all of the cloud (e.g. when frac is zero)
+            if (frac_liq(l, k) + frac_ice(l, k) > 0.0_RealK) then
+              frac_liq(l, k) = &
+                frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+              frac_ice(l, k) = &
+                frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+            else
+              frac_liq(l, k) = 0.0_RealK
+              frac_ice(l, k) = 0.0_RealK
+            end if
           end if
         end do
       end do
@@ -669,10 +679,16 @@ case (ip_cloud_csiw, ip_cloud_split_ice_water)
         if (frac_liq(l, k) + frac_ice(l, k) > eps) then
           ! Split mixed phase fraction between ice and liquid
           call split_mix_phase(ip_cloud_type_sw, ip_cloud_type_si)
-          cld%frac_cloud(l, k, ip_cloud_type_sw) = &
-            frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
-          cld%frac_cloud(l, k, ip_cloud_type_si) = &
-            frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+          ! The split can remove all of the cloud (e.g. when frac is zero)
+          if (frac_liq(l, k) + frac_ice(l, k) > 0.0_RealK) then
+            cld%frac_cloud(l, k, ip_cloud_type_sw) = &
+              frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+            cld%frac_cloud(l, k, ip_cloud_type_si) = &
+              frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+          else
+            cld%frac_cloud(l, k, ip_cloud_type_sw) = 0.0_RealK
+            cld%frac_cloud(l, k, ip_cloud_type_si) = 0.0_RealK
+          end if
         else
           cld%frac_cloud(l, k, ip_cloud_type_sw) = 0.0_RealK
           cld%frac_cloud(l, k, ip_cloud_type_si) = 0.0_RealK
@@ -701,10 +717,16 @@ case (ip_cloud_csiw, ip_cloud_split_ice_water)
         if (frac_liq(l, k) + frac_ice(l, k) > eps) then
           ! Split mixed phase fraction between ice and liquid
           call split_mix_phase(ip_cloud_type_cw, ip_cloud_type_ci)
-          cld%frac_cloud(l, k, ip_cloud_type_cw) = &
-            frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
-          cld%frac_cloud(l, k, ip_cloud_type_ci) = &
-            frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+          ! The split can remove all of the cloud (e.g. when frac is zero)
+          if (frac_liq(l, k) + frac_ice(l, k) > 0.0_RealK) then
+            cld%frac_cloud(l, k, ip_cloud_type_cw) = &
+              frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+            cld%frac_cloud(l, k, ip_cloud_type_ci) = &
+              frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+          else
+            cld%frac_cloud(l, k, ip_cloud_type_cw) = 0.0_RealK
+            cld%frac_cloud(l, k, ip_cloud_type_ci) = 0.0_RealK
+          end if
         else
           cld%frac_cloud(l, k, ip_cloud_type_cw) = 0.0_RealK
           cld%frac_cloud(l, k, ip_cloud_type_ci) = 0.0_RealK
@@ -848,93 +870,6 @@ do k = dimen%id_cloud_top, atm%n_layer
       end if
     end if
     if (cld%w_cloud(l, k) > 1.0_RealK + min_cloud_fraction) then
-      ierr = i_warning
-      write(cmessage, '(A,I4,A,I4,A,E16.8)') &
-        'Cloud fraction greater than 1: l=', l, ', k=', k, &
-        ', w_cloud=', cld%w_cloud(l, k)
-      call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
-      do j = 1, cld%n_cloud_type
-        ierr = i_warning
-        write(cmessage, '(A,I4,A,E16.8)') &
-          'frac_cloud(', j, ')=', cld%frac_cloud(l, k, j)
-        call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
-      end do
-      ! Scratch arrays below hold the last values set for this representation
-      write(cmessage, '(A,I4,A,I4)') &
-        'i_cloud_representation=', control%i_cloud_representation, &
-        ', n_cloud_type=', cld%n_cloud_type
-      call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
-      write(cmessage, '(A,E16.8,A,E16.8,A,E16.8)') &
-        'frac=', frac(l, k), ', frac_liq=', frac_liq(l, k), &
-        ', frac_ice=', frac_ice(l, k)
-      call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
-      write(cmessage, '(A,E16.8,A,E16.8,A,E16.8)') &
-        'cond_mmr=', cond_mmr(l, k), ', cond_rsd=', cond_rsd(l, k), &
-        ', cond_mmr_floor=', max(cond_mmr(l, k), eps)
-      call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
-      if (l_combine) then
-        write(cmessage, '(A,E16.8,A,E16.8)') &
-          'c_cloud=', cld%c_cloud(l, k), ', c_ratio=', cld%c_ratio(l, k)
-        call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
-      end if
-      if (l_split) then
-        write(cmessage, '(A,E16.8,A,E16.8)') &
-          'frac_thin=', frac_thin(l, k), ', ratio_thin=', ratio_thin(l, k)
-        call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
-      end if
-      do i = 1, cld%n_condensed
-        write(cmessage, '(A,I4,A,I4,A,I4,A,E16.8,A,E16.8)') &
-          'condensed(', i, '): type_condensed=', cld%type_condensed(i), &
-          ', i_cloud_type=', cld%i_cloud_type(i), &
-          ', mix_ratio=', cld%condensed_mix_ratio(l, k, i), &
-          ', rel_var_dens=', cld%condensed_rel_var_dens(l, k, i)
-        call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
-      end do
-      ! Replay the stratiform mixed-phase split from the raw 1d inputs
-      if (cld%n_cloud_type == 2 .and. present(cloud_frac_1d) .and. &
-          present(liq_frac_1d) .and. present(ice_frac_1d) .and. &
-          present(liq_mmr_1d) .and. present(ice_mmr_1d)) then
-        dbg_f = dbg_raw_1d(cloud_frac_1d)
-        dbg_a = dbg_raw_1d(liq_frac_1d)
-        dbg_b = dbg_raw_1d(ice_frac_1d)
-        dbg_ml = dbg_raw_1d(liq_mmr_1d)
-        dbg_mi = dbg_raw_1d(ice_mmr_1d)
-        if (l_combine .and. present(liq_conv_mmr_1d) .and. &
-            present(ice_conv_mmr_1d)) then
-          dbg_ml = dbg_ml + dbg_raw_1d(liq_conv_mmr_1d)
-          dbg_mi = dbg_mi + dbg_raw_1d(ice_conv_mmr_1d)
-        end if
-        write(cmessage, '(A,ES24.16,A,ES24.16,A,ES24.16)') &
-          'raw stratiform: frac=', dbg_f, ', liq_frac=', dbg_a, &
-          ', ice_frac=', dbg_b
-        call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
-        write(cmessage, '(A,ES24.16,A,ES24.16)') &
-          'raw gridbox mmr: liq(+conv)=', dbg_ml, ', ice(+conv)=', dbg_mi
-        call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
-        dbg_mix = dbg_a + dbg_b - dbg_f
-        dbg_a2 = dbg_a
-        dbg_b2 = dbg_b
-        if (dbg_mix > eps .and. dbg_a > eps .and. dbg_b > eps) then
-          dbg_lm = dbg_ml / dbg_a
-          dbg_im = dbg_mi / dbg_b
-          if (dbg_lm + dbg_im > eps) then
-            dbg_a2 = max(dbg_a - dbg_mix*dbg_im/(dbg_lm + dbg_im), 0.0_RealK)
-            dbg_b2 = max(dbg_b - dbg_mix*dbg_lm/(dbg_lm + dbg_im), 0.0_RealK)
-          end if
-        end if
-        write(cmessage, '(A,ES24.16,A,ES24.16,A,ES24.16)') &
-          'replay: liq+ice>eps test value=', dbg_a + dbg_b, &
-          ', frac_mix=', dbg_mix, ', eps=', eps
-        call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
-        write(cmessage, '(A,ES24.16,A,ES24.16)') &
-          'replay after split: liq=', dbg_a2, ', ice=', dbg_b2
-        call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
-        write(cmessage, '(A,ES24.16,A,ES24.16,A,ES24.16)') &
-          'replay division: numerators frac*liq=', dbg_f*dbg_a2, &
-          ', frac*ice=', dbg_f*dbg_b2, ', denominator liq+ice=', &
-          dbg_a2 + dbg_b2
-        call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
-      end if
       cmessage = 'Cloud fraction greater than 1.'
       ierr=i_err_fatal
       call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
@@ -1030,23 +965,6 @@ contains
       end if
     end if
   end subroutine split_mix_phase
-
-  function dbg_raw_1d(oned_field) result(val)
-    implicit none
-
-    real(RealExt), intent(in) :: oned_field(:)
-    real(RealK) :: val
-    integer :: kk0, ll0
-
-    ! Read the input value for (l, k) as set_cld_field would
-    kk0 = abs(layer_offset-k)
-    if (l_last) then
-      ll0 = stride_layer*(list(l)-1) + kk0
-    else
-      ll0 = atm%n_profile*(kk0-1) + list(l)
-    end if
-    val = max(real(oned_field(ll0), RealK), 0.0_RealK)
-  end function dbg_raw_1d
 
 end subroutine set_cld
 end module socrates_set_cld
