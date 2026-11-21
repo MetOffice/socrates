@@ -42,6 +42,7 @@ use rad_pcf,      only: &
   ip_drop_unparametrized, ip_ice_unparametrized, &
   ip_scaling, ip_cairns, ip_mcica, ip_tripleclouds_2019, &
   i_normal, i_err_fatal, i_warning
+use ieee_arithmetic, only: ieee_is_nan
 use ereport_mod,  only: ereport
 use errormessagelength_mod, only: errormessagelength
 
@@ -122,6 +123,7 @@ logical :: l_split
 real(RealK) :: eps = EPSILON(1.0_RealK)
 real(RealK) :: min_cloud_fraction = 0.001_RealK
 real(RealK) :: frac_c, frac_m
+real(RealK) :: dbg_frac, dbg_liq, dbg_ice
 
 integer                      :: ierr = i_normal
 character (len=*), parameter :: RoutineName = 'SET_CLD'
@@ -514,11 +516,17 @@ case (ip_cloud_ice_water, ip_cloud_combine_ice_water)
       do l = 1, atm%n_profile
         if (frac_liq(l, k) + frac_ice(l, k) > eps) then
           ! Split mixed phase fraction between ice and liquid
+          dbg_frac = frac(l, k)
+          dbg_liq = frac_liq(l, k)
+          dbg_ice = frac_ice(l, k)
           call split_mix_phase(ip_cloud_type_water, ip_cloud_type_ice)
           cld%frac_cloud(l, k, ip_cloud_type_water) = &
             frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
           cld%frac_cloud(l, k, ip_cloud_type_ice) = &
             frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+          if (ieee_is_nan(cld%frac_cloud(l, k, ip_cloud_type_water)) .or. &
+              ieee_is_nan(cld%frac_cloud(l, k, ip_cloud_type_ice))) &
+            call report_nan_frac('stratiform')
         else
           cld%frac_cloud(l, k, ip_cloud_type_water) = 0.0_RealK
           cld%frac_cloud(l, k, ip_cloud_type_ice) = 0.0_RealK
@@ -548,11 +556,17 @@ case (ip_cloud_ice_water, ip_cloud_combine_ice_water)
         do l = 1, atm%n_profile
           if (frac_liq(l, k) + frac_ice(l, k) > eps) then
             ! Split mixed phase fraction between ice and liquid
+            dbg_frac = frac(l, k)
+            dbg_liq = frac_liq(l, k)
+            dbg_ice = frac_ice(l, k)
             call split_mix_phase(ip_cloud_type_water, ip_cloud_type_ice)
             frac_liq(l, k) = &
               frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
             frac_ice(l, k) = &
               frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+            if (ieee_is_nan(frac_liq(l, k)) .or. &
+                ieee_is_nan(frac_ice(l, k))) &
+              call report_nan_frac('convective')
           end if
         end do
       end do
@@ -983,6 +997,31 @@ contains
       end if
     end if
   end subroutine split_mix_phase
+
+  subroutine report_nan_frac(label)
+    implicit none
+
+    character(len=*), intent(in) :: label
+
+    ! Report the inputs and results of the mixed-phase split at (l, k)
+    ierr = i_warning
+    write(cmessage, '(A,A,A,I4,A,I4)') 'NaN cloud fraction (', label, &
+      '): l=', l, ', k=', k
+    call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+    write(cmessage, '(A,E16.8,A,E16.8,A,E16.8)') &
+      'before split: frac=', dbg_frac, ', frac_liq=', dbg_liq, &
+      ', frac_ice=', dbg_ice
+    call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+    write(cmessage, '(A,E16.8,A,E16.8)') &
+      'after split: frac_liq=', frac_liq(l, k), ', frac_ice=', frac_ice(l, k)
+    call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+    do i = 1, cld%n_condensed
+      write(cmessage, '(A,I4,A,I4,A,E16.8)') &
+        'condensed(', i, '): i_cloud_type=', cld%i_cloud_type(i), &
+        ', mix_ratio=', cld%condensed_mix_ratio(l, k, i)
+      call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+    end do
+  end subroutine report_nan_frac
 
 end subroutine set_cld
 end module socrates_set_cld
