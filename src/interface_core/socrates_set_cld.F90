@@ -857,6 +857,37 @@ do k = dimen%id_cloud_top, atm%n_layer
           'frac_cloud(', j, ')=', cld%frac_cloud(l, k, j)
         call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
       end do
+      ! Scratch arrays below hold the last values set for this representation
+      write(cmessage, '(A,I4,A,I4)') &
+        'i_cloud_representation=', control%i_cloud_representation, &
+        ', n_cloud_type=', cld%n_cloud_type
+      call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+      write(cmessage, '(A,E16.8,A,E16.8,A,E16.8)') &
+        'frac=', frac(l, k), ', frac_liq=', frac_liq(l, k), &
+        ', frac_ice=', frac_ice(l, k)
+      call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+      write(cmessage, '(A,E16.8,A,E16.8,A,E16.8)') &
+        'cond_mmr=', cond_mmr(l, k), ', cond_rsd=', cond_rsd(l, k), &
+        ', cond_mmr_floor=', max(cond_mmr(l, k), eps)
+      call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+      if (l_combine) then
+        write(cmessage, '(A,E16.8,A,E16.8)') &
+          'c_cloud=', cld%c_cloud(l, k), ', c_ratio=', cld%c_ratio(l, k)
+        call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+      end if
+      if (l_split) then
+        write(cmessage, '(A,E16.8,A,E16.8)') &
+          'frac_thin=', frac_thin(l, k), ', ratio_thin=', ratio_thin(l, k)
+        call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+      end if
+      do i = 1, cld%n_condensed
+        write(cmessage, '(A,I4,A,I4,A,I4,A,E16.8,A,E16.8)') &
+          'condensed(', i, '): type_condensed=', cld%type_condensed(i), &
+          ', i_cloud_type=', cld%i_cloud_type(i), &
+          ', mix_ratio=', cld%condensed_mix_ratio(l, k, i), &
+          ', rel_var_dens=', cld%condensed_rel_var_dens(l, k, i)
+        call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
+      end do
       cmessage = 'Cloud fraction greater than 1.'
       ierr=i_err_fatal
       call ereport(ModuleName//':'//RoutineName, ierr, cmessage)
