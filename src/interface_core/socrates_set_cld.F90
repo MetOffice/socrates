@@ -515,10 +515,17 @@ case (ip_cloud_ice_water, ip_cloud_combine_ice_water)
         if (frac_liq(l, k) + frac_ice(l, k) > eps) then
           ! Split mixed phase fraction between ice and liquid
           call split_mix_phase(ip_cloud_type_water, ip_cloud_type_ice)
-          cld%frac_cloud(l, k, ip_cloud_type_water) = &
-            frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
-          cld%frac_cloud(l, k, ip_cloud_type_ice) = &
-            frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+          ! Only update fractions for split if total fraction is non-zero
+          ! Otherwise set the fractions to zero
+          if (frac_liq(l, k) + frac_ice(l, k) > 0.0_RealK) then
+            cld%frac_cloud(l, k, ip_cloud_type_water) = &
+              frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+            cld%frac_cloud(l, k, ip_cloud_type_ice) = &
+              frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+          else
+            cld%frac_cloud(l, k, ip_cloud_type_water) = 0.0_RealK
+            cld%frac_cloud(l, k, ip_cloud_type_ice) = 0.0_RealK
+          end if
         else
           cld%frac_cloud(l, k, ip_cloud_type_water) = 0.0_RealK
           cld%frac_cloud(l, k, ip_cloud_type_ice) = 0.0_RealK
@@ -549,10 +556,17 @@ case (ip_cloud_ice_water, ip_cloud_combine_ice_water)
           if (frac_liq(l, k) + frac_ice(l, k) > eps) then
             ! Split mixed phase fraction between ice and liquid
             call split_mix_phase(ip_cloud_type_water, ip_cloud_type_ice)
-            frac_liq(l, k) = &
-              frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
-            frac_ice(l, k) = &
-              frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+            ! Only update fractions for split if total fraction is non-zero
+            ! Otherwise set the fractions to zero
+            if (frac_liq(l, k) + frac_ice(l, k) > 0.0_RealK) then
+              frac_liq(l, k) = &
+                frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+              frac_ice(l, k) = &
+                frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+            else
+              frac_liq(l, k) = 0.0_RealK
+              frac_ice(l, k) = 0.0_RealK
+            end if
           end if
         end do
       end do
@@ -667,10 +681,16 @@ case (ip_cloud_csiw, ip_cloud_split_ice_water)
         if (frac_liq(l, k) + frac_ice(l, k) > eps) then
           ! Split mixed phase fraction between ice and liquid
           call split_mix_phase(ip_cloud_type_sw, ip_cloud_type_si)
-          cld%frac_cloud(l, k, ip_cloud_type_sw) = &
-            frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
-          cld%frac_cloud(l, k, ip_cloud_type_si) = &
-            frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+          ! The split can remove all of the cloud (e.g. when frac is zero)
+          if (frac_liq(l, k) + frac_ice(l, k) > 0.0_RealK) then
+            cld%frac_cloud(l, k, ip_cloud_type_sw) = &
+              frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+            cld%frac_cloud(l, k, ip_cloud_type_si) = &
+              frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+          else
+            cld%frac_cloud(l, k, ip_cloud_type_sw) = 0.0_RealK
+            cld%frac_cloud(l, k, ip_cloud_type_si) = 0.0_RealK
+          end if
         else
           cld%frac_cloud(l, k, ip_cloud_type_sw) = 0.0_RealK
           cld%frac_cloud(l, k, ip_cloud_type_si) = 0.0_RealK
@@ -699,10 +719,16 @@ case (ip_cloud_csiw, ip_cloud_split_ice_water)
         if (frac_liq(l, k) + frac_ice(l, k) > eps) then
           ! Split mixed phase fraction between ice and liquid
           call split_mix_phase(ip_cloud_type_cw, ip_cloud_type_ci)
-          cld%frac_cloud(l, k, ip_cloud_type_cw) = &
-            frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
-          cld%frac_cloud(l, k, ip_cloud_type_ci) = &
-            frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+          ! The split can remove all of the cloud (e.g. when frac is zero)
+          if (frac_liq(l, k) + frac_ice(l, k) > 0.0_RealK) then
+            cld%frac_cloud(l, k, ip_cloud_type_cw) = &
+              frac(l, k)*frac_liq(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+            cld%frac_cloud(l, k, ip_cloud_type_ci) = &
+              frac(l, k)*frac_ice(l, k) / (frac_liq(l, k)+frac_ice(l, k))
+          else
+            cld%frac_cloud(l, k, ip_cloud_type_cw) = 0.0_RealK
+            cld%frac_cloud(l, k, ip_cloud_type_ci) = 0.0_RealK
+          end if
         else
           cld%frac_cloud(l, k, ip_cloud_type_cw) = 0.0_RealK
           cld%frac_cloud(l, k, ip_cloud_type_ci) = 0.0_RealK
